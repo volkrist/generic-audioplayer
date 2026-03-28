@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+option java_package = "com.github.pakka_papad.data";
+option java_multiple_files = true;
+
+message UserPreferences {
+  bool useMaterialYouTheme = 1;
+  enum Theme {
+    LIGHT_MODE = 0;
+    DARK_MODE = 1;
+    USE_SYSTEM_MODE = 2;
+  }
+  Theme chosenTheme = 2;
+  bool onBoardingComplete = 3;
+  enum Accent {
+    Default = 0;
+    Malibu = 1;
+    Melrose = 2;
+    Elm = 3;
+    Magenta = 4;
+    JacksonsPurple = 5;
+  }
+  Accent chosenAccent = 4;
+  bool crashlyticsDisabled = 5;
+  message PlaybackParams {
+    int32 playbackSpeed = 1;
+    int32 playbackPitch = 2;
+  }
+  PlaybackParams playbackParams = 6;
+  repeated int32 selectedTabs = 7;
+  map<int32, int32> chosenSortOrder = 8;
+}
