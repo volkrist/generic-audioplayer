@@ -1,6 +1,8 @@
 package com.github.pakka_papad.nowplaying
 
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -8,8 +10,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,15 +31,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -63,6 +71,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -70,11 +79,21 @@ import com.github.pakka_papad.R
 import com.github.pakka_papad.data.UserPreferences.PlaybackParams
 import com.github.pakka_papad.data.music.Song
 import com.github.pakka_papad.round
+import java.io.File
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import com.github.pakka_papad.nowplaying.RepeatMode as RepeatModeEnum
 
+private val playbackSpeedPresets: List<Pair<String, Int>> = listOf(
+    "0.75×" to 75,
+    "1×" to 100,
+    "1.25×" to 125,
+    "1.5×" to 150,
+    "2×" to 200,
+)
+
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NowPlayingScreen(
     paddingValues: PaddingValues,
@@ -96,10 +115,17 @@ fun NowPlayingScreen(
     onTimerBegin: (Int) -> Unit,
     onTimerCancel: () -> Unit,
     onSaveQueueClicked: () -> Unit,
+    onShuffleClicked: () -> Unit,
+    onEqualizerClicked: () -> Unit,
+    onVolumeBoosterClicked: () -> Unit,
+    onOpenAlbum: () -> Unit,
+    onOpenArtist: () -> Unit,
+    onOpenFolder: () -> Unit,
+    onAddCurrentSongToPlaylist: () -> Unit,
 ) {
     if (song == null || songPlaying == null) return
     val configuration = LocalConfiguration.current
-    val screenHeight = max(configuration.screenHeightDp - 20, 0) // subtracting 20 for Scrim height
+    val screenHeight = max(configuration.screenHeightDp - 20, 0)
     val screenWidth = configuration.screenWidthDp
     if (configuration.orientation == ORIENTATION_LANDSCAPE) {
         Row(
@@ -111,14 +137,18 @@ fun NowPlayingScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            val albumArtMaxWidth = ((0.5f) * screenWidth).toInt()
-            val infoAndControlsMaxWidth = ((0.5f) * screenWidth).toInt()
+            val albumArtMaxWidth = ((0.48f) * screenWidth).toInt()
             if (albumArtMaxWidth >= 50 && screenHeight >= 50) {
                 val imageSize = min(albumArtMaxWidth, screenHeight)
-                AlbumArt(
-                    song = song,
-                    modifier = Modifier.size((imageSize * 0.9f).dp),
-                )
+                AnimatedContent(
+                    targetState = song.location,
+                    label = "npArtLand",
+                ) {
+                    AlbumArt(
+                        song = song,
+                        modifier = Modifier.size((imageSize * 0.92f).dp),
+                    )
+                }
             }
             InfoAndControls(
                 song = song,
@@ -131,8 +161,9 @@ fun NowPlayingScreen(
                 onFavouriteClicked = onFavouriteClicked,
                 onQueueClicked = onQueueClicked,
                 modifier = Modifier
-                    .width(infoAndControlsMaxWidth.dp)
-                    .fillMaxHeight(),
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState()),
                 repeatMode = repeatMode,
                 toggleRepeatMode = toggleRepeatMode,
                 playbackParams = playbackParams,
@@ -142,6 +173,13 @@ fun NowPlayingScreen(
                 onTimerBegin = onTimerBegin,
                 onTimerCancel = onTimerCancel,
                 onSaveQueueClicked = onSaveQueueClicked,
+                onShuffleClicked = onShuffleClicked,
+                onEqualizerClicked = onEqualizerClicked,
+                onVolumeBoosterClicked = onVolumeBoosterClicked,
+                onOpenAlbum = onOpenAlbum,
+                onOpenArtist = onOpenArtist,
+                onOpenFolder = onOpenFolder,
+                onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
             )
         }
     } else {
@@ -152,18 +190,25 @@ fun NowPlayingScreen(
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                 .padding(paddingValues),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.Top,
         ) {
-            val albumArtMaxHeight = ((0.5f) * screenHeight).toInt()
-            val infoAndControlsMaxHeight = ((0.5f) * screenHeight).toInt()
-            if (screenWidth >= 50 && albumArtMaxHeight >= 50) {
-                val imageSize = min(screenWidth, albumArtMaxHeight)
-                AlbumArt(
-                    song = song,
-                    modifier = Modifier
-                        .size((imageSize * 0.9f).dp)
-                        .weight(1f),
-                )
+            Box(
+                modifier = Modifier
+                    .weight(1.15f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                AnimatedContent(
+                    targetState = song.location,
+                    label = "npArtPort",
+                ) {
+                    AlbumArt(
+                        song = song,
+                        modifier = Modifier
+                            .fillMaxWidth(0.88f)
+                            .aspectRatio(1f),
+                    )
+                }
             }
             InfoAndControls(
                 song = song,
@@ -176,7 +221,7 @@ fun NowPlayingScreen(
                 onFavouriteClicked = onFavouriteClicked,
                 onQueueClicked = onQueueClicked,
                 modifier = Modifier
-                    .height(infoAndControlsMaxHeight.dp)
+                    .weight(1f)
                     .fillMaxWidth(),
                 repeatMode = repeatMode,
                 toggleRepeatMode = toggleRepeatMode,
@@ -187,6 +232,13 @@ fun NowPlayingScreen(
                 onTimerBegin = onTimerBegin,
                 onTimerCancel = onTimerCancel,
                 onSaveQueueClicked = onSaveQueueClicked,
+                onShuffleClicked = onShuffleClicked,
+                onEqualizerClicked = onEqualizerClicked,
+                onVolumeBoosterClicked = onVolumeBoosterClicked,
+                onOpenAlbum = onOpenAlbum,
+                onOpenArtist = onOpenArtist,
+                onOpenFolder = onOpenFolder,
+                onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
             )
         }
     }
@@ -197,21 +249,38 @@ private fun AlbumArt(
     song: Song,
     modifier: Modifier = Modifier,
 ) {
-    AsyncImage(
-        model = song.artUri,
-        contentDescription = stringResource(R.string.song_image),
-        modifier = modifier
-            .aspectRatio(1f)
-            .shadow(
-                elevation = 20.dp,
-                shape = RoundedCornerShape(20.dp),
-                clip = false,
+    val shape = RoundedCornerShape(20.dp)
+    val base = modifier
+        .shadow(
+            elevation = 20.dp,
+            shape = shape,
+            clip = false,
+        )
+        .clip(shape)
+    if (song.artUri.isNullOrBlank()) {
+        Box(
+            modifier = base
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_outline_music_note_40),
+                contentDescription = null,
+                modifier = Modifier.size(96.dp),
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)),
             )
-            .clip(RoundedCornerShape(20.dp)),
-        contentScale = ContentScale.Crop,
-    )
+        }
+    } else {
+        AsyncImage(
+            model = song.artUri,
+            contentDescription = stringResource(R.string.song_image),
+            modifier = base,
+            contentScale = ContentScale.Crop,
+        )
+    }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun InfoAndControls(
     song: Song,
@@ -233,43 +302,61 @@ private fun InfoAndControls(
     onTimerBegin: (Int) -> Unit,
     onTimerCancel: () -> Unit,
     onSaveQueueClicked: () -> Unit,
+    onShuffleClicked: () -> Unit,
+    onEqualizerClicked: () -> Unit,
+    onVolumeBoosterClicked: () -> Unit,
+    onOpenAlbum: () -> Unit,
+    onOpenArtist: () -> Unit,
+    onOpenFolder: () -> Unit,
+    onAddCurrentSongToPlaylist: () -> Unit,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceEvenly,
-        modifier = modifier
-            .padding(vertical = 16.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = modifier.padding(vertical = 8.dp, horizontal = 4.dp),
     ) {
-        SongInfo(
-            song = song,
-            modifier = Modifier.weight(1f)
+        QuickActionsRow(
+            onEqualizerClicked = onEqualizerClicked,
+            onVolumeBoosterClicked = onVolumeBoosterClicked,
+            onSaveQueueClicked = onSaveQueueClicked,
+            onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
+            sleepTimer = {
+                SleepTimerButton(
+                    isRunning = isTimerRunning,
+                    timeLeft = timeLeft,
+                    beginTimer = onTimerBegin,
+                    cancelTimer = onTimerCancel,
+                )
+            },
+        )
+        PlaybackSpeedPresetsRow(
+            playbackParams = playbackParams,
+            updatePlaybackParams = updatePlaybackParams,
         )
         Row(
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp)
+            horizontalArrangement = Arrangement.Center,
         ) {
             PlaybackSpeedAndPitchController(
                 playbackParams = playbackParams,
-                updatePlaybackParams = updatePlaybackParams
+                updatePlaybackParams = updatePlaybackParams,
             )
-            SleepTimerButton(
-                isRunning = isTimerRunning,
-                timeLeft = timeLeft,
-                beginTimer = onTimerBegin,
-                cancelTimer = onTimerCancel,
-            )
-            SaveQueue(onSaveQueueClicked = onSaveQueueClicked)
-            RepeatModeController(
-                currentRepeatMode = repeatMode,
-                toggleRepeatMode = toggleRepeatMode
+        }
+        AnimatedContent(
+            targetState = song.location,
+            label = "npMeta",
+        ) {
+            SongInfo(
+                song = song,
+                onOpenAlbum = onOpenAlbum,
+                onOpenArtist = onOpenArtist,
+                onOpenFolder = onOpenFolder,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
         MusicSlider(
-            modifier = Modifier
-                .padding(24.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             playerHelper = playerHelper,
             currentSongPlaying = currentSongPlaying,
             duration = song.durationMillis,
@@ -278,8 +365,7 @@ private fun InfoAndControls(
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             LikeButton(
                 song = song,
@@ -301,9 +387,145 @@ private fun InfoAndControls(
                 modifier = Modifier.weight(1f),
             )
         }
+        Row(
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp, bottom = 8.dp),
+        ) {
+            ShuffleButton(onClick = onShuffleClicked)
+            RepeatModeController(
+                currentRepeatMode = repeatMode,
+                toggleRepeatMode = toggleRepeatMode,
+            )
+        }
     }
 }
 
+@Composable
+private fun QuickActionsRow(
+    onEqualizerClicked: () -> Unit,
+    onVolumeBoosterClicked: () -> Unit,
+    onSaveQueueClicked: () -> Unit,
+    onAddCurrentSongToPlaylist: () -> Unit,
+    sleepTimer: @Composable () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_baseline_piano_40),
+            contentDescription = stringResource(R.string.now_playing_equalizer),
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = onEqualizerClicked,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true, radius = 20.dp),
+                )
+                .padding(4.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        Icon(
+            painter = painterResource(R.drawable.baseline_speed_24),
+            contentDescription = stringResource(R.string.now_playing_volume_booster),
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = onVolumeBoosterClicked,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true, radius = 20.dp),
+                )
+                .padding(4.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        sleepTimer()
+        Icon(
+            painter = painterResource(R.drawable.ic_baseline_playlist_play_40),
+            contentDescription = stringResource(R.string.now_playing_add_to_playlist),
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = onAddCurrentSongToPlaylist,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true, radius = 20.dp),
+                )
+                .padding(4.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        Icon(
+            painter = painterResource(R.drawable.ic_baseline_playlist_add_40),
+            contentDescription = stringResource(R.string.save_queue_to_playlist),
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = onSaveQueueClicked,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true, radius = 20.dp),
+                )
+                .padding(4.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlaybackSpeedPresetsRow(
+    playbackParams: PlaybackParams,
+    updatePlaybackParams: (speed: Int, pitch: Int) -> Unit,
+) {
+    val scroll = rememberScrollState()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(scroll)
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        playbackSpeedPresets.forEach { (label, speedInt) ->
+            val selected = playbackParams.playbackSpeed == speedInt
+            FilterChip(
+                selected = selected,
+                onClick = {
+                    updatePlaybackParams(speedInt, playbackParams.playbackPitch)
+                },
+                label = { Text(label) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ShuffleButton(
+    onClick: () -> Unit,
+) {
+    Image(
+        painter = painterResource(R.drawable.ic_baseline_shuffle_40),
+        contentDescription = stringResource(R.string.shuffle_button),
+        modifier = Modifier
+            .size(44.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(
+                onClick = onClick,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = rememberRipple(bounded = true, radius = 22.dp),
+            )
+            .padding(6.dp),
+        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
+    )
+}
 
 /**
  * All control buttons composable
@@ -447,61 +669,124 @@ private fun QueueButton(
     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
 )
 
-/**
- * Song info composable
- */
 @Composable
 private fun SongInfo(
     song: Song,
+    onOpenAlbum: () -> Unit,
+    onOpenArtist: () -> Unit,
+    onOpenFolder: () -> Unit,
     modifier: Modifier = Modifier,
-) = Column(
-    horizontalAlignment = Alignment.CenterHorizontally,
-    modifier = modifier,
-    verticalArrangement = Arrangement.Center
 ) {
-    val spacerModifier = Modifier.height(8.dp)
-    Text(
-        text = song.title,
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
-        textAlign = TextAlign.Center,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        color = MaterialTheme.colorScheme.onSurface,
-    )
-    Spacer(spacerModifier)
-    Text(
-        text = song.artist,
-        style = MaterialTheme.typography.titleMedium,
-        textAlign = TextAlign.Center,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-        color = MaterialTheme.colorScheme.onSurface,
-    )
-    Spacer(spacerModifier)
-    Text(
-        text = song.album,
-        style = MaterialTheme.typography.titleMedium,
-        textAlign = TextAlign.Center,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        color = MaterialTheme.colorScheme.onSurface,
-    )
+    val spacerModifier = Modifier.height(6.dp)
+    val albumOpenable = song.album.isNotBlank() && song.album != "Unknown"
+    val artistOpenable = song.artist.isNotBlank() && song.artist != "Unknown"
+    val parentFolder = remember(song.location) { File(song.location).parentFile }
+    val folderOpenable = parentFolder != null
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier.padding(horizontal = 12.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = song.title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(spacerModifier)
+        Text(
+            text = song.artist,
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = if (artistOpenable) TextDecoration.Underline else null,
+            modifier = Modifier
+                .then(
+                    if (artistOpenable) {
+                        Modifier.clickable(
+                            onClick = onOpenArtist,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = rememberRipple(bounded = true),
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
+        )
+        Spacer(spacerModifier)
+        Text(
+            text = song.album,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textDecoration = if (albumOpenable) TextDecoration.Underline else null,
+            modifier = Modifier
+                .then(
+                    if (albumOpenable) {
+                        Modifier.clickable(
+                            onClick = onOpenAlbum,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = rememberRipple(bounded = true),
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
+        )
+        if (folderOpenable && parentFolder != null) {
+            Spacer(Modifier.height(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(
+                        onClick = onOpenFolder,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = rememberRipple(bounded = true),
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_outline_folder_40),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = parentFolder.name,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
 }
 
 @Composable
 fun PlaybackSpeedAndPitchController(
     playbackParams: PlaybackParams,
     updatePlaybackParams: (speed: Int, pitch: Int) -> Unit,
-){
+) {
     val speed = playbackParams.playbackSpeed
     val pitch = playbackParams.playbackPitch
     var showDialog by remember { mutableStateOf(false) }
     Icon(
-        painter = painterResource(R.drawable.baseline_speed_24),
+        painter = painterResource(R.drawable.ic_outline_music_note_40),
         contentDescription = stringResource(R.string.speed_and_pitch_controller),
         modifier = Modifier
-            .size(30.dp)
+            .size(28.dp)
             .clickable(
                 onClick = { showDialog = true },
                 interactionSource = remember { MutableInteractionSource() },
@@ -510,8 +795,8 @@ fun PlaybackSpeedAndPitchController(
         tint = MaterialTheme.colorScheme.onSurface
     )
     if (showDialog) {
-        var newSpeed by remember { mutableStateOf((speed.toFloat()/100).round(2))}
-        var newPitch by remember { mutableStateOf((pitch.toFloat()/100).round(2)) }
+        var newSpeed by remember { mutableStateOf((speed.toFloat() / 100).round(2)) }
+        var newPitch by remember { mutableStateOf((pitch.toFloat() / 100).round(2)) }
         AlertDialog(
             onDismissRequest = { showDialog = false },
             confirmButton = {
@@ -537,11 +822,11 @@ fun PlaybackSpeedAndPitchController(
                 )
             },
             text = {
-                Column() {
+                Column {
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
-                    ){
+                    ) {
                         Text(
                             text = stringResource(R.string.speed_x, newSpeed),
                             style = MaterialTheme.typography.titleMedium,
@@ -564,7 +849,7 @@ fun PlaybackSpeedAndPitchController(
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth(),
-                    ){
+                    ) {
                         Text(
                             text = stringResource(R.string.pitch_x, newPitch),
                             style = MaterialTheme.typography.titleMedium,
@@ -599,30 +884,14 @@ fun RepeatModeController(
         painter = painterResource(currentRepeatMode.iconResource),
         contentDescription = stringResource(R.string.repeat_mode_button),
         modifier = Modifier
-            .size(30.dp)
+            .size(44.dp)
+            .clip(RoundedCornerShape(22.dp))
             .clickable(
                 onClick = toggleRepeatMode,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = false, radius = 20.dp),
-            ),
-        tint = MaterialTheme.colorScheme.onSurface
-    )
-}
-
-@Composable
-private fun SaveQueue(
-    onSaveQueueClicked: () -> Unit,
-){
-    Icon(
-        painter = painterResource(R.drawable.ic_baseline_playlist_add_40),
-        contentDescription = stringResource(R.string.repeat_mode_button),
-        modifier = Modifier
-            .size(30.dp)
-            .clickable(
-                onClick = onSaveQueueClicked,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = false, radius = 20.dp),
-            ),
+                indication = rememberRipple(bounded = true, radius = 22.dp),
+            )
+            .padding(6.dp),
         tint = MaterialTheme.colorScheme.onSurface
     )
 }
@@ -633,30 +902,34 @@ private fun SleepTimerButton(
     timeLeft: Int,
     beginTimer: (Int) -> Unit,
     cancelTimer: () -> Unit,
-){
+) {
     var showTimerDialog by remember { mutableStateOf(false) }
     Icon(
         painter = painterResource(R.drawable.outline_timer_24),
         contentDescription = stringResource(R.string.sleep_timer_button),
         modifier = Modifier
-            .size(30.dp)
+            .size(34.dp)
+            .clip(RoundedCornerShape(8.dp))
             .clickable(
                 onClick = { showTimerDialog = true },
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = false, radius = 20.dp),
-            ),
+                indication = rememberRipple(bounded = true, radius = 20.dp),
+            )
+            .padding(4.dp),
         tint = MaterialTheme.colorScheme.onSurface
     )
     if (showTimerDialog) {
         var minutes by remember { mutableStateOf<Int?>(null) }
-        var seconds by  remember { mutableStateOf<Int?>(null) }
-        val time by remember(timeLeft) { derivedStateOf {
-            val mins = timeLeft/60
-            val secs = timeLeft%60
-            val sMinutes = if (mins < 10) "0$mins" else mins.toString()
-            val sSeconds = if (secs < 10) "0$secs" else secs.toString()
-            "$sMinutes:$sSeconds"
-        } }
+        var seconds by remember { mutableStateOf<Int?>(null) }
+        val time by remember(timeLeft) {
+            derivedStateOf {
+                val mins = timeLeft / 60
+                val secs = timeLeft % 60
+                val sMinutes = if (mins < 10) "0$mins" else mins.toString()
+                val sSeconds = if (secs < 10) "0$secs" else secs.toString()
+                "$sMinutes:$sSeconds"
+            }
+        }
         AlertDialog(
             onDismissRequest = { showTimerDialog = false },
             title = {
@@ -672,7 +945,7 @@ private fun SleepTimerButton(
                         .fillMaxWidth()
                         .padding(vertical = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
-                ){
+                ) {
                     if (isRunning) {
                         Text(
                             text = stringResource(R.string.stopping_in, time),
@@ -688,7 +961,9 @@ private fun SleepTimerButton(
                                     if (it.length > 2) return@OutlinedTextField
                                     minutes = try {
                                         if (it.isEmpty()) null else it.toInt()
-                                    } catch (_: Exception) { minutes }
+                                    } catch (_: Exception) {
+                                        minutes
+                                    }
                                 },
                                 maxLines = 1,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -717,7 +992,9 @@ private fun SleepTimerButton(
                                     }
                                     val num = try {
                                         it.toInt()
-                                    } catch (_: Exception) { seconds }
+                                    } catch (_: Exception) {
+                                        seconds
+                                    }
                                     if (num != null && num > 59) return@OutlinedTextField
                                     seconds = num
                                 },
@@ -740,7 +1017,7 @@ private fun SleepTimerButton(
                         if (isRunning) {
                             cancelTimer()
                         } else {
-                            beginTimer((minutes ?: 0)*60+(seconds ?: 0))
+                            beginTimer((minutes ?: 0) * 60 + (seconds ?: 0))
                         }
                         showTimerDialog = false
                     },

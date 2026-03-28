@@ -22,7 +22,7 @@ import com.github.pakka_papad.data.daos.SongDao
 import com.github.pakka_papad.formatToDate
 import com.github.pakka_papad.toMBfromB
 import com.github.pakka_papad.toMS
-import kotlinx.coroutines.CompletionHandler
+import com.github.pakka_papad.data.daos.deleteSongsByLocations
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
@@ -30,12 +30,14 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileNotFoundException
+import java.util.LinkedHashMap
 import java.util.TreeMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -55,7 +57,10 @@ class SongExtractor(
 ) {
 
     init {
-        cleanData()
+        scope.launch {
+            delay(1500)
+            cleanData()
+        }
     }
 
     fun cleanData() {
@@ -72,13 +77,17 @@ class SongExtractor(
             }
             jobs.joinAll()
             jobs.clear()
-            albumDao.cleanAlbumTable()
-            artistDao.cleanArtistTable()
-            albumArtistDao.cleanAlbumArtistTable()
-            composerDao.cleanComposerTable()
-            lyricistDao.cleanLyricistTable()
-            genreDao.cleanGenreTable()
+            cleanupOrphanMetadataTables()
         }
+    }
+
+    private suspend fun cleanupOrphanMetadataTables() {
+        albumDao.cleanAlbumTable()
+        artistDao.cleanArtistTable()
+        albumArtistDao.cleanAlbumArtistTable()
+        composerDao.cleanComposerTable()
+        lyricistDao.cleanLyricistTable()
+        genreDao.cleanGenreTable()
     }
 
     private fun checkReadStoragePermission(): Boolean {
@@ -131,6 +140,7 @@ class SongExtractor(
             val size = cursor.getString(sizeIndex)
             val addedDate = cursor.getString(dateAddedIndex)
             val modifiedDate = cursor.getString(dateModifiedIndex)
+            val dateModifiedSec = cursor.getLong(dateModifiedIndex).coerceAtLeast(0L)
             val songId = cursor.getLong(songIdIndex)
             val title = cursor.getString(titleIndex).trim()
             val album = cursor.getString(albumIndex).trim()
@@ -139,6 +149,7 @@ class SongExtractor(
                 size = size,
                 addedDate = addedDate,
                 modifiedDate = modifiedDate,
+                dateModifiedSec = dateModifiedSec,
                 songId = songId,
                 title = title,
                 album = album,
@@ -182,6 +193,7 @@ class SongExtractor(
                 val size = cursor.getString(sizeIndex)
                 val addedDate = cursor.getString(dateAddedIndex)
                 val modifiedDate = cursor.getString(dateModifiedIndex)
+                val dateModifiedSec = cursor.getLong(dateModifiedIndex).coerceAtLeast(0L)
                 val songId = cursor.getLong(songIdIndex)
                 val title = cursor.getString(titleIndex).trim()
                 val album = cursor.getString(albumIndex).trim()
@@ -191,6 +203,7 @@ class SongExtractor(
                         size = size,
                         addedDate = addedDate,
                         modifiedDate = modifiedDate,
+                        dateModifiedSec = dateModifiedSec,
                         songId = songId,
                         title = title,
                         album = album,
@@ -256,6 +269,39 @@ class SongExtractor(
     private val _scanStatus = Channel<ScanStatus>(onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val scanStatus = _scanStatus.receiveAsFlow()
 
+    private suspend fun persistExtractedLibrary(songs: List<Song>, albums: List<Album>) {
+        if (songs.isEmpty()) {
+            cleanupOrphanMetadataTables()
+            return
+        }
+        val insertJobs = listOf(
+            scope.launch {
+                val artists = songs.map { it.artist }.toSet().map { Artist(it) }
+                artistDao.insertAllArtists(artists)
+            },
+            scope.launch {
+                val albumArtists = songs.map { it.albumArtist }.toSet().map { AlbumArtist(it) }
+                albumArtistDao.insertAllAlbumArtists(albumArtists)
+            },
+            scope.launch {
+                val lyricists = songs.map { it.lyricist }.toSet().map { Lyricist(it) }
+                lyricistDao.insertAllLyricists(lyricists)
+            },
+            scope.launch {
+                val composers = songs.map { it.composer }.toSet().map { Composer(it) }
+                composerDao.insertAllComposers(composers)
+            },
+            scope.launch {
+                val genres = songs.map { it.genre }.toSet().map { Genre(it) }
+                genreDao.insertAllGenres(genres)
+            }
+        )
+        albumDao.insertAllAlbums(albums)
+        insertJobs.joinAll()
+        songDao.insertOrReplaceSongs(songs)
+        cleanupOrphanMetadataTables()
+    }
+
     fun scanForMusic() {
         if (!checkReadStoragePermission()) return
         scope.launch {
@@ -276,31 +322,7 @@ class SongExtractor(
                     _scanStatus.trySend(ScanStatus.ScanProgress(parsed, total))
                 }
             )
-            val insertJobs = listOf(
-                launch {
-                    val artists = songs.map { it.artist }.toSet().map { Artist(it) }
-                    artistDao.insertAllArtists(artists)
-                },
-                launch {
-                    val albumArtists = songs.map { it.albumArtist }.toSet().map { AlbumArtist(it) }
-                    albumArtistDao.insertAllAlbumArtists(albumArtists)
-                },
-                launch {
-                    val lyricists = songs.map { it.lyricist }.toSet().map { Lyricist(it) }
-                    lyricistDao.insertAllLyricists(lyricists)
-                },
-                launch {
-                    val composers = songs.map { it.composer }.toSet().map { Composer(it) }
-                    composerDao.insertAllComposers(composers)
-                },
-                launch {
-                    val genres = songs.map { it.genre }.toSet().map { Genre(it) }
-                    genreDao.insertAllGenres(genres)
-                }
-            )
-            albumDao.insertAllAlbums(albums)
-            insertJobs.joinAll()
-            songDao.insertAllSongs(songs)
+            persistExtractedLibrary(songs, albums)
             _scanStatus.send(ScanStatus.ScanComplete)
         }
     }
@@ -308,12 +330,16 @@ class SongExtractor(
     private suspend fun extract(
         blacklistedSongLocations: HashSet<String>,
         blacklistedFolderPaths: HashSet<String>,
-        statusListener: ((parsed: Int, total: Int) -> Unit)? = null
+        statusListener: ((parsed: Int, total: Int) -> Unit)? = null,
+        pathsFilter: Set<String>? = null
     ): Pair<List<Song>,List<Album>>  {
+        if (pathsFilter != null && pathsFilter.isEmpty()) {
+            return Pair(emptyList(), emptyList())
+        }
         val selection = StringBuilder()
         val selectionArgs = arrayListOf<String>()
         selection.append(MediaStore.Audio.Media.IS_MUSIC + " != 0 ")
-        blacklistedFolderPaths.forEachIndexed { index, path ->
+        blacklistedFolderPaths.forEach { path ->
             selection.append(" AND NOT ")
                 .append(MediaStore.Audio.Media.DATA)
                 .append(" LIKE ?")
@@ -338,13 +364,6 @@ class SongExtractor(
         val dateModifiedIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATE_MODIFIED)
         val songIdIndex = cursor.getColumnIndex(MediaStore.Audio.Media._ID)
         val dSongs = ArrayList<Deferred<Song?>>()
-        val total  = cursor.count
-        val parsed = AtomicInteger(0)
-        val parseCompletionHandler = object : CompletionHandler {
-            override fun invoke(cause: Throwable?) {
-                statusListener?.invoke(parsed.incrementAndGet(), total)
-            }
-        }
         cursor.moveToFirst()
         do {
             try {
@@ -352,9 +371,11 @@ class SongExtractor(
                 val songFile = File(songPath)
                 if (!songFile.exists()) throw FileNotFoundException()
                 if (blacklistedSongLocations.contains(songFile.path)) continue
+                if (pathsFilter != null && !pathsFilter.contains(songPath)) continue
                 val size = cursor.getString(sizeIndex)
                 val addedDate = cursor.getString(dateAddedIndex)
                 val modifiedDate = cursor.getString(dateModifiedIndex)
+                val dateModifiedSec = cursor.getLong(dateModifiedIndex).coerceAtLeast(0L)
                 val songId = cursor.getLong(songIdIndex)
                 val title = cursor.getString(titleIndex).trim()
                 val album = cursor.getString(albumIndex).trim()
@@ -366,22 +387,109 @@ class SongExtractor(
                             size = size,
                             addedDate = addedDate,
                             modifiedDate = modifiedDate,
+                            dateModifiedSec = dateModifiedSec,
                             songId = songId,
                             title = title,
                             album = album,
                         )
-                    }.apply {
-                        invokeOnCompletion(parseCompletionHandler)
                     }
                 )
             } catch (_: Exception){
 
             }
         } while (cursor.moveToNext())
+        val totalForProgress = dSongs.size
+        val parsed = AtomicInteger(0)
+        dSongs.forEach { deferred ->
+            deferred.invokeOnCompletion {
+                statusListener?.invoke(parsed.incrementAndGet(), totalForProgress)
+            }
+        }
         val songs = dSongs.awaitAll().filterNotNull()
         cursor.close()
         val albums = albumArtMap.map { (t, u) -> Album(t, ContentUris.withAppendedId(songCover, u).toString()) }
         return Pair(songs,albums)
+    }
+
+    private suspend fun queryMediaStoreFingerprints(
+        blacklistedSongLocations: HashSet<String>,
+        blacklistedFolderPaths: HashSet<String>,
+    ): Map<String, Long> {
+        val selection = StringBuilder()
+        val selectionArgs = arrayListOf<String>()
+        selection.append(MediaStore.Audio.Media.IS_MUSIC + " != 0 ")
+        blacklistedFolderPaths.forEach { path ->
+            selection.append(" AND NOT ")
+                .append(MediaStore.Audio.Media.DATA)
+                .append(" LIKE ?")
+            selectionArgs.add("$path%")
+        }
+        val cursor = context.contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            arrayOf(MediaStore.Audio.Media.DATA, MediaStore.Audio.Media.DATE_MODIFIED),
+            selection.toString(),
+            selectionArgs.toTypedArray(),
+            MediaStore.Audio.Media.DATE_ADDED,
+            null
+        ) ?: return emptyMap()
+        val dataIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
+        val dateModifiedIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATE_MODIFIED)
+        val result = LinkedHashMap<String, Long>()
+        cursor.moveToFirst()
+        do {
+            try {
+                val songPath = cursor.getString(dataIndex)
+                val songFile = File(songPath)
+                if (!songFile.exists()) throw FileNotFoundException()
+                if (blacklistedSongLocations.contains(songFile.path)) continue
+                result[songPath] = cursor.getLong(dateModifiedIndex).coerceAtLeast(0L)
+            } catch (_: Exception) { }
+        } while (cursor.moveToNext())
+        cursor.close()
+        return result
+    }
+
+    suspend fun hasCachedLibrary(): Boolean =
+        songDao.getSongCount() > 0
+
+    suspend fun syncLibraryIncremental() {
+        if (!checkReadStoragePermission()) return
+        val blacklistedSongLocations = blacklistDao.getBlacklistedSongs().map { it.location }.toHashSet()
+        val blacklistedFolderPaths = blacklistedFolderDao.getAllFolders().first().map { it.path }.toHashSet()
+
+        val dbMap = songDao.getSongFingerprints().associate { it.location to it.dateModifiedSec }
+
+        if (dbMap.isEmpty()) {
+            val (songs, albums) = extract(
+                blacklistedSongLocations,
+                blacklistedFolderPaths,
+                statusListener = null,
+                pathsFilter = null,
+            )
+            persistExtractedLibrary(songs, albums)
+            return
+        }
+
+        val mediaFingerprints = queryMediaStoreFingerprints(blacklistedSongLocations, blacklistedFolderPaths)
+
+        val toDelete = dbMap.keys - mediaFingerprints.keys
+        songDao.deleteSongsByLocations(toDelete)
+
+        val toProcess = mediaFingerprints.filter { (path, sec) ->
+            dbMap[path] != sec
+        }
+        if (toProcess.isEmpty()) {
+            cleanupOrphanMetadataTables()
+            return
+        }
+
+        val (songs, albums) = extract(
+            blacklistedSongLocations,
+            blacklistedFolderPaths,
+            statusListener = null,
+            pathsFilter = toProcess.keys.toHashSet(),
+        )
+        persistExtractedLibrary(songs, albums)
     }
 
     companion object {
@@ -393,6 +501,7 @@ class SongExtractor(
         size: String,
         addedDate: String,
         modifiedDate: String,
+        dateModifiedSec: Long,
         songId: Long,
         title: String,
         album: String,
@@ -415,6 +524,7 @@ class SongExtractor(
                 size = size.toFloat().toMBfromB(),
                 addedDate = addedDate.toLong().formatToDate(),
                 modifiedDate = modifiedDate.toLong().formatToDate(),
+                dateModifiedSec = dateModifiedSec,
                 artist = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.trim() ?: UNKNOWN,
                 albumArtist = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)?.trim() ?: UNKNOWN,
                 composer = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_COMPOSER)?.trim() ?: UNKNOWN,

@@ -24,6 +24,9 @@ interface QueueService {
 
     fun getSongAtIndex(index: Int): Song?
 
+    /** Index of [currentSong] in [queue], or 0 if unknown. */
+    fun currentQueueIndex(): Int
+
     fun setCurrentSong(currentSongIndex: Int)
 
     val repeatMode: StateFlow<RepeatMode>
@@ -131,6 +134,12 @@ class QueueServiceImpl() : QueueService {
     override fun getSongAtIndex(index: Int): Song? {
         if (index < 0 || index >= mutableQueue.size) return null
         return mutableQueue[index]
+    }
+
+    override fun currentQueueIndex(): Int {
+        val cur = _currentSong.value ?: return 0
+        val idx = mutableQueue.indexOfFirst { it.location == cur.location }
+        return if (idx >= 0) idx else 0
     }
 
     override fun setCurrentSong(currentSongIndex: Int) {

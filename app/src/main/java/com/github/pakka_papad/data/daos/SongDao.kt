@@ -16,17 +16,34 @@ import com.github.pakka_papad.data.music.LyricistWithSongCount
 import com.github.pakka_papad.data.music.Song
 import kotlinx.coroutines.flow.Flow
 
+data class SongFingerprint(
+    val location: String,
+    val dateModifiedSec: Long,
+)
+
 @Dao
 interface SongDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAllSongs(data: List<Song>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrReplaceSongs(data: List<Song>)
+
     @Query("SELECT * FROM ${Constants.Tables.SONG_TABLE} ORDER BY title ASC")
     fun getAllSongs(): Flow<List<Song>>
 
     @Query("SELECT * FROM ${Constants.Tables.SONG_TABLE}")
     suspend fun getSongs(): List<Song>
+
+    @Query("SELECT COUNT(*) FROM ${Constants.Tables.SONG_TABLE}")
+    suspend fun getSongCount(): Int
+
+    @Query("SELECT location, dateModifiedSec FROM ${Constants.Tables.SONG_TABLE}")
+    suspend fun getSongFingerprints(): List<SongFingerprint>
+
+    @Query("DELETE FROM ${Constants.Tables.SONG_TABLE} WHERE location IN (:locations)")
+    suspend fun deleteSongsByLocationsChunk(locations: List<String>)
 
     @Update
     suspend fun updateSong(song: Song)
@@ -75,4 +92,49 @@ interface SongDao {
 
     @Query("SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE location IN (:locations)")
     suspend fun getSongsFromLocations(locations: List<String>): List<Song>
+
+    @Query("SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE location = :location LIMIT 1")
+    suspend fun getSongByLocation(location: String): Song?
+
+    @Query("SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE album = :albumName")
+    suspend fun getSongsByAlbumName(albumName: String): List<Song>
+
+    @Query("SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE artist = :artistName")
+    suspend fun getSongsByArtistName(artistName: String): List<Song>
+
+    /**
+     * All songs whose file path equals the folder or is under it (prefix + '/').
+     */
+    @Query(
+        "SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE location = :folderPath OR " +
+            "location LIKE :folderPath || '/%'"
+    )
+    suspend fun getSongsUnderFolderPath(folderPath: String): List<Song>
+
+    /** Title-only search for library; excludes dictaphone recordings folder. */
+    @Query(
+        "SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE title LIKE '%' || :query || '%' " +
+            "AND location NOT LIKE '%AudioPlayer/Recordings%' LIMIT 80",
+    )
+    suspend fun searchSongsByTitleExcludingDictaphone(query: String): List<Song>
+
+    /** Paths that may contain matching folder segments (bounded for performance). */
+    @Query(
+        "SELECT location FROM ${Constants.Tables.SONG_TABLE} WHERE location LIKE '%' || :query || '%' LIMIT 600",
+    )
+    suspend fun searchLocationsContainingForFolders(query: String): List<String>
+
+    @Query(
+        "SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE title LIKE '%' || :query || '%' " +
+            "AND location LIKE '%AudioPlayer/Recordings%' LIMIT 50",
+    )
+    suspend fun searchDictaphoneRecordingsByTitle(query: String): List<Song>
+}
+
+/** SQLite variable limit (~999); chunk deletes to stay safe. */
+suspend fun SongDao.deleteSongsByLocations(locations: Collection<String>) {
+    if (locations.isEmpty()) return
+    locations.chunked(450).forEach { chunk ->
+        deleteSongsByLocationsChunk(chunk)
+    }
 }

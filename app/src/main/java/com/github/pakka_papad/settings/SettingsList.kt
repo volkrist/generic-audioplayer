@@ -210,7 +210,7 @@ private fun LookAndFeelSettings(
     val icon by remember(themePreference.theme) { derivedStateOf {
         when (themePreference.theme) {
             UserPreferences.Theme.LIGHT_MODE, UserPreferences.Theme.UNRECOGNIZED -> R.drawable.baseline_light_mode_40
-            UserPreferences.Theme.DARK_MODE -> R.drawable.baseline_dark_mode_40
+            UserPreferences.Theme.DARK_MODE, UserPreferences.Theme.AMOLED_MODE -> R.drawable.baseline_dark_mode_40
             UserPreferences.Theme.USE_SYSTEM_MODE -> {
                 if (isSystemInDarkMode){
                     R.drawable.baseline_dark_mode_40
@@ -458,6 +458,13 @@ private fun ThemeSelectorDialog(
                     text = stringResource(R.string.system_mode),
                     onClick = {
                         onPreferenceChanged(themePreference.copy(theme = UserPreferences.Theme.USE_SYSTEM_MODE))
+                    }
+                )
+                ThemeMode(
+                    isSelected = (themePreference.theme == UserPreferences.Theme.AMOLED_MODE),
+                    text = stringResource(R.string.theme_amoled),
+                    onClick = {
+                        onPreferenceChanged(themePreference.copy(theme = UserPreferences.Theme.AMOLED_MODE))
                     }
                 )
             }

@@ -31,6 +31,38 @@ class HomeNavHelper(
         navController.navigate(R.id.action_homeFragment_to_settingsFragment)
     }
 
+    fun navigateToPlaceholder(screenTitle: String) {
+        if (!check()) return
+        navController.navigate(
+            HomeFragmentDirections.actionHomeFragmentToPlaceholderFragment(screenTitle)
+        )
+    }
+
+    fun navigateToSleepTimer() {
+        if (!check()) return
+        navController.navigate(R.id.action_homeFragment_to_sleepTimerFragment)
+    }
+
+    fun navigateToVolumeBooster() {
+        if (!check()) return
+        navController.navigate(R.id.action_homeFragment_to_volumeBoosterFragment)
+    }
+
+    fun navigateToEqualizer() {
+        if (!check()) return
+        navController.navigate(R.id.action_homeFragment_to_equalizerFragment)
+    }
+
+    fun navigateToDictaphone() {
+        if (!check()) return
+        navController.navigate(R.id.action_homeFragment_to_dictaphoneFragment)
+    }
+
+    fun navigateToTheme() {
+        if (!check()) return
+        navController.navigate(R.id.action_homeFragment_to_themeFragment)
+    }
+
     fun navigateToSearch() {
         if (!check()) return
         navController.navigate(R.id.action_homeFragment_to_searchFragment)
@@ -82,9 +114,7 @@ class HomeNavHelper(
     fun navigateToViewDetails(playlistId: Long) {
         if (!check()) return
         navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                CollectionType(CollectionType.PlaylistType, playlistId.toString())
-            )
+            HomeFragmentDirections.actionHomeFragmentToPlaylistEditorFragment(playlistId)
         )
     }
 
@@ -102,6 +132,26 @@ class HomeNavHelper(
         navController.navigate(
             HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
                 CollectionType(CollectionType.FavouritesType)
+            )
+        )
+    }
+
+    fun navigateToAlbumByName(albumName: String) {
+        if (!check()) return
+        if (albumName.isBlank() || albumName == "Unknown") return
+        navController.navigate(
+            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
+                CollectionType(CollectionType.AlbumType, albumName)
+            )
+        )
+    }
+
+    fun navigateToArtistByName(artistName: String) {
+        if (!check()) return
+        if (artistName.isBlank() || artistName == "Unknown") return
+        navController.navigate(
+            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
+                CollectionType(CollectionType.ArtistType, artistName)
             )
         )
     }

@@ -42,6 +42,12 @@ interface SongService {
 
     suspend fun updateSong(song: Song)
     suspend fun getSongsFromLocations(locations: List<String>): List<Song>
+
+    suspend fun getSongsByAlbumName(albumName: String): List<Song>
+
+    suspend fun getSongsByArtistName(artistName: String): List<Song>
+
+    suspend fun getSongsUnderFolderPath(folderPath: String): List<Song>
 }
 
 class SongServiceImpl(
@@ -108,5 +114,17 @@ class SongServiceImpl(
 
     override suspend fun getSongsFromLocations(locations: List<String>): List<Song> {
         return songDao.getSongsFromLocations(locations)
+    }
+
+    override suspend fun getSongsByAlbumName(albumName: String): List<Song> {
+        return songDao.getSongsByAlbumName(albumName)
+    }
+
+    override suspend fun getSongsByArtistName(artistName: String): List<Song> {
+        return songDao.getSongsByArtistName(artistName)
+    }
+
+    override suspend fun getSongsUnderFolderPath(folderPath: String): List<Song> {
+        return songDao.getSongsUnderFolderPath(folderPath)
     }
 }

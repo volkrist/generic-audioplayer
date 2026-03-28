@@ -107,7 +107,7 @@ private fun FavouritesCard(
     val scheme by remember(themePreference) { derivedStateOf {
         val isDark = when(themePreference.theme){
             UserPreferences.Theme.LIGHT_MODE, UserPreferences.Theme.UNRECOGNIZED -> false
-            UserPreferences.Theme.DARK_MODE -> true
+            UserPreferences.Theme.DARK_MODE, UserPreferences.Theme.AMOLED_MODE -> true
             UserPreferences.Theme.USE_SYSTEM_MODE -> isSystemDark
         }
         if (isDark) Scheme.dark(Color(0xFFE90064).toArgb())

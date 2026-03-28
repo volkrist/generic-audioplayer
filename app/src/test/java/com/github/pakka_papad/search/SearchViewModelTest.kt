@@ -1,22 +1,21 @@
 package com.github.pakka_papad.search
 
 import com.github.pakka_papad.MainDispatcherRule
-import com.github.pakka_papad.data.music.Album
 import com.github.pakka_papad.data.music.Song
+import com.github.pakka_papad.data.search.SearchRepository
 import com.github.pakka_papad.data.services.PlayerService
-import com.github.pakka_papad.data.services.QueueService
-import com.github.pakka_papad.data.services.SearchService
 import com.github.pakka_papad.util.MessageStore
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
@@ -30,12 +29,10 @@ class SearchViewModelTest {
 
     private val messageStore = mockk<MessageStore>(relaxed = true)
     private val playerService = mockk<PlayerService>()
-    private val queueService = mockk<QueueService>()
-    private val searchService = mockk<SearchService>()
+    private val searchRepository = mockk<SearchRepository>()
 
     private val query = "Good"
     private lateinit var songs: List<Song>
-    private lateinit var albums: List<Album>
     private lateinit var viewModel: SearchViewModel
 
     @Before
@@ -47,22 +44,15 @@ class SearchViewModelTest {
                 add(mockSong)
             }
         }
-        albums = buildList {
-            repeat(4) {
-                add(Album("Good album $it"))
-            }
-        }
-        coEvery { searchService.searchSongs(query) } returns songs
-        coEvery { searchService.searchAlbums(query) } returns albums
+        coEvery { searchRepository.search(query) } returns SearchResult(songs = songs)
         coEvery { playerService.startServiceIfNotRunning(any(), any()) } answers {
-            queueService.setQueue(firstArg(), secondArg())
+            // PlayerService drives queue internally
         }
         viewModel = SearchViewModel(
             messageStore = messageStore,
             playerService = playerService,
-            queueService = queueService,
-            searchService = searchService,
-            crashReporter = mockk(relaxed = true)
+            searchRepository = searchRepository,
+            crashReporter = mockk(relaxed = true),
         )
     }
 
@@ -74,51 +64,27 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun `verify updateQuery`() = runTest {
-        // Given
+    fun `verify updateQuery debounced search`() = runTest {
         startCollection()
-
-        // When
         viewModel.updateQuery(query)
-
-        // Then
+        advanceTimeBy(350)
         assertEquals(query, viewModel.query.value)
         assertEquals(songs, viewModel.searchResult.value.songs)
-        assertEquals(0, viewModel.searchResult.value.albums.size)
+        coVerify(exactly = 1) { searchRepository.search(query) }
     }
 
-    @Test
-    fun `verify updateType`() = runTest {
-        // Given
-        startCollection()
-        viewModel.updateQuery(query)
-
-        // When
-        viewModel.updateType(SearchType.Albums)
-
-        // Then
-        assertEquals(SearchType.Albums, viewModel.searchType.value)
-        assertEquals(albums, viewModel.searchResult.value.albums)
-        assertEquals(0, viewModel.searchResult.value.songs.size)
-    }
-
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `verify setQueue`() = runTest {
-        // Given
         startCollection()
-        every { queueService.setQueue(songs, 0) } returns Unit
+        viewModel.updateQuery(query)
+        advanceTimeBy(350)
+        advanceUntilIdle()
 
-        // When
         viewModel.setQueue(songs, 0)
 
-        // Then
         coVerify(exactly = 1) {
-            queueService.setQueue(songs, 0)
             playerService.startServiceIfNotRunning(songs, 0)
-        }
-        coVerifyOrder {
-            playerService.startServiceIfNotRunning(songs, 0)
-            queueService.setQueue(songs, 0)
         }
     }
 }

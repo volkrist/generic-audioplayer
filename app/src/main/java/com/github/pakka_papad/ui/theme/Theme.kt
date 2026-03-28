@@ -35,18 +35,26 @@ fun ZenTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val isDark = when(themePreference.theme){
+    val isSystemDark = isSystemInDarkTheme()
+    val wantsAmoled = themePreference.theme == UserPreferences.Theme.AMOLED_MODE
+    val isDark = when (themePreference.theme) {
         UserPreferences.Theme.LIGHT_MODE, UserPreferences.Theme.UNRECOGNIZED -> false
-        UserPreferences.Theme.DARK_MODE -> true
-        UserPreferences.Theme.USE_SYSTEM_MODE -> isSystemInDarkTheme()
+        UserPreferences.Theme.DARK_MODE, UserPreferences.Theme.AMOLED_MODE -> true
+        UserPreferences.Theme.USE_SYSTEM_MODE -> isSystemDark
     }
-    val colourScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && themePreference.useMaterialYou) {
-        if (isDark) dynamicDarkColorScheme(context)
-        else dynamicLightColorScheme(context)
-    } else {
-        themePreference.accent.getColorScheme(isDark)
+    val colourScheme = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && themePreference.useMaterialYou -> {
+            val base = when {
+                wantsAmoled -> dynamicDarkColorScheme(context)
+                isDark -> dynamicDarkColorScheme(context)
+                else -> dynamicLightColorScheme(context)
+            }
+            if (wantsAmoled) base.toAmoled() else base
+        }
+        wantsAmoled -> themePreference.accent.getColorScheme(isDark = true).toAmoled()
+        else -> themePreference.accent.getColorScheme(isDark)
     }
-    DisposableEffect(key1 = themePreference.theme, key2 = systemUiController) {
+    DisposableEffect(themePreference, systemUiController) {
         systemUiController.setSystemBarsColor(
             color = Color.Transparent,
             darkIcons = !isDark,

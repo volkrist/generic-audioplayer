@@ -155,8 +155,6 @@ dependencies {
     androidTestImplementation(Libraries.androidxTestKtx)
     androidTestImplementation(Libraries.androidxEspresso)
 
-    debugImplementation(Libraries.leakcanary)
-
     implementation(Libraries.hilt)
     implementation(Libraries.hiltWork)
     kapt(AnnotationProcessors.hiltCompiler)

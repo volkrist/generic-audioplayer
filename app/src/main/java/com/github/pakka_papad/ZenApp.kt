@@ -10,6 +10,10 @@ import cat.ereza.customactivityoncrash.config.CaocConfig
 import cat.ereza.customactivityoncrash.config.CaocConfig.BACKGROUND_MODE_SILENT
 import coil.ImageLoader
 import coil.ImageLoaderFactory
+import com.github.pakka_papad.BuildConfig
+import com.github.pakka_papad.data.ZenPreferenceProvider
+import com.github.pakka_papad.data.services.SleepTimerService
+import com.github.pakka_papad.equalizer.EqualizerManager
 import com.github.pakka_papad.workers.ThumbnailWorker
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.HiltAndroidApp
@@ -20,11 +24,24 @@ import javax.inject.Inject
 class ZenApp: Application(), ImageLoaderFactory, Configuration.Provider {
 
     @Inject lateinit var hiltWorkerFactory: HiltWorkerFactory
+    @Inject lateinit var sleepTimerService: SleepTimerService
+
+    @Inject lateinit var equalizerManager: EqualizerManager
+
+    @Inject lateinit var preferenceProvider: ZenPreferenceProvider
 
     override fun onCreate() {
         super.onCreate()
 
-        FirebaseApp.initializeApp(this)
+        // Theme is loaded from DataStore via ZenPreferenceProvider.theme (Eagerly); touch ensures early read.
+        preferenceProvider.theme.value
+
+        sleepTimerService.restoreIfNeeded()
+        with(equalizerManager) { }
+
+        if (!BuildConfig.DEBUG) {
+            FirebaseApp.initializeApp(this)
+        }
 
         if (BuildConfig.DEBUG){
             Timber.plant(Timber.DebugTree())

@@ -15,6 +15,7 @@ import com.github.pakka_papad.data.ZenCrashReporter
 import com.github.pakka_papad.data.music.Song
 import com.github.pakka_papad.data.services.QueueService
 import com.github.pakka_papad.data.services.SongService
+import com.github.pakka_papad.nowplaying.RepeatMode
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -126,6 +127,11 @@ class SessionCallback @Inject constructor(
                     }
                 }
             }
+            val repeatValues = RepeatMode.values()
+            val repeatMode = repeatValues.getOrNull(
+                state.repeatModeOrdinal.coerceIn(0, repeatValues.lastIndex),
+            ) ?: RepeatMode.NO_REPEAT
+            queueService.updateRepeatMode(repeatMode)
             queueService.clearQueue()
             queueService.setQueue(orderedSongs, state.startIndex)
             result.set(

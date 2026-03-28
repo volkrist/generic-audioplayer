@@ -9,6 +9,7 @@ message UserPreferences {
     LIGHT_MODE = 0;
     DARK_MODE = 1;
     USE_SYSTEM_MODE = 2;
+    AMOLED_MODE = 3;
   }
   Theme chosenTheme = 2;
   bool onBoardingComplete = 3;
@@ -29,4 +30,23 @@ message UserPreferences {
   PlaybackParams playbackParams = 6;
   repeated int32 selectedTabs = 7;
   map<int32, int32> chosenSortOrder = 8;
+  // Sleep timer: wall-clock end time for duration-based timer (ms since epoch); 0 = inactive
+  int64 sleep_timer_end_epoch_ms = 9;
+  bool sleep_timer_stop_after_current_track = 10;
+  // In-app volume multiplier percent (100 = unity, 200 = 2x). Does not change system volume.
+  int32 volume_booster_percent = 11;
+
+  enum EqualizerPreset {
+    EQUALIZER_PRESET_NORMAL = 0;
+    EQUALIZER_PRESET_BASS = 1;
+    EQUALIZER_PRESET_ROCK = 2;
+    EQUALIZER_PRESET_POP = 3;
+    EQUALIZER_PRESET_CLASSICAL = 4;
+    EQUALIZER_PRESET_CUSTOM = 5;
+  }
+  EqualizerPreset equalizer_preset = 12;
+  // CUSTOM curve only; for presets levels are derived at runtime
+  repeated int32 equalizer_custom_band_mb = 13;
+  int32 bass_boost_strength = 14;
+  int32 virtualizer_strength = 15;
 }

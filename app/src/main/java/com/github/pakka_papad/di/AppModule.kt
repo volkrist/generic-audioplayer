@@ -15,8 +15,10 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.mp3.Mp3Extractor
 import androidx.room.Room
+import com.github.pakka_papad.BuildConfig
 import com.github.pakka_papad.Constants
 import com.github.pakka_papad.data.AppDatabase
+import com.github.pakka_papad.data.Migration4To5
 import com.github.pakka_papad.data.QueueState
 import com.github.pakka_papad.data.QueueStateSerializer
 import com.github.pakka_papad.data.UserPreferences
@@ -34,6 +36,8 @@ import com.github.pakka_papad.data.services.PlaylistService
 import com.github.pakka_papad.data.services.PlaylistServiceImpl
 import com.github.pakka_papad.data.services.QueueService
 import com.github.pakka_papad.data.services.QueueServiceImpl
+import com.github.pakka_papad.data.search.SearchRepository
+import com.github.pakka_papad.data.search.SearchRepositoryImpl
 import com.github.pakka_papad.data.services.SearchService
 import com.github.pakka_papad.data.services.SearchServiceImpl
 import com.github.pakka_papad.data.services.SleepTimerService
@@ -72,7 +76,8 @@ object AppModule {
             context.applicationContext,
             AppDatabase::class.java,
             Constants.DATABASE_NAME
-        ).build()
+        ).addMigrations(Migration4To5)
+            .build()
     }
 
     @SuppressLint("UnsafeOptInUsageError")
@@ -145,9 +150,12 @@ object AppModule {
     @Singleton
     @Provides
     fun providesZenCrashReporter(): ZenCrashReporter {
-        return ZenCrashReporter(
-            firebase = FirebaseCrashlytics.getInstance()
-        )
+        val crashlytics = if (BuildConfig.DEBUG) {
+            null
+        } else {
+            FirebaseCrashlytics.getInstance()
+        }
+        return ZenCrashReporter(firebase = crashlytics)
     }
 
     @Singleton
@@ -200,6 +208,7 @@ object AppModule {
         return PlaylistServiceImpl(
             playlistDao = db.playlistDao(),
             thumbnailDao = db.thumbnailDao(),
+            songDao = db.songDao(),
         )
     }
 
@@ -271,6 +280,19 @@ object AppModule {
 
     @Singleton
     @Provides
+    fun providesSearchRepository(
+        db: AppDatabase,
+    ): SearchRepository {
+        return SearchRepositoryImpl(
+            songDao = db.songDao(),
+            albumDao = db.albumDao(),
+            artistDao = db.artistDao(),
+            playlistDao = db.playlistDao(),
+        )
+    }
+
+    @Singleton
+    @Provides
     fun providesMessageStore(
         @ApplicationContext context: Context,
     ): MessageStore {
@@ -283,6 +305,7 @@ object AppModule {
     @Provides
     fun providesSleepTimerService(
         @ApplicationContext context: Context,
+        userPreferences: DataStore<UserPreferences>,
     ): SleepTimerService {
         return SleepTimerServiceImpl(
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
@@ -293,7 +316,8 @@ object AppModule {
                     ZenBroadcastReceiver.ZEN_PLAYER_CANCEL
                 ),
                 PendingIntent.FLAG_IMMUTABLE
-            )
+            ),
+            userPreferences = userPreferences,
         )
     }
 

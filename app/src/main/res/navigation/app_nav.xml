@@ -36,6 +36,55 @@
             app:exitAnim="@anim/fade_out_exit"
             app:popEnterAnim="@anim/fade_in_enter"
             app:popExitAnim="@anim/fade_out_exit" />
+        <action
+            android:id="@+id/action_homeFragment_to_placeholderFragment"
+            app:destination="@id/placeholderFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+        <action
+            android:id="@+id/action_homeFragment_to_sleepTimerFragment"
+            app:destination="@id/sleepTimerFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+        <action
+            android:id="@+id/action_homeFragment_to_volumeBoosterFragment"
+            app:destination="@id/volumeBoosterFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+        <action
+            android:id="@+id/action_homeFragment_to_equalizerFragment"
+            app:destination="@id/equalizerFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+        <action
+            android:id="@+id/action_homeFragment_to_dictaphoneFragment"
+            app:destination="@id/dictaphoneFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+        <action
+            android:id="@+id/action_homeFragment_to_themeFragment"
+            app:destination="@id/themeFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+        <action
+            android:id="@+id/action_homeFragment_to_playlistEditorFragment"
+            app:destination="@id/playlistEditorFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
     </fragment>
     <fragment
         android:id="@+id/collectionFragment"
@@ -126,6 +175,13 @@
             app:exitAnim="@anim/zen_open_exit"
             app:popEnterAnim="@anim/zen_close_enter"
             app:popExitAnim="@anim/zen_close_exit"/>
+        <action
+            android:id="@+id/action_searchFragment_to_playlistEditorFragment"
+            app:destination="@id/playlistEditorFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
     </fragment>
     <fragment
         android:id="@+id/restoreFragment"
@@ -139,4 +195,55 @@
         android:id="@+id/restoreFolderFragment"
         android:name="com.github.pakka_papad.restore_folder.RestoreFolderFragment"
         android:label="RestoreFolderFragment" />
+    <fragment
+        android:id="@+id/placeholderFragment"
+        android:name="com.github.pakka_papad.drawer.PlaceholderFragment"
+        android:label="PlaceholderFragment" >
+        <argument
+            android:name="screenTitle"
+            app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/sleepTimerFragment"
+        android:name="com.github.pakka_papad.sleeptimer.SleepTimerFragment"
+        android:label="SleepTimerFragment" />
+    <fragment
+        android:id="@+id/volumeBoosterFragment"
+        android:name="com.github.pakka_papad.volume.VolumeBoosterFragment"
+        android:label="VolumeBoosterFragment" />
+    <fragment
+        android:id="@+id/equalizerFragment"
+        android:name="com.github.pakka_papad.equalizer.EqualizerFragment"
+        android:label="EqualizerFragment" />
+    <fragment
+        android:id="@+id/dictaphoneFragment"
+        android:name="com.github.pakka_papad.dictaphone.DictaphoneFragment"
+        android:label="DictaphoneFragment" />
+    <fragment
+        android:id="@+id/themeFragment"
+        android:name="com.github.pakka_papad.theme.ThemeFragment"
+        android:label="ThemeFragment" />
+    <fragment
+        android:id="@+id/playlistEditorFragment"
+        android:name="com.github.pakka_papad.playlisteditor.PlaylistEditorFragment"
+        android:label="PlaylistEditorFragment" >
+        <argument
+            android:name="playlistId"
+            app:argType="long" />
+        <action
+            android:id="@+id/action_playlistEditorFragment_to_addSongsToPlaylistFragment"
+            app:destination="@id/addSongsToPlaylistFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+    </fragment>
+    <fragment
+        android:id="@+id/addSongsToPlaylistFragment"
+        android:name="com.github.pakka_papad.playlisteditor.AddSongsToPlaylistFragment"
+        android:label="AddSongsToPlaylistFragment" >
+        <argument
+            android:name="playlistId"
+            app:argType="long" />
+    </fragment>
 </navigation>

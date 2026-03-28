@@ -8,7 +8,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.github.pakka_papad.Constants
 import com.github.pakka_papad.R
 import com.github.pakka_papad.components.SortOptions
+import com.github.pakka_papad.data.QueueStateProvider
 import com.github.pakka_papad.data.ZenCrashReporter
+import com.github.pakka_papad.data.library.LibraryRepository
 import com.github.pakka_papad.data.ZenPreferenceProvider
 import com.github.pakka_papad.data.music.MiniSong
 import com.github.pakka_papad.data.music.PlaylistWithSongCount
@@ -22,6 +24,7 @@ import com.github.pakka_papad.data.services.SongService
 import com.github.pakka_papad.storage_explorer.Directory
 import com.github.pakka_papad.storage_explorer.DirectoryContents
 import com.github.pakka_papad.storage_explorer.MusicFileExplorer
+import com.github.pakka_papad.player.ZenPlayer
 import com.github.pakka_papad.util.MessageStore
 import com.github.pakka_papad.util.NaturalOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -45,12 +48,14 @@ class HomeViewModel @Inject constructor(
     private val messageStore: MessageStore,
     private val exoPlayer: ExoPlayer,
     private val songExtractor: SongExtractor,
+    private val libraryRepository: LibraryRepository,
     private val prefs: ZenPreferenceProvider,
     private val playlistService: PlaylistService,
     private val blacklistService: BlacklistService,
     private val songService: SongService,
     private val queueService: QueueService,
     private val playerService: PlayerService,
+    private val queueStateProvider: QueueStateProvider,
     private val crashReporter: ZenCrashReporter,
 ) : ViewModel() {
 
@@ -216,10 +221,31 @@ class HomeViewModel @Inject constructor(
     }
 
     init {
+        queueService.addListener(queueServiceListener)
+        viewModelScope.launch(Dispatchers.IO) {
+            libraryRepository.loadLibraryFromCache()
+            queueStateProvider.restoreQueueIfPossible(songService, queueService)
+            libraryRepository.updateLibraryFromMediaStore()
+        }
         _currentSongPlaying.update { exoPlayer.isPlaying }
         exoPlayer.addListener(exoPlayerListener)
-        queue.addAll(queueService.queue)
-        queueService.addListener(queueServiceListener)
+    }
+
+    fun onMiniPlayerPlayPause() {
+        viewModelScope.launch {
+            if (queueService.queue.isEmpty()) return@launch
+            if (ZenPlayer.isRunning.get()) {
+                playerService.togglePlayPauseIfRunning()
+            } else {
+                playerService.startServiceIfNotRunning(
+                    songs = queueService.queue,
+                    startPlayingFromPosition = queueService.currentQueueIndex(),
+                    startPositionMs = queueStateProvider.readStartPositionMs(),
+                    autoPlay = true,
+                    usePersistedShuffle = true,
+                )
+            }
+        }
     }
 
     private val _message = MutableStateFlow("")
@@ -403,6 +429,25 @@ class HomeViewModel @Inject constructor(
     fun moveToParent() {
         viewModelScope.launch(Dispatchers.IO) {
             explorer.moveToParent()
+            _isExplorerAtRoot.update { explorer.isRoot }
+        }
+    }
+
+    private val _switchToFoldersTab = MutableStateFlow(false)
+    val switchToFoldersTab = _switchToFoldersTab.asStateFlow()
+
+    fun consumeSwitchToFoldersTab() {
+        _switchToFoldersTab.value = false
+    }
+
+    /**
+     * Opens the file browser at [absolutePath] and requests the Home UI to switch to the Folders tab.
+     * Used from global search when the user picks a folder result.
+     */
+    fun navigateToFolderInExplorer(absolutePath: String) {
+        _switchToFoldersTab.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            explorer.moveInsideDirectory(absolutePath)
             _isExplorerAtRoot.update { explorer.isRoot }
         }
     }

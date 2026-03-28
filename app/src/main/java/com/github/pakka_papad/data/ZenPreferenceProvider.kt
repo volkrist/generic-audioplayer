@@ -3,6 +3,7 @@ package com.github.pakka_papad.data
 import androidx.datastore.core.DataStore
 import com.github.pakka_papad.Screens
 import com.github.pakka_papad.components.SortOptions
+import com.github.pakka_papad.data.UserPreferences.EqualizerPreset
 import com.github.pakka_papad.data.UserPreferences.PlaybackParams
 import com.github.pakka_papad.ui.theme.ThemePreference
 import kotlinx.coroutines.CoroutineScope
@@ -11,6 +12,13 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.minutes
+
+data class EqualizerSettings(
+    val preset: EqualizerPreset,
+    val customBandsMb: List<Int>,
+    val bassStrength: Int,
+    val virtualizerStrength: Int,
+)
 
 class ZenPreferenceProvider @Inject constructor(
     private val userPreferences: DataStore<UserPreferences>,
@@ -48,9 +56,13 @@ class ZenPreferenceProvider @Inject constructor(
             it.onBoardingComplete
         }.stateIn(
             scope = coroutineScope,
-            started = SharingStarted.WhileSubscribed(5_000),
+            started = SharingStarted.Eagerly,
             initialValue = null
         )
+
+    /** One-shot read for splash navigation — avoids waiting on StateFlow null. */
+    suspend fun readOnBoardingComplete(): Boolean =
+        userPreferences.data.first().onBoardingComplete
 
     fun setOnBoardingComplete() {
         coroutineScope.launch {
@@ -94,6 +106,104 @@ class ZenPreferenceProvider @Inject constructor(
                     playbackPitch = 100
                 }
         )
+
+    val volumeBoosterPercent = userPreferences.data
+        .map { prefs ->
+            val p = prefs.volumeBoosterPercent
+            if (p in 100..200) p else 100
+        }
+        .stateIn(
+            scope = coroutineScope,
+            started = SharingStarted.Eagerly,
+            initialValue = 100,
+        )
+
+    fun updateVolumeBoosterPercent(percent: Int) {
+        val clamped = percent.coerceIn(100, 200)
+        coroutineScope.launch {
+            userPreferences.updateData {
+                it.copy {
+                    volumeBoosterPercent = clamped
+                }
+            }
+        }
+    }
+
+    val equalizerSettings: StateFlow<EqualizerSettings> = userPreferences.data
+        .map { prefs ->
+            EqualizerSettings(
+                preset = prefs.equalizerPreset,
+                customBandsMb = prefs.equalizerCustomBandMbList.map { it.toInt() },
+                bassStrength = prefs.bassBoostStrength.coerceIn(0, 1000),
+                virtualizerStrength = prefs.virtualizerStrength.coerceIn(0, 1000),
+            )
+        }
+        .stateIn(
+            scope = coroutineScope,
+            started = SharingStarted.Eagerly,
+            initialValue = EqualizerSettings(
+                preset = EqualizerPreset.EQUALIZER_PRESET_NORMAL,
+                customBandsMb = emptyList(),
+                bassStrength = 0,
+                virtualizerStrength = 0,
+            ),
+        )
+
+    fun updateEqualizerPreset(preset: EqualizerPreset) {
+        coroutineScope.launch {
+            userPreferences.updateData {
+                it.copy {
+                    equalizerPreset = preset
+                    if (preset != EqualizerPreset.EQUALIZER_PRESET_CUSTOM) {
+                        equalizerCustomBandMb.clear()
+                    }
+                }
+            }
+        }
+    }
+
+    fun updateEqualizerCustomBands(bandsMb: List<Int>) {
+        coroutineScope.launch {
+            userPreferences.updateData {
+                it.copy {
+                    equalizerPreset = EqualizerPreset.EQUALIZER_PRESET_CUSTOM
+                    equalizerCustomBandMb.clear()
+                    equalizerCustomBandMb.addAll(bandsMb)
+                }
+            }
+        }
+    }
+
+    fun updateBassBoostStrength(strength: Int) {
+        val s = strength.coerceIn(0, 1000)
+        coroutineScope.launch {
+            userPreferences.updateData {
+                it.copy { bassBoostStrength = s }
+            }
+        }
+    }
+
+    fun updateVirtualizerStrength(strength: Int) {
+        val s = strength.coerceIn(0, 1000)
+        coroutineScope.launch {
+            userPreferences.updateData {
+                it.copy { virtualizerStrength = s }
+            }
+        }
+    }
+
+    fun resetEqualizerToDefaults() {
+        coroutineScope.launch {
+            userPreferences.updateData {
+                it.copy {
+                    equalizerPreset = EqualizerPreset.EQUALIZER_PRESET_NORMAL
+                    equalizerCustomBandMb.clear()
+                    bassBoostStrength = 0
+                    virtualizerStrength = 0
+                }
+            }
+        }
+    }
 
     fun updatePlaybackParams(speed: Int, pitch: Int){
         coroutineScope.launch {

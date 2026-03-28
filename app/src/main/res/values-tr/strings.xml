@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Zen Müzik</string>
-    <string name="music_control_widget_description">Müzik Kontrol Widget\'ı</string>
+    <string name="player_widget_medium_description">Şimdi çalıyor (orta)</string>
+    <string name="player_widget_small_description">Oynatıcı (kompakt)</string>
 
     <!-- UI messages -->
     <string name="done_rescan_to_see_all_the_restored_songs">Tamamlandı. Geri yüklenen tüm şarkıları görmek için yeniden tarayın</string>
@@ -19,6 +20,15 @@
     <string name="clear_button">Temizle butonu</string>
     <string name="search_icon">Arama butonu</string>
     <string name="search_for_songs_albums_artists_playlists">Şarkıları, albümleri, sanatçıları, çalma listelerini arayın…</string>
+    <string name="search_global_hint">Parça, albüm, sanatçı, klasör, çalma listesi, diktafon…</string>
+    <string name="search_type_hint">Aramak için yazın. Sonuçlar kategorilere ayrılır.</string>
+    <string name="search_no_results">Sonuç yok</string>
+    <string name="search_section_songs">Şarkılar</string>
+    <string name="search_section_albums">Albümler</string>
+    <string name="search_section_artists">Sanatçılar</string>
+    <string name="search_section_folders">Klasörler</string>
+    <string name="search_section_playlists">Çalma listeleri</string>
+    <string name="search_section_dictaphone">Diktafon</string>
     <string name="sad_face_image">Üzgün yüz görüntüsü</string>
     <string name="more_menu_button">Daha fazla menü düğmesi</string>
     <string name="no_songs_found">Şarkı bulunamadı</string>

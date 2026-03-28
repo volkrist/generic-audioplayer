@@ -42,4 +42,28 @@ interface PlaylistDao {
             "${Constants.Tables.PLAYLIST_SONG_CROSS_REF_TABLE} GROUP BY playlistId)")
     fun getAllPlaylistWithSongCount(): Flow<List<PlaylistWithSongCount>>
 
+    @Query(
+        "SELECT COALESCE(MAX(position), -1) FROM ${Constants.Tables.PLAYLIST_SONG_CROSS_REF_TABLE} " +
+            "WHERE playlistId = :playlistId"
+    )
+    suspend fun getMaxPosition(playlistId: Long): Int
+
+    @Query(
+        "UPDATE ${Constants.Tables.PLAYLIST_SONG_CROSS_REF_TABLE} SET position = :position " +
+            "WHERE playlistId = :playlistId AND location = :location"
+    )
+    suspend fun updateSongPosition(playlistId: Long, location: String, position: Int)
+
+    @Query(
+        "SELECT * FROM ${Constants.Tables.PLAYLIST_SONG_CROSS_REF_TABLE} WHERE playlistId = :playlistId " +
+            "ORDER BY position ASC, location ASC"
+    )
+    suspend fun getCrossRefsOrdered(playlistId: Long): List<PlaylistSongCrossRef>
+
+    @Transaction
+    suspend fun setPlaylistSongOrder(playlistId: Long, orderedLocations: List<String>) {
+        orderedLocations.forEachIndexed { index, location ->
+            updateSongPosition(playlistId, location, index)
+        }
+    }
 }

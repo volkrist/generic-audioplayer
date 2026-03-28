@@ -11,7 +11,6 @@ import androidx.navigation.fragment.findNavController
 import com.github.pakka_papad.R
 import com.github.pakka_papad.data.ZenPreferenceProvider
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -34,15 +33,18 @@ class SplashFragment : Fragment() {
     ): View? {
         navController = findNavController()
         lifecycleScope.launch {
-            preferenceProvider.isOnBoardingComplete.collectLatest {
-                if (it == null) return@collectLatest
-                if (navController.currentDestination?.id != R.id.splashFragment) return@collectLatest
-                val nextFragment = when(it){
-                    true -> R.id.action_splashFragment_to_homeFragment
-                    false -> R.id.action_splashFragment_to_onBoardingFragment
-                }
-                navController.navigate(nextFragment)
+            val complete = try {
+                preferenceProvider.readOnBoardingComplete()
+            } catch (_: Exception) {
+                false
             }
+            if (navController.currentDestination?.id != R.id.splashFragment) return@launch
+            val action = if (complete) {
+                R.id.action_splashFragment_to_homeFragment
+            } else {
+                R.id.action_splashFragment_to_onBoardingFragment
+            }
+            navController.navigate(action)
         }
         return null
     }

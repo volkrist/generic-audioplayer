@@ -34,6 +34,11 @@ class UserPreferencesSerializer @Inject constructor() : Serializer<UserPreferenc
                 put(Screens.Playlists.ordinal, SortOptions.NameASC.ordinal)
                 put(Screens.Folders.ordinal, SortOptions.Default.ordinal)
             }
+            volumeBoosterPercent = 100
+            equalizerPreset = UserPreferences.EqualizerPreset.EQUALIZER_PRESET_NORMAL
+            equalizerCustomBandMb.clear()
+            bassBoostStrength = 0
+            virtualizerStrength = 0
         }
 
     override suspend fun readFrom(input: InputStream): UserPreferences =

@@ -2,6 +2,7 @@ package com.github.pakka_papad.data.services
 
 import com.github.pakka_papad.assertCollectionEquals
 import com.github.pakka_papad.data.daos.PlaylistDao
+import com.github.pakka_papad.data.daos.SongDao
 import com.github.pakka_papad.data.music.Playlist
 import com.github.pakka_papad.data.music.PlaylistExceptId
 import com.github.pakka_papad.data.music.PlaylistSongCrossRef
@@ -25,6 +26,7 @@ class PlaylistServiceImplTest {
 
     private val playlistDao = mockk<PlaylistDao>()
     private val thumbnailDao = mockk<ThumbnailDao>()
+    private val songDao = mockk<SongDao>()
     private val initialPlaylistsWithSongCount: List<PlaylistWithSongCount>
     private val playlistsFlow: MutableStateFlow<List<PlaylistWithSongCount>>
 
@@ -44,6 +46,8 @@ class PlaylistServiceImplTest {
         }
         playlistsFlow = MutableStateFlow(initialPlaylistsWithSongCount)
         every { playlistDao.getAllPlaylistWithSongCount() } returns playlistsFlow
+        coEvery { playlistDao.getMaxPosition(any()) } returns -1
+        coEvery { songDao.getSongByLocation(any()) } returns null
     }
 
     @Test
@@ -65,6 +69,7 @@ class PlaylistServiceImplTest {
         val service = PlaylistServiceImpl(
             playlistDao = playlistDao,
             thumbnailDao = thumbnailDao,
+            songDao = songDao,
         )
         assertCollectionEquals(initialPlaylistsWithSongCount, service.playlists.first())
 
@@ -97,6 +102,7 @@ class PlaylistServiceImplTest {
         val service = PlaylistServiceImpl(
             playlistDao = playlistDao,
             thumbnailDao = thumbnailDao,
+            songDao = songDao,
         )
         assertCollectionEquals(initialPlaylistsWithSongCount, service.playlists.first())
 
@@ -132,6 +138,7 @@ class PlaylistServiceImplTest {
         val service = PlaylistServiceImpl(
             playlistDao = playlistDao,
             thumbnailDao = thumbnailDao,
+            songDao = songDao,
         )
         assertCollectionEquals(initialPlaylistsWithSongCount, service.playlists.first())
 
@@ -176,6 +183,7 @@ class PlaylistServiceImplTest {
         val service = PlaylistServiceImpl(
             playlistDao = playlistDao,
             thumbnailDao = thumbnailDao,
+            songDao = songDao,
         )
         assertCollectionEquals(initialPlaylistsWithSongCount, service.playlists.first())
 
@@ -217,6 +225,7 @@ class PlaylistServiceImplTest {
         val service = PlaylistServiceImpl(
             playlistDao = playlistDao,
             thumbnailDao = thumbnailDao,
+            songDao = songDao,
         )
         assertCollectionEquals(initialPlaylistsWithSongCount, service.playlists.first())
 
@@ -256,6 +265,7 @@ class PlaylistServiceImplTest {
         val service = PlaylistServiceImpl(
             playlistDao = playlistDao,
             thumbnailDao = thumbnailDao,
+            songDao = songDao,
         )
         assertCollectionEquals(initialPlaylistsWithSongCount, service.playlists.first())
 
@@ -301,6 +311,7 @@ class PlaylistServiceImplTest {
         val service = PlaylistServiceImpl(
             playlistDao = playlistDao,
             thumbnailDao = thumbnailDao,
+            songDao = songDao,
         )
         assertCollectionEquals(initialPlaylistsWithSongCount, service.playlists.first())
 
@@ -338,6 +349,7 @@ class PlaylistServiceImplTest {
         val service = PlaylistServiceImpl(
             playlistDao = playlistDao,
             thumbnailDao = thumbnailDao,
+            songDao = songDao,
         )
         assertCollectionEquals(initialPlaylistsWithSongCount, service.playlists.first())
 
@@ -383,6 +395,7 @@ class PlaylistServiceImplTest {
         val service = PlaylistServiceImpl(
             playlistDao = playlistDao,
             thumbnailDao = thumbnailDao,
+            songDao = songDao,
         )
         assertCollectionEquals(initialPlaylistsWithSongCount, service.playlists.first())
 

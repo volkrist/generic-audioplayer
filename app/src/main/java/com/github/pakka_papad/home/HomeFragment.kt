@@ -32,6 +32,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.rememberSwipeableState
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalAbsoluteTonalElevation
@@ -43,6 +44,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.DisposableEffect
@@ -58,11 +60,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -95,7 +98,7 @@ class HomeFragment : Fragment() {
 
     private lateinit var navController: NavController
 
-    private val viewModel: HomeViewModel by viewModels()
+    private val viewModel: HomeViewModel by activityViewModels()
 
     @Inject lateinit var exoPlayer: ExoPlayer
     @Inject lateinit var preferenceProvider: ZenPreferenceProvider
@@ -111,14 +114,6 @@ class HomeFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         navController = findNavController()
-        val pendingPausePlayIntent = PendingIntent.getBroadcast(
-            context, ZenBroadcastReceiver.PAUSE_PLAY_ACTION_REQUEST_CODE,
-            Intent(Constants.PACKAGE_NAME).putExtra(
-                ZenBroadcastReceiver.AUDIO_CONTROL,
-                ZenBroadcastReceiver.ZEN_PLAYER_PAUSE_PLAY
-            ),
-            PendingIntent.FLAG_IMMUTABLE
-        )
         val pendingPreviousIntent = PendingIntent.getBroadcast(
             context, ZenBroadcastReceiver.PREVIOUS_ACTION_REQUEST_CODE,
             Intent(Constants.PACKAGE_NAME).putExtra(
@@ -144,9 +139,18 @@ class HomeFragment : Fragment() {
                 val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
                 ZenTheme(themePreference, systemUiController) {
+                    val context = LocalContext.current
                     val selectedTabs by preferenceProvider.selectedTabs.collectAsStateWithLifecycle()
                     var currentScreen by rememberSaveable { mutableStateOf(Screens.Songs) }
+                    val switchToFoldersTab by viewModel.switchToFoldersTab.collectAsStateWithLifecycle()
+                    LaunchedEffect(switchToFoldersTab) {
+                        if (switchToFoldersTab) {
+                            currentScreen = Screens.Folders
+                            viewModel.consumeSwitchToFoldersTab()
+                        }
+                    }
                     val scope = rememberCoroutineScope()
+                    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
                     val sortOrder by preferenceProvider.sortOrder.collectAsStateWithLifecycle()
 
@@ -259,9 +263,13 @@ class HomeFragment : Fragment() {
                     }
 
                     BackHandler(
-                        enabled = (currentScreen == Screens.Folders && !isExplorerAtRoot) || swipeableState.currentValue == 1,
+                        enabled = drawerState.currentValue == DrawerValue.Open ||
+                            (currentScreen == Screens.Folders && !isExplorerAtRoot) ||
+                            swipeableState.currentValue == 1,
                         onBack = {
-                            if (swipeableState.currentValue == 1) {
+                            if (drawerState.currentValue == DrawerValue.Open) {
+                                scope.launch { drawerState.close() }
+                            } else if (swipeableState.currentValue == 1) {
                                 scope.launch {
                                     if (isQueueBottomSheetExpanded) playerScaffoldState.bottomSheetState.hide()
                                     else swipeableState.animateTo(0)
@@ -278,7 +286,7 @@ class HomeFragment : Fragment() {
                     val songScreenPlayAllClicked = remember { { viewModel.setQueue(songs) } }
                     val songScreenShuffleClicked = remember { { viewModel.shufflePlay(songs) } }
                     val miniPlayerPlayPauseClicked = remember { {
-                        if (swipeableState.currentValue == 0) { pendingPausePlayIntent.send() }
+                        if (swipeableState.currentValue == 0) { viewModel.onMiniPlayerPlayPause() }
                     } }
                     val expandQueueBottomSheet = remember<() -> Unit> {
                         { scope.launch { playerScaffoldState.bottomSheetState.expand() } }
@@ -306,6 +314,26 @@ class HomeFragment : Fragment() {
                         }
                     }
 
+                    HomeNavigationDrawer(
+                        drawerState = drawerState,
+                        onItemClick = { item ->
+                            scope.launch {
+                                drawerState.close()
+                                when (item) {
+                                    DrawerMenuDestination.Library -> { }
+                                    DrawerMenuDestination.Settings -> navHelper.navigateToSettings()
+                                    DrawerMenuDestination.SleepTimer -> navHelper.navigateToSleepTimer()
+                                    DrawerMenuDestination.VolumeBooster -> navHelper.navigateToVolumeBooster()
+                                    DrawerMenuDestination.Equalizer -> navHelper.navigateToEqualizer()
+                                    DrawerMenuDestination.Dictaphone -> navHelper.navigateToDictaphone()
+                                    DrawerMenuDestination.GraphicTheme -> navHelper.navigateToTheme()
+                                    DrawerMenuDestination.Widgets -> navHelper.navigateToPlaceholder(
+                                        context.getString(item.titleRes),
+                                    )
+                                }
+                            }
+                        },
+                    ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -317,6 +345,7 @@ class HomeFragment : Fragment() {
                                 .padding(bottom = homeScreenBottomPadding),
                             topBar = {
                                 HomeTopBar(
+                                    onMenuClicked = { scope.launch { drawerState.open() } },
                                     onSettingsClicked = navHelper::navigateToSettings,
                                     onSearchClicked = navHelper::navigateToSearch,
                                     currentScreen = currentScreen,
@@ -482,7 +511,7 @@ class HomeFragment : Fragment() {
                                             NowPlayingScreen(
                                                 paddingValues = paddingValues,
                                                 song = it,
-                                                onPausePlayPressed = pendingPausePlayIntent::send,
+                                                onPausePlayPressed = viewModel::onMiniPlayerPlayPause,
                                                 onPreviousPressed = pendingPreviousIntent::send,
                                                 onNextPressed = pendingNextIntent::send,
                                                 songPlaying = songPlaying,
@@ -499,6 +528,19 @@ class HomeFragment : Fragment() {
                                                 onTimerBegin = sleepTimerService::begin,
                                                 onTimerCancel = sleepTimerService::cancel,
                                                 onSaveQueueClicked = { navHelper.navigateToChoosePlaylist(queue) },
+                                                onShuffleClicked = { viewModel.shufflePlay(queue.toList()) },
+                                                onEqualizerClicked = navHelper::navigateToEqualizer,
+                                                onVolumeBoosterClicked = navHelper::navigateToVolumeBooster,
+                                                onOpenAlbum = { navHelper.navigateToAlbumByName(it.album) },
+                                                onOpenArtist = { navHelper.navigateToArtistByName(it.artist) },
+                                                onOpenFolder = {
+                                                    java.io.File(it.location).parentFile?.let { dir ->
+                                                        viewModel.navigateToFolderInExplorer(dir.absolutePath)
+                                                    }
+                                                },
+                                                onAddCurrentSongToPlaylist = {
+                                                    navHelper.navigateToChoosePlaylist(it)
+                                                },
                                             )
                                         },
                                         sheetContent = {
@@ -537,6 +579,7 @@ class HomeFragment : Fragment() {
                                 selectedTabs = selectedTabs,
                             )
                         }
+                    }
                     }
                 }
             }

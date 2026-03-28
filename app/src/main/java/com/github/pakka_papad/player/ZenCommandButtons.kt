@@ -40,8 +40,8 @@ object ZenCommandButtons {
         CommandButton.Builder()
             .apply {
                 setPlayerCommand(Player.COMMAND_PLAY_PAUSE)
-                setDisplayName("Previous")
-                setIconResId(R.drawable.ic_baseline_skip_previous_40)
+                setDisplayName("Play/Pause")
+                setIconResId(R.drawable.ic_baseline_play_arrow_40)
             }.build()
     }
 

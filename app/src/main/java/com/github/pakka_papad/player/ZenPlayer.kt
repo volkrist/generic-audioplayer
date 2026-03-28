@@ -1,11 +1,12 @@
 package com.github.pakka_papad.player
 
 import android.annotation.SuppressLint
-import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
@@ -30,7 +31,7 @@ import com.github.pakka_papad.data.services.SleepTimerService
 import com.github.pakka_papad.data.services.SongService
 import com.github.pakka_papad.toCorrectedParams
 import com.github.pakka_papad.toExoPlayerPlaybackParameters
-import com.github.pakka_papad.widgets.WidgetBroadcast
+import com.github.pakka_papad.widgets.PlayerWidgetManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +39,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
@@ -61,12 +63,57 @@ class ZenPlayer : MediaSessionService(), QueueService.Listener, ZenBroadcastRece
     @Inject lateinit var preferencesProvider: ZenPreferenceProvider
     @Inject lateinit var queueStateProvider: QueueStateProvider
     @Inject lateinit var sessionCallback: SessionCallback
-    @Inject lateinit var notificationProvider: NotificationProvider
+    @Inject lateinit var playerNotificationManager: PlayerNotificationManager
+    @Inject lateinit var playerWidgetManager: PlayerWidgetManager
 
     private var broadcastReceiver: ZenBroadcastReceiver? = null
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(job + Dispatchers.Default)
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private val debouncedSaveRunnable = Runnable {
+        scope.launch(Dispatchers.Main) {
+            try {
+                persistSnapshotIfPossible()
+            } catch (e: Exception) {
+                crashReporter.logException(e)
+            }
+        }
+    }
+
+    private val periodicSaveRunnable = object : Runnable {
+        override fun run() {
+            scope.launch(Dispatchers.Main) {
+                try {
+                    persistSnapshotIfPossible()
+                } catch (e: Exception) {
+                    crashReporter.logException(e)
+                }
+            }
+            if (exoPlayer.isPlaying) {
+                mainHandler.postDelayed(this, 12_000L)
+            }
+        }
+    }
+
+    private suspend fun persistSnapshotIfPossible() {
+        if (queueService.queue.isEmpty()) return
+        queueStateProvider.persistStateNow(
+            queue = queueService.queue.map { it.location },
+            queueStartIndex = exoPlayer.currentMediaItemIndex.coerceAtLeast(0),
+            startPosition = exoPlayer.currentPosition,
+            repeatModeOrdinal = queueService.repeatMode.value.ordinal,
+            shuffleMode = 0,
+            wasPlaying = exoPlayer.isPlaying,
+        )
+    }
+
+    private fun schedulePersistQueueState() {
+        mainHandler.removeCallbacks(debouncedSaveRunnable)
+        mainHandler.postDelayed(debouncedSaveRunnable, 400)
+    }
 
     private val playTimeThresholdMs = 10.seconds.inWholeMilliseconds
 
@@ -124,39 +171,63 @@ class ZenPlayer : MediaSessionService(), QueueService.Listener, ZenBroadcastRece
                 withContext(Dispatchers.Main) { exoPlayer.repeatMode = it.toExoPlayerRepeatMode() }
             }
         }
+        scope.launch {
+            preferencesProvider.volumeBoosterPercent.collect { percent ->
+                withContext(Dispatchers.Main) {
+                    exoPlayer.volume = percent / 100f
+                }
+            }
+        }
 
-        setMediaNotificationProvider(notificationProvider)
+        setMediaNotificationProvider(playerNotificationManager)
     }
 
     private val exoPlayerListener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO &&
+                sleepTimerService.consumeStopAfterCurrentTrack()
+            ) {
+                scope.launch(Dispatchers.Main) { exoPlayer.pause() }
+            }
             super.onMediaItemTransition(mediaItem, reason)
 
             try {
                 queueService.setCurrentSong(exoPlayer.currentMediaItemIndex)
                 queueService.getSongAtIndex(exoPlayer.currentMediaItemIndex)?.let { song ->
                     updateNotification(song.favourite)
-                    val broadcast = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
-                        putExtra(WidgetBroadcast.WIDGET_BROADCAST, WidgetBroadcast.SONG_CHANGED)
-                        putExtra("imageUri", song.artUri)
-                        putExtra("title", song.title)
-                        putExtra("artist", song.artist)
-                        putExtra("album", song.album)
-                    }
-                    this@ZenPlayer.applicationContext.sendBroadcast(broadcast)
+                    playerWidgetManager.notifySongChanged(song)
                 }
             } catch (e: Exception) {
                 Timber.e(e)
             }
+            schedulePersistQueueState()
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            super.onPlaybackStateChanged(playbackState)
+            if (playbackState == Player.STATE_ENDED && sleepTimerService.consumeStopAfterCurrentTrack()) {
+                scope.launch(Dispatchers.Main) { exoPlayer.pause() }
+            }
+            schedulePersistQueueState()
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             super.onIsPlayingChanged(isPlaying)
-            val broadcast = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
-                putExtra(WidgetBroadcast.WIDGET_BROADCAST, WidgetBroadcast.IS_PLAYING_CHANGED)
-                putExtra("isPlaying", isPlaying)
+            try {
+                queueService.getSongAtIndex(exoPlayer.currentMediaItemIndex)?.let { song ->
+                    updateNotification(song.favourite)
+                }
+            } catch (e: Exception) {
+                Timber.e(e)
             }
-            this@ZenPlayer.applicationContext.sendBroadcast(broadcast)
+            playerWidgetManager.notifyIsPlayingChanged(isPlaying)
+            schedulePersistQueueState()
+            if (isPlaying) {
+                mainHandler.removeCallbacks(periodicSaveRunnable)
+                mainHandler.postDelayed(periodicSaveRunnable, 12_000L)
+            } else {
+                mainHandler.removeCallbacks(periodicSaveRunnable)
+            }
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -187,11 +258,15 @@ class ZenPlayer : MediaSessionService(), QueueService.Listener, ZenBroadcastRece
 
     private fun stopService() {
         isRunning.set(false)
-        queueStateProvider.saveState(
-            queue = queueService.queue.map { it.location },
-            startIndex = exoPlayer.currentMediaItemIndex,
-            startPosition = exoPlayer.currentPosition
-        )
+        mainHandler.removeCallbacks(debouncedSaveRunnable)
+        mainHandler.removeCallbacks(periodicSaveRunnable)
+        runBlocking {
+            try {
+                persistSnapshotIfPossible()
+            } catch (e: Exception) {
+                crashReporter.logException(e)
+            }
+        }
         with(queueService) {
             clearQueue()
             removeListener(this@ZenPlayer)
@@ -224,21 +299,26 @@ class ZenPlayer : MediaSessionService(), QueueService.Listener, ZenBroadcastRece
         )
     }
 
-    private fun setQueue(mediaItems: List<MediaItem>, startPosition: Int){
-        crashReporter.logData("ZenPlayer.setQueue(List<MediaItem>,Int)")
+    private fun setQueue(
+        mediaItems: List<MediaItem>,
+        startIndex: Int,
+        startPositionMs: Long = 0L,
+        autoPlay: Boolean = true,
+    ) {
+        crashReporter.logData("ZenPlayer.setQueue(List<MediaItem>,Int,Long,Boolean)")
         scope.launch {
             val repeatMode = queueService.repeatMode.first()
-            withContext(Dispatchers.Main){
+            withContext(Dispatchers.Main) {
                 exoPlayer.stop()
                 exoPlayer.clearMediaItems()
                 exoPlayer.addMediaItems(mediaItems)
                 exoPlayer.prepare()
-                exoPlayer.seekTo(startPosition,0)
+                exoPlayer.seekTo(startIndex, startPositionMs)
                 exoPlayer.repeatMode = repeatMode.toExoPlayerRepeatMode()
                 exoPlayer.playbackParameters = preferencesProvider.playbackParams.value
                     .toCorrectedParams()
                     .toExoPlayerPlaybackParameters()
-                exoPlayer.play()
+                if (autoPlay) exoPlayer.play() else exoPlayer.pause()
             }
         }
     }
@@ -274,7 +354,7 @@ class ZenPlayer : MediaSessionService(), QueueService.Listener, ZenBroadcastRece
     override fun onSetQueue(songs: List<Song>, startPlayingFromPosition: Int) {
         crashReporter.logData("ZenPlayer.onSetQueue(List<Song>,Int)")
         val mediaItems = songs.map(Song::toMediaItem)
-        setQueue(mediaItems, startPlayingFromPosition)
+        setQueue(mediaItems, startPlayingFromPosition, startPositionMs = 0L, autoPlay = true)
     }
 
     /**

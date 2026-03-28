@@ -17,9 +17,13 @@ class PlayerHelper(
     val currentMediaItemIndex: Int
         get() = exoPlayer.currentMediaItemIndex
 
-    fun addListener(listener: Listener) = exoPlayer::addListener
+    fun addListener(listener: Listener) {
+        exoPlayer.addListener(listener)
+    }
 
-    fun removeListener(listener: Listener) = exoPlayer::removeListener
+    fun removeListener(listener: Listener) {
+        exoPlayer.removeListener(listener)
+    }
 
     fun seekTo(mediaItemIndex: Int, positionMs: Long) {
         exoPlayer.seekTo(mediaItemIndex, positionMs)

@@ -29,4 +29,8 @@ data class PlaylistSongCrossRef(
     // refers to location of song
     @ColumnInfo(index = true)
     val location: String,
+
+    /** Order within the playlist (0-based). */
+    @ColumnInfo(defaultValue = "0")
+    val position: Int = 0,
 )

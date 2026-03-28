@@ -44,10 +44,11 @@ import com.github.pakka_papad.data.thumbnails.ThumbnailDao
         PlayHistory::class,
         Thumbnail::class,
     ],
-    version = 3, exportSchema = true,
+    version = 5, exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
-        AutoMigration(from = 2, to = 3)
+        AutoMigration(from = 2, to = 3),
+        AutoMigration(from = 3, to = 4),
     ]
 )
 abstract class AppDatabase: RoomDatabase() {

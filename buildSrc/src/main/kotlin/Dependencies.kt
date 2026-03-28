@@ -34,8 +34,6 @@ object Versions {
 
     const val junit = "4.13.2"
 
-    const val leakcanary = "2.9.1"
-
     const val hilt = "2.38.1"
     const val hiltWork = "1.0.0"
 
@@ -112,8 +110,6 @@ object Libraries {
     const val accompanistPermissions = "com.google.accompanist:accompanist-permissions:${Versions.accompanist}"
     const val accompanistPager = "com.google.accompanist:accompanist-pager:${Versions.accompanist}"
     const val accompanistPagerIndicator = "com.google.accompanist:accompanist-pager-indicators:${Versions.accompanist}"
-
-    const val leakcanary = "com.squareup.leakcanary:leakcanary-android:${Versions.leakcanary}"
 
     const val hilt = "com.google.dagger:hilt-android:${Versions.hilt}"
     const val hiltWork = "androidx.hilt:hilt-work:${Versions.hiltWork}"
