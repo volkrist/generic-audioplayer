@@ -1,6 +1,7 @@
 package com.github.pakka_papad.equalizer
 
 data class EqualizerUiState(
+    val equalizerEnabled: Boolean,
     val bandCount: Int,
     val centerFreqHz: List<Float>,
     val levelsMb: List<Int>,
@@ -15,6 +16,7 @@ data class EqualizerUiState(
         fun initial(): EqualizerUiState {
             val n = 5
             return EqualizerUiState(
+                equalizerEnabled = true,
                 bandCount = n,
                 centerFreqHz = EqualizerPresetHelper.defaultCenterFreqHz(n),
                 levelsMb = List(n) { 0 },

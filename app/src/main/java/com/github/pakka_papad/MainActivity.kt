@@ -3,16 +3,21 @@ package com.github.pakka_papad
 import android.content.ComponentName
 import android.graphics.Color
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.work.await
 import com.github.pakka_papad.data.ZenCrashReporter
+import com.github.pakka_papad.data.ZenPreferenceProvider
 import com.github.pakka_papad.data.services.QueueService
 import com.github.pakka_papad.databinding.ActivityMainBinding
 import com.github.pakka_papad.player.ZenPlayer
@@ -25,6 +30,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -40,6 +46,10 @@ class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var playerWidgetManager: PlayerWidgetManager
 
+    @Inject lateinit var preferenceProvider: ZenPreferenceProvider
+
+    @Inject lateinit var exoPlayer: ExoPlayer
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installSplashScreen()
@@ -48,6 +58,25 @@ class MainActivity : AppCompatActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window,false)
         window.statusBarColor = Color.TRANSPARENT
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    preferenceProvider.keepScreenOn.collectLatest { on ->
+                        if (on) {
+                            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        } else {
+                            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        }
+                    }
+                }
+                launch {
+                    preferenceProvider.pauseOnHeadsetDisconnect.collectLatest { handle ->
+                        exoPlayer.setHandleAudioBecomingNoisy(handle)
+                    }
+                }
+            }
+        }
     }
 
     @OptIn(UnstableApi::class)

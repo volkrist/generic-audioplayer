@@ -10,7 +10,14 @@ class SleepTimerViewModel @Inject constructor(
     val sleepTimerService: SleepTimerService,
 ) : ViewModel() {
 
-    fun startMinutes(minutes: Int) = sleepTimerService.begin(minutes * 60)
+    init {
+        sleepTimerService.restoreIfNeeded()
+    }
+
+    fun startMinutes(minutes: Int) = sleepTimerService.begin(minutes.coerceIn(1, 24 * 60) * 60)
+
+    fun startCustomTotalSeconds(totalSeconds: Int) =
+        sleepTimerService.begin(totalSeconds.coerceIn(1, 24 * 60 * 60))
 
     fun startStopAfterCurrentTrack() = sleepTimerService.beginStopAfterCurrentTrack()
 

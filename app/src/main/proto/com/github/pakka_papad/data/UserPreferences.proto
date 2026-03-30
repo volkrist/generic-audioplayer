@@ -49,4 +49,18 @@ message UserPreferences {
   repeated int32 equalizer_custom_band_mb = 13;
   int32 bass_boost_strength = 14;
   int32 virtualizer_strength = 15;
+
+  // Playback / UI toggles (seeded once for existing installs — see ZenPreferenceProvider)
+  bool crossfade_enabled = 16;
+  bool gapless_playback_enabled = 17;
+  bool keep_screen_on = 18;
+  bool show_on_lock_screen = 19;
+  bool pause_on_headset_disconnect = 20;
+  int32 playback_prefs_seed_version = 21;
+  // When false, EQ / bass boost / virtualizer are bypassed (effects stay attached but disabled)
+  bool equalizer_enabled = 22;
+  // 0 = legacy datastore before this field; migration sets enabled=true once
+  int32 equalizer_prefs_seed_version = 23;
+  // Last successful local JSON backup export (epoch ms); 0 = never
+  int64 last_backup_export_epoch_ms = 24;
 }

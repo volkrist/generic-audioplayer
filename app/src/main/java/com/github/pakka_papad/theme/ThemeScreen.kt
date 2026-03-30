@@ -3,7 +3,6 @@ package com.github.pakka_papad.theme
 import android.os.Build
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.pakka_papad.R
 import com.github.pakka_papad.data.UserPreferences
 import com.github.pakka_papad.data.UserPreferences.Accent
+import com.github.pakka_papad.ui.theme.ThemePreference
 import com.github.pakka_papad.ui.theme.getSeedColor
 
 @Composable
@@ -54,6 +54,7 @@ fun ThemeScreen(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        ThemeCurrentSummary(themePreference = themePreference)
         Text(
             text = stringResource(R.string.theme_appearance_section),
             style = MaterialTheme.typography.titleMedium,
@@ -137,6 +138,7 @@ fun ThemeScreen(
         )
 
         val accents = listOf(
+            Triple(Accent.Default, R.string.accent_default, Accent.Default.getSeedColor()),
             Triple(Accent.Malibu, R.string.accent_blue, Accent.Malibu.getSeedColor()),
             Triple(Accent.Magenta, R.string.accent_red, Accent.Magenta.getSeedColor()),
             Triple(Accent.Elm, R.string.accent_green, Accent.Elm.getSeedColor()),
@@ -144,41 +146,77 @@ fun ThemeScreen(
             Triple(Accent.JacksonsPurple, R.string.accent_purple, Accent.JacksonsPurple.getSeedColor()),
         )
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                accents.take(3).forEach { (accent, labelRes, color) ->
-                    AccentChoice(
-                        label = stringResource(labelRes),
-                        color = color,
-                        selected = themePreference.accent == accent,
-                        enabled = accentEnabled,
-                        onClick = {
-                            viewModel.updateTheme(themePreference.copy(accent = accent))
-                        },
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                accents.drop(3).forEach { (accent, labelRes, color) ->
-                    AccentChoice(
-                        label = stringResource(labelRes),
-                        color = color,
-                        selected = themePreference.accent == accent,
-                        enabled = accentEnabled,
-                        onClick = {
-                            viewModel.updateTheme(themePreference.copy(accent = accent))
-                        },
-                    )
+            accents.chunked(3).forEach { rowAccents ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    rowAccents.forEach { (accent, labelRes, color) ->
+                        AccentChoice(
+                            label = stringResource(labelRes),
+                            color = color,
+                            selected = themePreference.accent == accent,
+                            enabled = accentEnabled,
+                            onClick = {
+                                viewModel.updateTheme(themePreference.copy(accent = accent))
+                            },
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ThemeCurrentSummary(themePreference: ThemePreference) {
+    val modeLabel = when (themePreference.theme) {
+        UserPreferences.Theme.USE_SYSTEM_MODE, UserPreferences.Theme.UNRECOGNIZED ->
+            stringResource(R.string.system_mode)
+        UserPreferences.Theme.LIGHT_MODE -> stringResource(R.string.light_mode)
+        UserPreferences.Theme.DARK_MODE -> stringResource(R.string.dark_mode)
+        UserPreferences.Theme.AMOLED_MODE -> stringResource(R.string.theme_amoled)
+    }
+    val accentLabel = when (themePreference.accent) {
+        Accent.Default, Accent.UNRECOGNIZED -> stringResource(R.string.accent_default)
+        Accent.Malibu -> stringResource(R.string.accent_blue)
+        Accent.Melrose -> stringResource(R.string.accent_orange)
+        Accent.Elm -> stringResource(R.string.accent_green)
+        Accent.Magenta -> stringResource(R.string.accent_red)
+        Accent.JacksonsPurple -> stringResource(R.string.accent_purple)
+    }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.theme_summary_mode, modeLabel),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Text(
+                text = stringResource(
+                    R.string.theme_summary_material_you,
+                    stringResource(
+                        if (themePreference.useMaterialYou) {
+                            R.string.theme_state_on
+                        } else {
+                            R.string.theme_state_off
+                        },
+                    ),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = stringResource(R.string.theme_summary_accent, accentLabel),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

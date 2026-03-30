@@ -20,8 +20,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -39,8 +37,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +50,7 @@ import com.github.pakka_papad.components.PlaylistCardV2
 import com.github.pakka_papad.components.more_options.PlaylistOptions
 import com.github.pakka_papad.data.UserPreferences
 import com.github.pakka_papad.data.music.PlaylistWithSongCount
+import com.github.pakka_papad.data.music.SmartPlaylistCounts
 import com.github.pakka_papad.ui.theme.LocalThemePreference
 import com.github.pakka_papad.ui.theme.harmonize
 import scheme.Scheme
@@ -57,10 +58,14 @@ import scheme.Scheme
 @Composable
 fun Playlists(
     playlistsWithSongCount: List<PlaylistWithSongCount>?,
+    smartPlaylistCounts: SmartPlaylistCounts,
     onPlaylistClicked: (Long) -> Unit,
     listState: LazyGridState,
     onPlaylistCreate: (String) -> Unit,
     onFavouritesClicked: () -> Unit,
+    onRecentlyAddedClicked: () -> Unit,
+    onRecentlyPlayedClicked: () -> Unit,
+    onTopTracksClicked: () -> Unit,
     onDeletePlaylistClicked: (PlaylistWithSongCount) -> Unit,
 ) {
     if (playlistsWithSongCount == null) return
@@ -72,13 +77,48 @@ fun Playlists(
         contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Bottom).asPaddingValues(),
     ) {
         item {
-            CreatePlaylistCard(
-                onPlaylistCreate = onPlaylistCreate,
+            SmartSystemPlaylistCard(
+                title = stringResource(R.string.favourites),
+                songCount = smartPlaylistCounts.favourites,
+                seedColor = Color(0xFFE90064),
+                iconPainter = painterResource(R.drawable.ic_baseline_favorite_border_24),
+                contentDescription = stringResource(R.string.favourite_button),
+                onClick = onFavouritesClicked,
             )
         }
         item {
-            FavouritesCard(
-                onFavouritesClicked = onFavouritesClicked,
+            SmartSystemPlaylistCard(
+                title = stringResource(R.string.smart_playlist_recently_added),
+                songCount = smartPlaylistCounts.recentlyAdded,
+                seedColor = Color(0xFF2E7D32),
+                iconPainter = painterResource(R.drawable.ic_baseline_music_note_40),
+                contentDescription = stringResource(R.string.smart_playlist_recently_added),
+                onClick = onRecentlyAddedClicked,
+            )
+        }
+        item {
+            SmartSystemPlaylistCard(
+                title = stringResource(R.string.smart_playlist_recently_played),
+                songCount = smartPlaylistCounts.recentlyPlayed,
+                seedColor = Color(0xFF7B1FA2),
+                iconPainter = painterResource(R.drawable.ic_baseline_queue_music_40),
+                contentDescription = stringResource(R.string.smart_playlist_recently_played),
+                onClick = onRecentlyPlayedClicked,
+            )
+        }
+        item {
+            SmartSystemPlaylistCard(
+                title = stringResource(R.string.smart_playlist_top_tracks),
+                songCount = smartPlaylistCounts.topTracks,
+                seedColor = Color(0xFFF57C00),
+                iconPainter = painterResource(R.drawable.ic_baseline_album_40),
+                contentDescription = stringResource(R.string.smart_playlist_top_tracks),
+                onClick = onTopTracksClicked,
+            )
+        }
+        item {
+            CreatePlaylistCard(
+                onPlaylistCreate = onPlaylistCreate,
             )
         }
         items(
@@ -99,24 +139,31 @@ fun Playlists(
 }
 
 @Composable
-private fun FavouritesCard(
-    onFavouritesClicked: () -> Unit
+private fun SmartSystemPlaylistCard(
+    title: String,
+    songCount: Int,
+    seedColor: Color,
+    iconPainter: Painter,
+    contentDescription: String,
+    onClick: () -> Unit,
 ) {
     val themePreference = LocalThemePreference.current
     val isSystemDark = isSystemInDarkTheme()
-    val scheme by remember(themePreference) { derivedStateOf {
-        val isDark = when(themePreference.theme){
-            UserPreferences.Theme.LIGHT_MODE, UserPreferences.Theme.UNRECOGNIZED -> false
-            UserPreferences.Theme.DARK_MODE, UserPreferences.Theme.AMOLED_MODE -> true
-            UserPreferences.Theme.USE_SYSTEM_MODE -> isSystemDark
+    val scheme by remember(themePreference, seedColor) {
+        derivedStateOf {
+            val isDark = when (themePreference.theme) {
+                UserPreferences.Theme.LIGHT_MODE, UserPreferences.Theme.UNRECOGNIZED -> false
+                UserPreferences.Theme.DARK_MODE, UserPreferences.Theme.AMOLED_MODE -> true
+                UserPreferences.Theme.USE_SYSTEM_MODE -> isSystemDark
+            }
+            if (isDark) Scheme.dark(seedColor.toArgb())
+            else Scheme.light(seedColor.toArgb())
         }
-        if (isDark) Scheme.dark(Color(0xFFE90064).toArgb())
-        else Scheme.light(Color(0xFFE90064).toArgb())
-    } }
+    }
     Column(
         modifier = Modifier
             .widthIn(max = 200.dp)
-            .clickable(onClick = onFavouritesClicked)
+            .clickable(onClick = onClick)
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -134,17 +181,24 @@ private fun FavouritesCard(
                     )
                 )
                 .padding(45.dp),
-            imageVector = Icons.Outlined.FavoriteBorder,
-            contentDescription = stringResource(R.string.favourite_button),
+            painter = iconPainter,
+            contentDescription = contentDescription,
             tint = Color(scheme.onPrimary)
         )
         Text(
-            text = stringResource(R.string.favourites),
+            text = title,
             style = MaterialTheme.typography.titleMedium,
-            maxLines = 1,
+            maxLines = 2,
             modifier = Modifier.fillMaxWidth(),
             fontWeight = FontWeight.Bold,
             overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = pluralStringResource(R.plurals.song_count, songCount, songCount.toString()),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

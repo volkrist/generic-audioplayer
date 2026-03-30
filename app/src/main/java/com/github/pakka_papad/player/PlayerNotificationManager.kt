@@ -11,6 +11,7 @@ import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaStyleNotificationHelper
 import com.github.pakka_papad.R
+import com.github.pakka_papad.data.ZenPreferenceProvider
 import com.github.pakka_papad.data.services.QueueService
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,6 +30,7 @@ import javax.inject.Inject
 class PlayerNotificationManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val queueService: QueueService,
+    private val preferenceProvider: ZenPreferenceProvider,
 ) : MediaNotification.Provider {
 
     init {
@@ -67,7 +69,13 @@ class PlayerNotificationManager @Inject constructor(
             .setContentIntent(NotificationHelper.contentActivityIntent(context))
             .setDeleteIntent(NotificationHelper.stopPlaybackPendingIntent(context))
             .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setVisibility(
+                if (preferenceProvider.showOnLockScreen.value) {
+                    NotificationCompat.VISIBILITY_PUBLIC
+                } else {
+                    NotificationCompat.VISIBILITY_SECRET
+                },
+            )
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setOngoing(playing)

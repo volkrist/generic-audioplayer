@@ -115,6 +115,13 @@
             app:popEnterAnim="@anim/no_change"
             app:popExitAnim="@anim/exit_to_bottom"/>
         <action
+            android:id="@+id/action_settingsFragment_to_backupRestoreFragment"
+            app:destination="@id/backupRestoreFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+        <action
             android:id="@+id/action_settingsFragment_to_whatsNewFragment"
             app:destination="@id/whatsNewFragment"
             app:enterAnim="@anim/zen_open_enter"
@@ -128,6 +135,34 @@
             app:exitAnim="@anim/no_change"
             app:popEnterAnim="@anim/no_change"
             app:popExitAnim="@anim/exit_to_bottom"/>
+        <action
+            android:id="@+id/action_settingsFragment_to_equalizerFragment"
+            app:destination="@id/equalizerFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+        <action
+            android:id="@+id/action_settingsFragment_to_sleepTimerFragment"
+            app:destination="@id/sleepTimerFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+        <action
+            android:id="@+id/action_settingsFragment_to_themeFragment"
+            app:destination="@id/themeFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
+        <action
+            android:id="@+id/action_settingsFragment_to_placeholderFragment"
+            app:destination="@id/placeholderFragment"
+            app:enterAnim="@anim/zen_open_enter"
+            app:exitAnim="@anim/zen_open_exit"
+            app:popEnterAnim="@anim/zen_close_enter"
+            app:popExitAnim="@anim/zen_close_exit" />
     </fragment>
     <fragment
         android:id="@+id/splashFragment"
@@ -183,6 +218,10 @@
             app:popEnterAnim="@anim/zen_close_enter"
             app:popExitAnim="@anim/zen_close_exit" />
     </fragment>
+    <fragment
+        android:id="@+id/backupRestoreFragment"
+        android:name="com.github.pakka_papad.backup.BackupRestoreFragment"
+        android:label="BackupRestoreFragment" />
     <fragment
         android:id="@+id/restoreFragment"
         android:name="com.github.pakka_papad.restore.RestoreFragment"

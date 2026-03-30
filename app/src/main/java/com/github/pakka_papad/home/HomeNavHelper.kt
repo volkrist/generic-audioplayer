@@ -136,6 +136,33 @@ class HomeNavHelper(
         )
     }
 
+    fun navigateToRecentlyAddedCollection() {
+        if (!check()) return
+        navController.navigate(
+            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
+                CollectionType(CollectionType.RecentlyAddedType)
+            )
+        )
+    }
+
+    fun navigateToRecentlyPlayedCollection() {
+        if (!check()) return
+        navController.navigate(
+            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
+                CollectionType(CollectionType.RecentlyPlayedType)
+            )
+        )
+    }
+
+    fun navigateToTopTracksCollection() {
+        if (!check()) return
+        navController.navigate(
+            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
+                CollectionType(CollectionType.TopTracksType)
+            )
+        )
+    }
+
     fun navigateToAlbumByName(albumName: String) {
         if (!check()) return
         if (albumName.isBlank() || albumName == "Unknown") return

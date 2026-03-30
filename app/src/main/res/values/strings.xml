@@ -12,6 +12,7 @@
     <string name="volume_booster_current">Current: %1$d%%</string>
     <string name="volume_booster_reset">Reset to 100%</string>
     <string name="equalizer_no_audio_session_hint">Start playback to attach the equalizer to the audio output. You can still edit presets; they apply when music plays.</string>
+    <string name="equalizer_master_enable">Enable equalizer</string>
     <string name="equalizer_preset_label">Preset</string>
     <string name="equalizer_preset_normal">Normal</string>
     <string name="equalizer_preset_bass">Bass</string>
@@ -105,6 +106,11 @@
     <string name="now_playing_go_to_folder">Go to folder</string>
     <string name="save_queue_to_playlist">Save queue to playlist</string>
     <string name="now_playing_add_to_playlist">Add current song to playlist</string>
+    <string name="now_playing_tab_song">Song</string>
+    <string name="now_playing_tab_lyrics">Lyrics</string>
+    <string name="now_playing_lyrics_placeholder">Lyrics are not available yet</string>
+    <string name="seek_back_10">−10s</string>
+    <string name="seek_forward_10">+10s</string>
     <string name="playlist_editor_play_all">Play all</string>
     <string name="playlist_editor_rename">Rename playlist</string>
     <string name="playlist_editor_add_queue">Add current queue</string>
@@ -153,6 +159,9 @@
     <string name="no_artists_found">No artists found</string>
     <string name="create_playlist_button">Create playlist button</string>
     <string name="favourites">Favourites</string>
+    <string name="smart_playlist_recently_added">Recently added</string>
+    <string name="smart_playlist_recently_played">Recently played</string>
+    <string name="smart_playlist_top_tracks">Top tracks</string>
     <string name="new_playlist">New Playlist</string>
     <string name="create">Create</string>
     <string name="cancel">Cancel</string>
@@ -189,6 +198,12 @@
     <string name="theme_appearance_section">Appearance</string>
     <string name="material_you_title">Material You</string>
     <string name="theme_accent_hint">Uses your accent when Material You is off (Android 12+).</string>
+    <string name="theme_summary_mode">Mode: %1$s</string>
+    <string name="theme_summary_accent">Accent: %1$s</string>
+    <string name="theme_summary_material_you">Material You: %1$s</string>
+    <string name="theme_state_on">On</string>
+    <string name="theme_state_off">Off</string>
+    <string name="accent_default">Default</string>
     <string name="accent_blue">Blue</string>
     <string name="accent_red">Red</string>
     <string name="accent_green">Green</string>
@@ -218,6 +233,15 @@
     <string name="sleep_timer_after_current_track_active">Stopping after this track</string>
     <string name="cancel_sleep_timer">Cancel timer</string>
     <string name="sleep_timer_button">Sleep timer button</string>
+    <string name="sleep_timer_custom_duration">Custom duration</string>
+    <string name="sleep_timer_picker_value">%1$d h %2$d m %3$d s</string>
+    <string name="sleep_timer_picker_hours">Hours</string>
+    <string name="sleep_timer_picker_minutes">Minutes</string>
+    <string name="sleep_timer_picker_seconds">Seconds</string>
+    <string name="sleep_timer_start_picker">Start with picker</string>
+    <string name="sleep_timer_quick_presets">Quick presets</string>
+    <string name="sleep_timer_custom_minutes_slider">Or set minutes (1–180)</string>
+    <string name="sleep_timer_start_minutes">Start %1$d min</string>
     <string name="stop_timer">Stop timer</string>
     <string name="start_timer">Start timer</string>
     <string name="stopping_in">Stopping in %1$s</string>
@@ -229,6 +253,50 @@
     <string name="update" tools:ignore="MissingTranslation">Update</string>
     <string name="add_songs_back_to_the_library" tools:ignore="MissingTranslation">Add songs back to the library</string>
     <string name="add_folders_back_to_the_library" tools:ignore="MissingTranslation">Add folders back to the library</string>
+
+    <string name="settings_section_playback">Playback</string>
+    <string name="settings_crossfade">Crossfade</string>
+    <string name="settings_crossfade_desc">Fade between tracks (full playback integration coming later)</string>
+    <string name="settings_gapless">Gapless playback</string>
+    <string name="settings_gapless_desc">Preference saved; engine wiring can follow in a later update</string>
+    <string name="settings_keep_screen_on">Keep screen on</string>
+    <string name="settings_keep_screen_on_desc">While the app is open and in the foreground</string>
+    <string name="settings_show_lock_screen">Show on lock screen</string>
+    <string name="settings_show_lock_screen_desc">Media notification visibility on the lock screen</string>
+    <string name="settings_pause_headset">Pause when headset disconnects</string>
+    <string name="settings_pause_headset_desc">Uses player support when available</string>
+    <string name="settings_section_features">Playback &amp; tools</string>
+    <string name="settings_hidden_music">Hidden music</string>
+    <string name="settings_hidden_music_desc">Blacklisted tracks and folders</string>
+    <string name="settings_section_help">Help &amp; about</string>
+    <string name="settings_faq">FAQ</string>
+    <string name="settings_feedback">Feedback</string>
+    <string name="settings_rate_us">Rate us</string>
+    <string name="settings_privacy_policy">Privacy policy</string>
+    <string name="settings_terms_of_use">Terms of use</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_desc">System language settings</string>
+    <string name="settings_premium">Premium &amp; subscriptions</string>
+    <string name="settings_premium_desc">Coming soon</string>
+    <string name="settings_backup_restore_title">Backup &amp; restore</string>
+    <string name="settings_backup_restore_desc">Export or import settings and playlists (JSON)</string>
+    <string name="backup_restore_intro">Local backup includes theme, playback options, equalizer, tab order, sort preferences, and playlists. Sleep timer and crash-reporting preferences are not changed on import.</string>
+    <string name="backup_last_export">Last export: %1$s</string>
+    <string name="backup_never_exported">Never</string>
+    <string name="backup_export_json">Export backup…</string>
+    <string name="backup_import_json">Import backup…</string>
+    <string name="backup_queue_not_included">Playback queue is not included (see backup file notes).</string>
+    <string name="backup_export_success">Backup saved</string>
+    <string name="backup_error_generic">Something went wrong</string>
+    <string name="backup_yes">Yes</string>
+    <string name="backup_no">No</string>
+    <string name="backup_import_success_detail">Settings restored: %1$s · Playlists: %2$d · Tracks added: %3$d · Skipped (missing files): %4$d</string>
+    <string name="settings_privacy_policy_url" translatable="false">https://github.com/pakka-papad/Zen/blob/main/privacy-policy.md</string>
+    <string name="settings_faq_url" translatable="false">https://github.com/pakka-papad/Zen/blob/main/README.md</string>
+    <string name="settings_terms_url" translatable="false">https://github.com/pakka-papad/Zen/blob/main/privacy-policy.md</string>
+    <string name="settings_ads_monetization">Ads &amp; monetization</string>
+    <string name="settings_ads_monetization_desc">Placeholder — no ads SDK yet</string>
+    <string name="settings_placeholder_message">This section will be expanded in a future update.</string>
 
     <!-- plural strings -->
     <plurals name="song_count">

@@ -44,7 +44,7 @@ import com.github.pakka_papad.data.thumbnails.ThumbnailDao
         PlayHistory::class,
         Thumbnail::class,
     ],
-    version = 5, exportSchema = true,
+    version = 6, exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),

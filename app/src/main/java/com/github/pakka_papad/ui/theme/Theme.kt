@@ -38,9 +38,9 @@ fun ZenTheme(
     val isSystemDark = isSystemInDarkTheme()
     val wantsAmoled = themePreference.theme == UserPreferences.Theme.AMOLED_MODE
     val isDark = when (themePreference.theme) {
-        UserPreferences.Theme.LIGHT_MODE, UserPreferences.Theme.UNRECOGNIZED -> false
+        UserPreferences.Theme.LIGHT_MODE -> false
         UserPreferences.Theme.DARK_MODE, UserPreferences.Theme.AMOLED_MODE -> true
-        UserPreferences.Theme.USE_SYSTEM_MODE -> isSystemDark
+        UserPreferences.Theme.USE_SYSTEM_MODE, UserPreferences.Theme.UNRECOGNIZED -> isSystemDark
     }
     val colourScheme = when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && themePreference.useMaterialYou -> {

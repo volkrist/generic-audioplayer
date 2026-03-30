@@ -113,34 +113,84 @@ class SessionCallback @Inject constructor(
         crashReporter.logData("SessionCallback.onPlaybackResumption()")
         val result = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
         scope.launch {
-            val state = queueState.data.first()
-            val songs = songService.getSongsFromLocations(state.locationsList)
-            val locationMap = buildMap {
-                for (song in songs) {
-                    put(song.location, song)
-                }
-            }
-            val orderedSongs = buildList {
-                for (location in state.locationsList) {
-                    if (locationMap.containsKey(location)) {
-                        add(locationMap[location]!!)
+            try {
+                val state = queueState.data.first()
+                val savedCount = state.locationsCount
+                val rawIdx = state.startIndex
+                val rawPos = state.startPositionMs
+                Timber.d(
+                    "SessionCallback.onPlaybackResumption savedLocations=$savedCount rawIndex=$rawIdx rawPositionMs=$rawPos",
+                )
+                val songs = songService.getSongsFromLocations(state.locationsList)
+                val locationMap = buildMap {
+                    for (song in songs) {
+                        put(song.location, song)
                     }
                 }
-            }
-            val repeatValues = RepeatMode.values()
-            val repeatMode = repeatValues.getOrNull(
-                state.repeatModeOrdinal.coerceIn(0, repeatValues.lastIndex),
-            ) ?: RepeatMode.NO_REPEAT
-            queueService.updateRepeatMode(repeatMode)
-            queueService.clearQueue()
-            queueService.setQueue(orderedSongs, state.startIndex)
-            result.set(
-                MediaSession.MediaItemsWithStartPosition(
-                    orderedSongs.map(Song::toMediaItem),
-                    state.startIndex,
-                    state.startPositionMs
+                val orderedSongs = buildList {
+                    for (location in state.locationsList) {
+                        if (locationMap.containsKey(location)) {
+                            add(locationMap[location]!!)
+                        }
+                    }
+                }
+                Timber.d(
+                    "SessionCallback.onPlaybackResumption restoredCount=${orderedSongs.size}",
                 )
-            )
+                if (orderedSongs.isEmpty()) {
+                    queueState.updateData { QueueState.getDefaultInstance() }
+                    result.set(
+                        MediaSession.MediaItemsWithStartPosition(
+                            emptyList(),
+                            0,
+                            0L,
+                        ),
+                    )
+                    return@launch
+                }
+                val repeatValues = RepeatMode.values()
+                val repeatMode = repeatValues.getOrNull(
+                    state.repeatModeOrdinal.coerceIn(0, repeatValues.lastIndex),
+                ) ?: RepeatMode.NO_REPEAT
+                var safeIndex = rawIdx
+                if (safeIndex < 0) safeIndex = 0
+                if (safeIndex >= orderedSongs.size) safeIndex = 0
+                var safePositionMs = rawPos.coerceAtLeast(0L)
+                if (rawIdx < 0 || rawIdx >= orderedSongs.size) {
+                    safePositionMs = 0L
+                }
+                Timber.d(
+                    "SessionCallback.onPlaybackResumption applying index=$safeIndex positionMs=$safePositionMs",
+                )
+                queueService.updateRepeatMode(repeatMode)
+                queueService.clearQueue()
+                queueService.setQueue(orderedSongs, safeIndex)
+                result.set(
+                    MediaSession.MediaItemsWithStartPosition(
+                        orderedSongs.map(Song::toMediaItem),
+                        safeIndex,
+                        safePositionMs,
+                    ),
+                )
+            } catch (e: Exception) {
+                crashReporter.logException(e)
+                try {
+                    queueState.updateData { QueueState.getDefaultInstance() }
+                } catch (eClear: Exception) {
+                    crashReporter.logException(eClear)
+                }
+                try {
+                    result.set(
+                        MediaSession.MediaItemsWithStartPosition(
+                            emptyList(),
+                            0,
+                            0L,
+                        ),
+                    )
+                } catch (e2: Exception) {
+                    crashReporter.logException(e2)
+                }
+            }
         }
         return result
     }

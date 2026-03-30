@@ -24,8 +24,9 @@ import com.github.pakka_papad.ui.accent_colours.melrose_seed
 
 data class ThemePreference(
     val useMaterialYou: Boolean = false,
-    val theme: UserPreferences.Theme = UserPreferences.Theme.UNRECOGNIZED,
-    val accent: UserPreferences.Accent = UserPreferences.Accent.Default,
+    /** Matches [UserPreferencesSerializer] defaults; avoids UNRECOGNIZED flash before first DataStore emit. */
+    val theme: UserPreferences.Theme = UserPreferences.Theme.DARK_MODE,
+    val accent: UserPreferences.Accent = UserPreferences.Accent.Elm,
 )
 
 fun UserPreferences.Accent.getColorScheme(isDark: Boolean): ColorScheme {

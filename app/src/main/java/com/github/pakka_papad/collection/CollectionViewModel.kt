@@ -147,7 +147,34 @@ class CollectionViewModel @Inject constructor(
                     songService.getFavouriteSongs().map {
                         CollectionUi(
                             songs = it,
-                            topBarTitle = "Favourites",
+                            topBarTitle = messageStore.getString(R.string.favourites),
+                            topBarBackgroundImageUri = it.randomOrNull()?.artUri ?: ""
+                        )
+                    }
+                }
+                CollectionType.RecentlyAddedType -> {
+                    songService.getRecentlyAddedSongs().map {
+                        CollectionUi(
+                            songs = it,
+                            topBarTitle = messageStore.getString(R.string.smart_playlist_recently_added),
+                            topBarBackgroundImageUri = it.randomOrNull()?.artUri ?: ""
+                        )
+                    }
+                }
+                CollectionType.RecentlyPlayedType -> {
+                    songService.getRecentlyPlayedSongs().map {
+                        CollectionUi(
+                            songs = it,
+                            topBarTitle = messageStore.getString(R.string.smart_playlist_recently_played),
+                            topBarBackgroundImageUri = it.randomOrNull()?.artUri ?: ""
+                        )
+                    }
+                }
+                CollectionType.TopTracksType -> {
+                    songService.getTopTracks().map {
+                        CollectionUi(
+                            songs = it,
+                            topBarTitle = messageStore.getString(R.string.smart_playlist_top_tracks),
                             topBarBackgroundImageUri = it.randomOrNull()?.artUri ?: ""
                         )
                     }

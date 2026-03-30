@@ -1,6 +1,7 @@
 package com.github.pakka_papad.nowplaying
 
 import androidx.compose.runtime.Stable
+import androidx.media3.common.C
 import androidx.media3.common.Player.Listener
 import androidx.media3.exoplayer.ExoPlayer
 
@@ -31,5 +32,13 @@ class PlayerHelper(
 
     fun seekTo(positionMs: Long) {
         exoPlayer.seekTo(positionMs)
+    }
+
+    /** Seeks by [deltaMs] milliseconds, clamped to the current media duration (if known). */
+    fun seekRelative(deltaMs: Long) {
+        val durationMs = exoPlayer.duration
+        val cur = exoPlayer.currentPosition
+        val max = if (durationMs != C.TIME_UNSET && durationMs > 0) durationMs else Long.MAX_VALUE
+        exoPlayer.seekTo((cur + deltaMs).coerceIn(0L, max))
     }
 }

@@ -3,6 +3,7 @@ package com.github.pakka_papad.settings
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings as AndroidSettings
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
@@ -95,6 +96,29 @@ fun SettingsList(
     onTabsSelectChange: (Screens, Boolean) -> Unit,
     onTabsOrderChanged: (fromIdx: Int, toIdx: Int) -> Unit,
     onTabsOrderConfirmed: () -> Unit,
+    crossfadeEnabled: Boolean,
+    onCrossfadeChanged: (Boolean) -> Unit,
+    gaplessEnabled: Boolean,
+    onGaplessChanged: (Boolean) -> Unit,
+    keepScreenOn: Boolean,
+    onKeepScreenOnChanged: (Boolean) -> Unit,
+    showOnLockScreen: Boolean,
+    onShowOnLockScreenChanged: (Boolean) -> Unit,
+    pauseOnHeadsetDisconnect: Boolean,
+    onPauseOnHeadsetChanged: (Boolean) -> Unit,
+    onEqualizerClicked: () -> Unit,
+    onSleepTimerClicked: () -> Unit,
+    onGraphicThemeClicked: () -> Unit,
+    onHiddenMusicClicked: () -> Unit,
+    onBackupRestoreClicked: () -> Unit,
+    onFaqClicked: () -> Unit,
+    onFeedbackClicked: () -> Unit,
+    onRateUsClicked: () -> Unit,
+    onPrivacyPolicyClicked: () -> Unit,
+    onTermsClicked: () -> Unit,
+    onLanguageClicked: () -> Unit,
+    onPremiumClicked: () -> Unit,
+    appVersionDisplay: String,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -107,6 +131,46 @@ fun SettingsList(
             item {
                 UpdateAvailable(onClick = onAppUpdateClicked)
             }
+        }
+        item {
+            GroupTitle(title = stringResource(R.string.settings_section_features))
+        }
+        item {
+            FeaturesToolsSection(
+                onEqualizerClicked = onEqualizerClicked,
+                onSleepTimerClicked = onSleepTimerClicked,
+                onGraphicThemeClicked = onGraphicThemeClicked,
+            )
+        }
+        item {
+            GroupTitle(title = stringResource(R.string.music_library))
+        }
+        item {
+            MusicLibrarySettings(
+                scanStatus = scanStatus,
+                onScanClicked = onScanClicked,
+                onRestoreClicked = onRestoreClicked,
+                onRestoreFoldersClicked = onRestoreFoldersClicked,
+                onBackupRestoreClicked = onBackupRestoreClicked,
+                onHiddenMusicClicked = onHiddenMusicClicked,
+            )
+        }
+        item {
+            GroupTitle(title = stringResource(R.string.settings_section_playback))
+        }
+        item {
+            PlaybackTogglesSection(
+                crossfadeEnabled = crossfadeEnabled,
+                onCrossfadeChanged = onCrossfadeChanged,
+                gaplessEnabled = gaplessEnabled,
+                onGaplessChanged = onGaplessChanged,
+                keepScreenOn = keepScreenOn,
+                onKeepScreenOnChanged = onKeepScreenOnChanged,
+                showOnLockScreen = showOnLockScreen,
+                onShowOnLockScreenChanged = onShowOnLockScreenChanged,
+                pauseOnHeadsetDisconnect = pauseOnHeadsetDisconnect,
+                onPauseOnHeadsetChanged = onPauseOnHeadsetChanged,
+            )
         }
         item {
             GroupTitle(title = stringResource(R.string.look_and_feel))
@@ -122,14 +186,17 @@ fun SettingsList(
             )
         }
         item {
-            GroupTitle(title = stringResource(R.string.music_library))
+            GroupTitle(title = stringResource(R.string.settings_section_help))
         }
         item {
-            MusicLibrarySettings(
-                scanStatus = scanStatus,
-                onScanClicked = onScanClicked,
-                onRestoreClicked = onRestoreClicked,
-                onRestoreFoldersClicked = onRestoreFoldersClicked
+            HelpAboutSection(
+                onFaqClicked = onFaqClicked,
+                onFeedbackClicked = onFeedbackClicked,
+                onRateUsClicked = onRateUsClicked,
+                onPrivacyPolicyClicked = onPrivacyPolicyClicked,
+                onTermsClicked = onTermsClicked,
+                onLanguageClicked = onLanguageClicked,
+                appVersionDisplay = appVersionDisplay,
             )
         }
         item {
@@ -142,10 +209,180 @@ fun SettingsList(
             )
         }
         item {
+            PremiumAndAdsSection(onPremiumClicked = onPremiumClicked)
+        }
+        item {
             MadeBy(
                 onWhatsNewClicked = onWhatsNewClicked
             )
         }
+    }
+}
+
+@Composable
+private fun PlaybackTogglesSection(
+    crossfadeEnabled: Boolean,
+    onCrossfadeChanged: (Boolean) -> Unit,
+    gaplessEnabled: Boolean,
+    onGaplessChanged: (Boolean) -> Unit,
+    keepScreenOn: Boolean,
+    onKeepScreenOnChanged: (Boolean) -> Unit,
+    showOnLockScreen: Boolean,
+    onShowOnLockScreenChanged: (Boolean) -> Unit,
+    pauseOnHeadsetDisconnect: Boolean,
+    onPauseOnHeadsetChanged: (Boolean) -> Unit,
+) {
+    Column(modifier = Modifier.group()) {
+        Setting(
+            title = stringResource(R.string.settings_crossfade),
+            icon = R.drawable.baseline_colorize_40,
+            description = stringResource(R.string.settings_crossfade_desc),
+            isChecked = crossfadeEnabled,
+            onCheckedChanged = onCrossfadeChanged,
+        )
+        Setting(
+            title = stringResource(R.string.settings_gapless),
+            icon = R.drawable.ic_baseline_library_music_40,
+            description = stringResource(R.string.settings_gapless_desc),
+            isChecked = gaplessEnabled,
+            onCheckedChanged = onGaplessChanged,
+        )
+        Setting(
+            title = stringResource(R.string.settings_keep_screen_on),
+            icon = R.drawable.baseline_light_mode_40,
+            description = stringResource(R.string.settings_keep_screen_on_desc),
+            isChecked = keepScreenOn,
+            onCheckedChanged = onKeepScreenOnChanged,
+        )
+        Setting(
+            title = stringResource(R.string.settings_show_lock_screen),
+            icon = R.drawable.baseline_dark_mode_40,
+            description = stringResource(R.string.settings_show_lock_screen_desc),
+            isChecked = showOnLockScreen,
+            onCheckedChanged = onShowOnLockScreenChanged,
+        )
+        Setting(
+            title = stringResource(R.string.settings_pause_headset),
+            icon = R.drawable.baseline_send_40,
+            description = stringResource(R.string.settings_pause_headset_desc),
+            isChecked = pauseOnHeadsetDisconnect,
+            onCheckedChanged = onPauseOnHeadsetChanged,
+        )
+    }
+}
+
+@Composable
+private fun FeaturesToolsSection(
+    onEqualizerClicked: () -> Unit,
+    onSleepTimerClicked: () -> Unit,
+    onGraphicThemeClicked: () -> Unit,
+) {
+    Column(modifier = Modifier.group()) {
+        Setting(
+            title = stringResource(R.string.drawer_equalizer),
+            icon = R.drawable.baseline_colorize_40,
+            description = null,
+            onClick = onEqualizerClicked,
+        )
+        Setting(
+            title = stringResource(R.string.sleep_timer),
+            icon = R.drawable.baseline_send_40,
+            description = stringResource(R.string.sleep_timer_status_hint),
+            onClick = onSleepTimerClicked,
+        )
+        Setting(
+            title = stringResource(R.string.drawer_graphic_theme),
+            icon = R.drawable.baseline_palette_40,
+            description = stringResource(R.string.theme_appearance_section),
+            onClick = onGraphicThemeClicked,
+        )
+    }
+}
+
+@Composable
+private fun HelpAboutSection(
+    onFaqClicked: () -> Unit,
+    onFeedbackClicked: () -> Unit,
+    onRateUsClicked: () -> Unit,
+    onPrivacyPolicyClicked: () -> Unit,
+    onTermsClicked: () -> Unit,
+    onLanguageClicked: () -> Unit,
+    appVersionDisplay: String,
+) {
+    Column(modifier = Modifier.group()) {
+        Setting(
+            title = stringResource(R.string.settings_faq),
+            icon = Icons.Outlined.Search,
+            description = null,
+            onClick = onFaqClicked,
+        )
+        Setting(
+            title = stringResource(R.string.settings_feedback),
+            icon = R.drawable.baseline_send_40,
+            description = null,
+            onClick = onFeedbackClicked,
+        )
+        Setting(
+            title = stringResource(R.string.settings_rate_us),
+            icon = R.drawable.baseline_bug_report_40,
+            description = null,
+            onClick = onRateUsClicked,
+        )
+        Setting(
+            title = stringResource(R.string.settings_privacy_policy),
+            icon = R.drawable.baseline_settings_backup_restore_40,
+            description = null,
+            onClick = onPrivacyPolicyClicked,
+        )
+        Setting(
+            title = stringResource(R.string.settings_terms_of_use),
+            icon = R.drawable.baseline_settings_backup_restore_40,
+            description = null,
+            onClick = onTermsClicked,
+        )
+        Setting(
+            title = stringResource(R.string.settings_language),
+            icon = R.drawable.baseline_palette_40,
+            description = stringResource(R.string.settings_language_desc),
+            onClick = onLanguageClicked,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.app_version),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = appVersionDisplay,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PremiumAndAdsSection(
+    onPremiumClicked: () -> Unit,
+) {
+    Column(modifier = Modifier.group()) {
+        Setting(
+            title = stringResource(R.string.settings_premium),
+            icon = R.drawable.baseline_palette_40,
+            description = stringResource(R.string.settings_premium_desc),
+            onClick = onPremiumClicked,
+        )
+        Setting(
+            title = stringResource(R.string.settings_ads_monetization),
+            icon = R.drawable.ic_baseline_library_music_40,
+            description = stringResource(R.string.settings_ads_monetization_desc),
+            onClick = onPremiumClicked,
+        )
     }
 }
 
@@ -606,6 +843,8 @@ private fun MusicLibrarySettings(
     onScanClicked: () -> Unit,
     onRestoreClicked: () -> Unit,
     onRestoreFoldersClicked: () -> Unit,
+    onBackupRestoreClicked: () -> Unit,
+    onHiddenMusicClicked: () -> Unit,
 ) {
     var progress by remember { mutableStateOf(0f) }
     LaunchedEffect(key1 = scanStatus){
@@ -624,6 +863,12 @@ private fun MusicLibrarySettings(
             .group()
             .animateContentSize(),
     ) {
+        Setting(
+            title = stringResource(R.string.settings_backup_restore_title),
+            icon = R.drawable.baseline_settings_backup_restore_40,
+            description = stringResource(R.string.settings_backup_restore_desc),
+            onClick = onBackupRestoreClicked,
+        )
         Setting(
             title = stringResource(R.string.rescan_for_music),
             icon = Icons.Outlined.Search,
@@ -658,6 +903,12 @@ private fun MusicLibrarySettings(
             icon = R.drawable.baseline_settings_backup_restore_40,
             description = stringResource(R.string.add_folders_back_to_the_library),
             onClick = onRestoreFoldersClicked
+        )
+        Setting(
+            title = stringResource(R.string.settings_hidden_music),
+            icon = R.drawable.ic_baseline_library_music_40,
+            description = stringResource(R.string.settings_hidden_music_desc),
+            onClick = onHiddenMusicClicked
         )
     }
 }

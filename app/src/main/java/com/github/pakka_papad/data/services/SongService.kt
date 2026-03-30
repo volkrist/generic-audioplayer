@@ -19,8 +19,10 @@ import com.github.pakka_papad.data.music.GenreWithSongCount
 import com.github.pakka_papad.data.music.GenreWithSongs
 import com.github.pakka_papad.data.music.LyricistWithSongCount
 import com.github.pakka_papad.data.music.LyricistWithSongs
+import com.github.pakka_papad.data.music.SmartPlaylistCounts
 import com.github.pakka_papad.data.music.Song
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 interface SongService {
     val songs: Flow<List<Song>>
@@ -31,6 +33,9 @@ interface SongService {
     val lyricists: Flow<List<LyricistWithSongCount>>
     val genres: Flow<List<GenreWithSongCount>>
 
+    /** Aggregate counts for smart playlist cards (updates with library / playback). */
+    val smartPlaylistCounts: Flow<SmartPlaylistCounts>
+
     fun getAlbumWithSongsByName(albumName: String): Flow<AlbumWithSongs?>
     fun getArtistWithSongsByName(artistName: String): Flow<ArtistWithSongs?>
     fun getAlbumArtistWithSongsByName(albumArtistName: String): Flow<AlbumArtistWithSongs?>
@@ -39,6 +44,12 @@ interface SongService {
     fun getGenreWithSongsByName(genre: String): Flow<GenreWithSongs?>
 
     fun getFavouriteSongs(): Flow<List<Song>>
+
+    fun getRecentlyAddedSongs(): Flow<List<Song>>
+
+    fun getRecentlyPlayedSongs(): Flow<List<Song>>
+
+    fun getTopTracks(): Flow<List<Song>>
 
     suspend fun updateSong(song: Song)
     suspend fun getSongsFromLocations(locations: List<String>): List<Song>
@@ -59,6 +70,20 @@ class SongServiceImpl(
     private val lyricistDao: LyricistDao,
     private val genreDao: GenreDao,
 ) :SongService {
+    override val smartPlaylistCounts: Flow<SmartPlaylistCounts> = combine(
+        songDao.observeFavouriteSongCount(),
+        songDao.observeLibrarySongCount(),
+        songDao.observeRecentlyPlayedSongCount(),
+        songDao.observeSongsWithPlayCount(),
+    ) { fav, lib, recent, top ->
+        SmartPlaylistCounts(
+            favourites = fav,
+            recentlyAdded = lib,
+            recentlyPlayed = recent,
+            topTracks = top,
+        )
+    }
+
     override val songs: Flow<List<Song>>
         = songDao.getAllSongs()
 
@@ -106,6 +131,18 @@ class SongServiceImpl(
 
     override fun getFavouriteSongs(): Flow<List<Song>> {
         return songDao.getAllFavourites()
+    }
+
+    override fun getRecentlyAddedSongs(): Flow<List<Song>> {
+        return songDao.getRecentlyAddedSongs()
+    }
+
+    override fun getRecentlyPlayedSongs(): Flow<List<Song>> {
+        return songDao.getRecentlyPlayedSongs()
+    }
+
+    override fun getTopTracks(): Flow<List<Song>> {
+        return songDao.getTopTracks()
     }
 
     override suspend fun updateSong(song: Song) {

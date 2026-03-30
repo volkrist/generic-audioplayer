@@ -56,6 +56,8 @@ data class Song(
     val modifiedDate: String,
     /** Seconds since epoch from MediaStore; used for incremental library sync. */
     @ColumnInfo(defaultValue = "0") val dateModifiedSec: Long = 0,
+    /** Seconds since epoch from MediaStore DATE_ADDED; used for "Recently added" ordering. */
+    @ColumnInfo(index = true, defaultValue = "0") val dateAddedSec: Long = 0,
     @ColumnInfo(index = true, defaultValue = "Unknown") val artist: String,
     @ColumnInfo(index = true, defaultValue = "Unknown") val albumArtist: String,
     @ColumnInfo(index = true, defaultValue = "Unknown") val composer: String,

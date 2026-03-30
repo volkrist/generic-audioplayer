@@ -90,6 +90,37 @@ interface SongDao {
     @Query("SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE favourite = 1")
     fun getAllFavourites(): Flow<List<Song>>
 
+    /** All library tracks ordered by date added (newest first). */
+    @Query(
+        "SELECT * FROM ${Constants.Tables.SONG_TABLE} ORDER BY dateAddedSec DESC, title COLLATE NOCASE ASC",
+    )
+    fun getRecentlyAddedSongs(): Flow<List<Song>>
+
+    @Query(
+        "SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE lastPlayed IS NOT NULL " +
+            "ORDER BY lastPlayed DESC",
+    )
+    fun getRecentlyPlayedSongs(): Flow<List<Song>>
+
+    /** Tracks with at least one completed play session; ordered by play count then recency. */
+    @Query(
+        "SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE playCount > 0 ORDER BY playCount DESC, " +
+            "CASE WHEN lastPlayed IS NULL THEN 1 ELSE 0 END, lastPlayed DESC, title COLLATE NOCASE ASC",
+    )
+    fun getTopTracks(): Flow<List<Song>>
+
+    @Query("SELECT COUNT(*) FROM ${Constants.Tables.SONG_TABLE} WHERE favourite = 1")
+    fun observeFavouriteSongCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM ${Constants.Tables.SONG_TABLE}")
+    fun observeLibrarySongCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM ${Constants.Tables.SONG_TABLE} WHERE lastPlayed IS NOT NULL")
+    fun observeRecentlyPlayedSongCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM ${Constants.Tables.SONG_TABLE} WHERE playCount > 0")
+    fun observeSongsWithPlayCount(): Flow<Int>
+
     @Query("SELECT * FROM ${Constants.Tables.SONG_TABLE} WHERE location IN (:locations)")
     suspend fun getSongsFromLocations(locations: List<String>): List<Song>
 

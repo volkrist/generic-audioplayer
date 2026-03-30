@@ -103,8 +103,18 @@ class EqualizerManager @Inject constructor(
         val eq = equalizer
         val bass = bassBoost
         val virt = virtualizer
+        val bypass = !settings.enabled
         try {
-            if (eq != null) {
+            if (bypass) {
+                eq?.enabled = false
+                bass?.enabled = false
+                virt?.enabled = false
+            } else {
+                eq?.enabled = true
+                bass?.enabled = true
+                virt?.enabled = virt?.strengthSupported == true
+            }
+            if (!bypass && eq != null) {
                 val n = eq.numberOfBands.toInt()
                 val levels = EqualizerPresetHelper.computeLevels(settings, n)
                 val range = eq.bandLevelRange
@@ -115,14 +125,16 @@ class EqualizerManager @Inject constructor(
                     eq.setBandLevel(i.toShort(), lvl)
                 }
             }
-            bass?.let { b ->
-                if (b.strengthSupported) {
-                    b.setStrength(settings.bassStrength.coerceIn(0, 1000).toShort())
+            if (!bypass) {
+                bass?.let { b ->
+                    if (b.strengthSupported) {
+                        b.setStrength(settings.bassStrength.coerceIn(0, 1000).toShort())
+                    }
                 }
-            }
-            virt?.let { v ->
-                if (v.strengthSupported) {
-                    v.setStrength(settings.virtualizerStrength.coerceIn(0, 1000).toShort())
+                virt?.let { v ->
+                    if (v.strengthSupported) {
+                        v.setStrength(settings.virtualizerStrength.coerceIn(0, 1000).toShort())
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -141,6 +153,7 @@ class EqualizerManager @Inject constructor(
             val levels = (0 until n).map { eq.getBandLevel(it.toShort()).toInt() }
             val freqs = (0 until n).map { eq.getCenterFreq(it.toShort()) / 1000f }
             _uiState.value = EqualizerUiState(
+                equalizerEnabled = settings.enabled,
                 bandCount = n,
                 centerFreqHz = freqs,
                 levelsMb = levels,
@@ -160,6 +173,7 @@ class EqualizerManager @Inject constructor(
         val n = 5
         val levels = EqualizerPresetHelper.computeLevels(settings, n).toList()
         _uiState.value = EqualizerUiState(
+            equalizerEnabled = settings.enabled,
             bandCount = n,
             centerFreqHz = EqualizerPresetHelper.defaultCenterFreqHz(n),
             levelsMb = levels,

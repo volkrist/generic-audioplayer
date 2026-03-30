@@ -14,6 +14,7 @@ import com.github.pakka_papad.data.library.LibraryRepository
 import com.github.pakka_papad.data.ZenPreferenceProvider
 import com.github.pakka_papad.data.music.MiniSong
 import com.github.pakka_papad.data.music.PlaylistWithSongCount
+import com.github.pakka_papad.data.music.SmartPlaylistCounts
 import com.github.pakka_papad.data.music.Song
 import com.github.pakka_papad.data.music.SongExtractor
 import com.github.pakka_papad.data.services.BlacklistService
@@ -146,6 +147,15 @@ class HomeViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    val smartPlaylistCounts = songService.smartPlaylistCounts
+        .catch { exception ->
+            Timber.e(exception)
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = SmartPlaylistCounts(0, 0, 0, 0),
+        )
+
     val genresWithSongCount = songService.genres
         .combine(prefs.genreSortOrder){ genres, sortOrder ->
             when(sortOrder){
@@ -224,7 +234,17 @@ class HomeViewModel @Inject constructor(
         queueService.addListener(queueServiceListener)
         viewModelScope.launch(Dispatchers.IO) {
             libraryRepository.loadLibraryFromCache()
-            queueStateProvider.restoreQueueIfPossible(songService, queueService)
+            try {
+                queueStateProvider.restoreQueueIfPossible(songService, queueService)
+            } catch (e: Exception) {
+                crashReporter.logException(e)
+                Timber.e(e, "HomeViewModel: restore queue failed, clearing persisted state")
+                try {
+                    queueStateProvider.clearPersistedState()
+                } catch (e2: Exception) {
+                    crashReporter.logException(e2)
+                }
+            }
             libraryRepository.updateLibraryFromMediaStore()
         }
         _currentSongPlaying.update { exoPlayer.isPlaying }

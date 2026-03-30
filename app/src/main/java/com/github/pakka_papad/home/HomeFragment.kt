@@ -168,6 +168,7 @@ class HomeFragment : Fragment() {
                     val allPersonsListState = rememberLazyListState()
 
                     val playlistsWithSongCount by viewModel.playlistsWithSongCount.collectAsStateWithLifecycle()
+                    val smartPlaylistCounts by viewModel.smartPlaylistCounts.collectAsStateWithLifecycle()
                     val allPlaylistsListState = rememberLazyGridState()
 
                     val genresWithSongCount by viewModel.genresWithSongCount.collectAsStateWithLifecycle()
@@ -409,10 +410,14 @@ class HomeFragment : Fragment() {
                                                 Screens.Playlists -> {
                                                     Playlists(
                                                         playlistsWithSongCount = playlistsWithSongCount,
+                                                        smartPlaylistCounts = smartPlaylistCounts,
                                                         onPlaylistClicked = navHelper::navigateToViewDetails,
                                                         listState = allPlaylistsListState,
                                                         onPlaylistCreate = viewModel::onPlaylistCreate,
                                                         onFavouritesClicked = navHelper::navigateToViewDetails,
+                                                        onRecentlyAddedClicked = navHelper::navigateToRecentlyAddedCollection,
+                                                        onRecentlyPlayedClicked = navHelper::navigateToRecentlyPlayedCollection,
+                                                        onTopTracksClicked = navHelper::navigateToTopTracksCollection,
                                                         onDeletePlaylistClicked = viewModel::deletePlaylist,
                                                     )
                                                 }

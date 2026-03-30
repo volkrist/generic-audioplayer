@@ -15,9 +15,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -58,6 +60,22 @@ fun EqualizerScreen(
             )
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.equalizer_master_enable),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = ui.equalizerEnabled,
+                onCheckedChange = viewModel::onEqualizerMasterEnabled,
+            )
+        }
+
         Text(
             text = stringResource(R.string.equalizer_preset_label),
             style = MaterialTheme.typography.titleSmall,
@@ -72,6 +90,7 @@ fun EqualizerScreen(
                 FilterChip(
                     selected = settings.preset == preset,
                     onClick = { viewModel.onPresetSelected(preset) },
+                    enabled = ui.equalizerEnabled,
                     label = { Text(presetTitle(preset)) },
                 )
             }
@@ -101,6 +120,7 @@ fun EqualizerScreen(
                     value = ui.levelsMb.getOrElse(index) { 0 }.toFloat(),
                     onValueChange = { viewModel.onBandLevelChange(index, it.roundToInt()) },
                     valueRange = ui.levelMinMb.toFloat()..ui.levelMaxMb.toFloat(),
+                    enabled = ui.equalizerEnabled,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -115,6 +135,7 @@ fun EqualizerScreen(
             onValueChange = { viewModel.onBassChange(it.roundToInt()) },
             valueRange = 0f..1000f,
             steps = 99,
+            enabled = ui.equalizerEnabled,
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
@@ -133,6 +154,7 @@ fun EqualizerScreen(
                 onValueChange = { viewModel.onVirtualizerChange(it.roundToInt()) },
                 valueRange = 0f..1000f,
                 steps = 99,
+                enabled = ui.equalizerEnabled,
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(

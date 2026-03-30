@@ -138,7 +138,7 @@ class SongExtractor(
             val songFile = File(songPath)
             if (!songFile.exists()) throw FileNotFoundException()
             val size = cursor.getString(sizeIndex)
-            val addedDate = cursor.getString(dateAddedIndex)
+            val dateAddedSec = cursor.getLong(dateAddedIndex).coerceAtLeast(0L)
             val modifiedDate = cursor.getString(dateModifiedIndex)
             val dateModifiedSec = cursor.getLong(dateModifiedIndex).coerceAtLeast(0L)
             val songId = cursor.getLong(songIdIndex)
@@ -147,7 +147,7 @@ class SongExtractor(
             resSong = getSong(
                 path = songPath,
                 size = size,
-                addedDate = addedDate,
+                dateAddedSec = dateAddedSec,
                 modifiedDate = modifiedDate,
                 dateModifiedSec = dateModifiedSec,
                 songId = songId,
@@ -191,7 +191,7 @@ class SongExtractor(
                 if (!songFile.exists()) throw FileNotFoundException()
                 if (folderPath != null && songFile.parentFile?.absolutePath != folderPath) throw Exception()
                 val size = cursor.getString(sizeIndex)
-                val addedDate = cursor.getString(dateAddedIndex)
+                val dateAddedSec = cursor.getLong(dateAddedIndex).coerceAtLeast(0L)
                 val modifiedDate = cursor.getString(dateModifiedIndex)
                 val dateModifiedSec = cursor.getLong(dateModifiedIndex).coerceAtLeast(0L)
                 val songId = cursor.getLong(songIdIndex)
@@ -201,7 +201,7 @@ class SongExtractor(
                     getSong(
                         path = songPath,
                         size = size,
-                        addedDate = addedDate,
+                        dateAddedSec = dateAddedSec,
                         modifiedDate = modifiedDate,
                         dateModifiedSec = dateModifiedSec,
                         songId = songId,
@@ -373,7 +373,7 @@ class SongExtractor(
                 if (blacklistedSongLocations.contains(songFile.path)) continue
                 if (pathsFilter != null && !pathsFilter.contains(songPath)) continue
                 val size = cursor.getString(sizeIndex)
-                val addedDate = cursor.getString(dateAddedIndex)
+                val dateAddedSec = cursor.getLong(dateAddedIndex).coerceAtLeast(0L)
                 val modifiedDate = cursor.getString(dateModifiedIndex)
                 val dateModifiedSec = cursor.getLong(dateModifiedIndex).coerceAtLeast(0L)
                 val songId = cursor.getLong(songIdIndex)
@@ -385,7 +385,7 @@ class SongExtractor(
                         getSong(
                             path = songPath,
                             size = size,
-                            addedDate = addedDate,
+                            dateAddedSec = dateAddedSec,
                             modifiedDate = modifiedDate,
                             dateModifiedSec = dateModifiedSec,
                             songId = songId,
@@ -499,7 +499,7 @@ class SongExtractor(
     private fun getSong(
         path: String,
         size: String,
-        addedDate: String,
+        dateAddedSec: Long,
         modifiedDate: String,
         dateModifiedSec: Long,
         songId: Long,
@@ -522,9 +522,10 @@ class SongExtractor(
                 title = title,
                 album = album,
                 size = size.toFloat().toMBfromB(),
-                addedDate = addedDate.toLong().formatToDate(),
+                addedDate = (dateAddedSec * 1000L).formatToDate(),
                 modifiedDate = modifiedDate.toLong().formatToDate(),
                 dateModifiedSec = dateModifiedSec,
+                dateAddedSec = dateAddedSec,
                 artist = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.trim() ?: UNKNOWN,
                 albumArtist = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)?.trim() ?: UNKNOWN,
                 composer = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_COMPOSER)?.trim() ?: UNKNOWN,

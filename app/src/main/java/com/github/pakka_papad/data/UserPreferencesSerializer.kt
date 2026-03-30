@@ -39,11 +39,29 @@ class UserPreferencesSerializer @Inject constructor() : Serializer<UserPreferenc
             equalizerCustomBandMb.clear()
             bassBoostStrength = 0
             virtualizerStrength = 0
+            equalizerEnabled = true
+            equalizerPrefsSeedVersion = 1
+            crossfadeEnabled = false
+            gaplessPlaybackEnabled = true
+            keepScreenOn = false
+            showOnLockScreen = true
+            pauseOnHeadsetDisconnect = true
+            playbackPrefsSeedVersion = 1
+            lastBackupExportEpochMs = 0L
         }
 
     override suspend fun readFrom(input: InputStream): UserPreferences =
         try {
-            UserPreferences.parseFrom(input)
+            UserPreferences.parseFrom(input).let { parsed ->
+                if (parsed.equalizerPrefsSeedVersion < 1) {
+                    parsed.copy {
+                        equalizerEnabled = true
+                        equalizerPrefsSeedVersion = 1
+                    }
+                } else {
+                    parsed
+                }
+            }
         } catch (exception: Exception) {
             defaultValue
         }

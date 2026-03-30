@@ -14,6 +14,7 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.minutes
 
 data class EqualizerSettings(
+    val enabled: Boolean,
     val preset: EqualizerPreset,
     val customBandsMb: List<Int>,
     val bassStrength: Int,
@@ -36,7 +37,10 @@ class ZenPreferenceProvider @Inject constructor(
         }.stateIn(
             scope = coroutineScope,
             started = SharingStarted.Eagerly,
-            initialValue = ThemePreference()
+            initialValue = ThemePreference(
+                theme = UserPreferences.Theme.DARK_MODE,
+                accent = UserPreferences.Accent.Elm,
+            ),
         )
 
     fun updateTheme(newThemePreference: ThemePreference) {
@@ -48,6 +52,20 @@ class ZenPreferenceProvider @Inject constructor(
                     chosenAccent = newThemePreference.accent
                 }
             }
+        }
+    }
+
+    val lastBackupExportEpochMs = userPreferences.data
+        .map { it.lastBackupExportEpochMs }
+        .stateIn(
+            scope = coroutineScope,
+            started = SharingStarted.Eagerly,
+            initialValue = 0L,
+        )
+
+    suspend fun setLastBackupExportEpochMs(epochMs: Long) {
+        userPreferences.updateData {
+            it.copy { lastBackupExportEpochMs = epochMs }
         }
     }
 
@@ -132,6 +150,7 @@ class ZenPreferenceProvider @Inject constructor(
     val equalizerSettings: StateFlow<EqualizerSettings> = userPreferences.data
         .map { prefs ->
             EqualizerSettings(
+                enabled = prefs.equalizerEnabled,
                 preset = prefs.equalizerPreset,
                 customBandsMb = prefs.equalizerCustomBandMbList.map { it.toInt() },
                 bassStrength = prefs.bassBoostStrength.coerceIn(0, 1000),
@@ -142,12 +161,21 @@ class ZenPreferenceProvider @Inject constructor(
             scope = coroutineScope,
             started = SharingStarted.Eagerly,
             initialValue = EqualizerSettings(
+                enabled = true,
                 preset = EqualizerPreset.EQUALIZER_PRESET_NORMAL,
                 customBandsMb = emptyList(),
                 bassStrength = 0,
                 virtualizerStrength = 0,
             ),
         )
+
+    fun updateEqualizerEnabled(enabled: Boolean) {
+        coroutineScope.launch {
+            userPreferences.updateData {
+                it.copy { equalizerEnabled = enabled }
+            }
+        }
+    }
 
     fun updateEqualizerPreset(preset: EqualizerPreset) {
         coroutineScope.launch {
@@ -192,10 +220,75 @@ class ZenPreferenceProvider @Inject constructor(
         }
     }
 
+    val crossfadeEnabled: StateFlow<Boolean> = userPreferences.data
+        .map { it.crossfadeEnabled }
+        .stateIn(coroutineScope, SharingStarted.Eagerly, false)
+
+    val gaplessPlaybackEnabled: StateFlow<Boolean> = userPreferences.data
+        .map { it.gaplessPlaybackEnabled }
+        .stateIn(coroutineScope, SharingStarted.Eagerly, true)
+
+    val keepScreenOn: StateFlow<Boolean> = userPreferences.data
+        .map { it.keepScreenOn }
+        .stateIn(coroutineScope, SharingStarted.Eagerly, false)
+
+    val showOnLockScreen: StateFlow<Boolean> = userPreferences.data
+        .map { it.showOnLockScreen }
+        .stateIn(coroutineScope, SharingStarted.Eagerly, true)
+
+    val pauseOnHeadsetDisconnect: StateFlow<Boolean> = userPreferences.data
+        .map { it.pauseOnHeadsetDisconnect }
+        .stateIn(coroutineScope, SharingStarted.Eagerly, true)
+
+    fun updateCrossfadeEnabled(enabled: Boolean) {
+        coroutineScope.launch {
+            userPreferences.updateData { it.copy { crossfadeEnabled = enabled } }
+        }
+    }
+
+    fun updateGaplessPlaybackEnabled(enabled: Boolean) {
+        coroutineScope.launch {
+            userPreferences.updateData { it.copy { gaplessPlaybackEnabled = enabled } }
+        }
+    }
+
+    fun updateKeepScreenOn(enabled: Boolean) {
+        coroutineScope.launch {
+            userPreferences.updateData { it.copy { keepScreenOn = enabled } }
+        }
+    }
+
+    fun updateShowOnLockScreen(enabled: Boolean) {
+        coroutineScope.launch {
+            userPreferences.updateData { it.copy { showOnLockScreen = enabled } }
+        }
+    }
+
+    fun updatePauseOnHeadsetDisconnect(enabled: Boolean) {
+        coroutineScope.launch {
+            userPreferences.updateData { it.copy { pauseOnHeadsetDisconnect = enabled } }
+        }
+    }
+
+    private suspend fun seedPlaybackToggleDefaultsIfNeeded() {
+        userPreferences.updateData { p ->
+            if (p.playbackPrefsSeedVersion >= 1) return@updateData p
+            p.copy {
+                crossfadeEnabled = false
+                gaplessPlaybackEnabled = true
+                keepScreenOn = false
+                showOnLockScreen = true
+                pauseOnHeadsetDisconnect = true
+                playbackPrefsSeedVersion = 1
+            }
+        }
+    }
+
     fun resetEqualizerToDefaults() {
         coroutineScope.launch {
             userPreferences.updateData {
                 it.copy {
+                    equalizerEnabled = true
                     equalizerPreset = EqualizerPreset.EQUALIZER_PRESET_NORMAL
                     equalizerCustomBandMb.clear()
                     bassBoostStrength = 0
@@ -298,11 +391,18 @@ class ZenPreferenceProvider @Inject constructor(
     }
 
     init {
+        coroutineScope.launch {
+            try {
+                seedPlaybackToggleDefaultsIfNeeded()
+            } catch (e: Exception) {
+                crashReporter.logException(e)
+            }
+        }
         val initJob = coroutineScope.launch {
             launch { theme.collect { } }
             launch { isOnBoardingComplete.collect { } }
             launch { isCrashlyticsDisabled.collect { } }
-            launch { playbackParams.collect { updatePlaybackParams(it.playbackSpeed,it.playbackPitch) } }
+            launch { playbackParams.collect { } }
             launch { selectedTabs.collect{  } }
             launch { songSortOrder.collect {  } }
             launch { albumSortOrder.collect {  } }

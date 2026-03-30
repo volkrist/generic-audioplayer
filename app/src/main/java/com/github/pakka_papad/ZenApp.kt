@@ -14,6 +14,7 @@ import com.github.pakka_papad.BuildConfig
 import com.github.pakka_papad.data.ZenPreferenceProvider
 import com.github.pakka_papad.data.services.SleepTimerService
 import com.github.pakka_papad.equalizer.EqualizerManager
+import com.github.pakka_papad.volume.VolumeBoosterManager
 import com.github.pakka_papad.workers.ThumbnailWorker
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.HiltAndroidApp
@@ -28,6 +29,8 @@ class ZenApp: Application(), ImageLoaderFactory, Configuration.Provider {
 
     @Inject lateinit var equalizerManager: EqualizerManager
 
+    @Inject lateinit var volumeBoosterManager: VolumeBoosterManager
+
     @Inject lateinit var preferenceProvider: ZenPreferenceProvider
 
     override fun onCreate() {
@@ -38,6 +41,7 @@ class ZenApp: Application(), ImageLoaderFactory, Configuration.Provider {
 
         sleepTimerService.restoreIfNeeded()
         with(equalizerManager) { }
+        with(volumeBoosterManager) { }
 
         if (!BuildConfig.DEBUG) {
             FirebaseApp.initializeApp(this)

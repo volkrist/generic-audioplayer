@@ -40,4 +40,8 @@ class EqualizerViewModel @Inject constructor(
     fun reset() {
         prefs.resetEqualizerToDefaults()
     }
+
+    fun onEqualizerMasterEnabled(enabled: Boolean) {
+        prefs.updateEqualizerEnabled(enabled)
+    }
 }

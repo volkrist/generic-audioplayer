@@ -1,6 +1,7 @@
 package com.github.pakka_papad.nowplaying
 
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.Animatable
@@ -60,12 +61,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -127,13 +131,23 @@ fun NowPlayingScreen(
     val configuration = LocalConfiguration.current
     val screenHeight = max(configuration.screenHeightDp - 20, 0)
     val screenWidth = configuration.screenWidthDp
+    val gradient = Brush.verticalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+            MaterialTheme.colorScheme.surface,
+        ),
+    )
     if (configuration.orientation == ORIENTATION_LANDSCAPE) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(brush = gradient)
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                 .padding(paddingValues),
+        ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
@@ -182,13 +196,17 @@ fun NowPlayingScreen(
                 onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
             )
         }
+        }
     } else {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(brush = gradient)
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                 .padding(paddingValues),
+        ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top,
         ) {
@@ -240,6 +258,7 @@ fun NowPlayingScreen(
                 onOpenFolder = onOpenFolder,
                 onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
             )
+        }
         }
     }
 }
@@ -315,11 +334,27 @@ private fun InfoAndControls(
         verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = modifier.padding(vertical = 8.dp, horizontal = 4.dp),
     ) {
-        QuickActionsRow(
+        SongLyricsTabRow()
+        AnimatedContent(
+            targetState = song.location,
+            label = "npMeta",
+        ) {
+            SongInfo(
+                song = song,
+                onOpenAlbum = onOpenAlbum,
+                onOpenArtist = onOpenArtist,
+                onOpenFolder = onOpenFolder,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        ReferenceQuickActionsRow(
+            song = song,
+            onFavouriteClicked = onFavouriteClicked,
+            onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
             onEqualizerClicked = onEqualizerClicked,
             onVolumeBoosterClicked = onVolumeBoosterClicked,
             onSaveQueueClicked = onSaveQueueClicked,
-            onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
+            onQueueClicked = onQueueClicked,
             sleepTimer = {
                 SleepTimerButton(
                     isRunning = isTimerRunning,
@@ -329,6 +364,33 @@ private fun InfoAndControls(
                 )
             },
         )
+        MusicSlider(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            playerHelper = playerHelper,
+            currentSongPlaying = currentSongPlaying,
+            duration = song.durationMillis,
+            song = song,
+        )
+        SeekSkipRow(playerHelper = playerHelper)
+        Row(
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+        ) {
+            ShuffleButton(onClick = onShuffleClicked)
+            PreviousButton(onPreviousPressed = onPreviousPressed)
+            PausePlayButton(
+                showPlayButton = showPlayButton,
+                onPausePlayPressed = onPausePlayPressed,
+            )
+            NextButton(onNextPressed = onNextPressed)
+            RepeatModeController(
+                currentRepeatMode = repeatMode,
+                toggleRepeatMode = toggleRepeatMode,
+            )
+        }
         PlaybackSpeedPresetsRow(
             playbackParams = playbackParams,
             updatePlaybackParams = updatePlaybackParams,
@@ -343,72 +405,62 @@ private fun InfoAndControls(
                 updatePlaybackParams = updatePlaybackParams,
             )
         }
-        AnimatedContent(
-            targetState = song.location,
-            label = "npMeta",
-        ) {
-            SongInfo(
-                song = song,
-                onOpenAlbum = onOpenAlbum,
-                onOpenArtist = onOpenArtist,
-                onOpenFolder = onOpenFolder,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        MusicSlider(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            playerHelper = playerHelper,
-            currentSongPlaying = currentSongPlaying,
-            duration = song.durationMillis,
-            song = song,
-        )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            LikeButton(
-                song = song,
-                onFavouriteClicked = onFavouriteClicked,
-                modifier = Modifier.weight(1f),
-            )
-            PreviousButton(
-                onPreviousPressed = onPreviousPressed,
-            )
-            PausePlayButton(
-                showPlayButton = showPlayButton,
-                onPausePlayPressed = onPausePlayPressed,
-            )
-            NextButton(
-                onNextPressed = onNextPressed,
-            )
-            QueueButton(
-                onQueueClicked = onQueueClicked,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp, bottom = 8.dp),
-        ) {
-            ShuffleButton(onClick = onShuffleClicked)
-            RepeatModeController(
-                currentRepeatMode = repeatMode,
-                toggleRepeatMode = toggleRepeatMode,
-            )
-        }
     }
 }
 
 @Composable
-private fun QuickActionsRow(
+private fun SongLyricsTabRow() {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.now_playing_tab_song),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+        Text(
+            text = " | ",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(R.string.now_playing_tab_lyrics),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .alpha(0.45f)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.now_playing_lyrics_placeholder),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    },
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true),
+                )
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+    }
+}
+
+@Composable
+private fun ReferenceQuickActionsRow(
+    song: Song,
+    onFavouriteClicked: () -> Unit,
+    onAddCurrentSongToPlaylist: () -> Unit,
     onEqualizerClicked: () -> Unit,
     onVolumeBoosterClicked: () -> Unit,
     onSaveQueueClicked: () -> Unit,
-    onAddCurrentSongToPlaylist: () -> Unit,
+    onQueueClicked: () -> Unit,
     sleepTimer: @Composable () -> Unit,
 ) {
     Row(
@@ -419,6 +471,21 @@ private fun QuickActionsRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        CompactFavoriteButton(song = song, onFavouriteClicked = onFavouriteClicked)
+        Icon(
+            painter = painterResource(R.drawable.ic_baseline_playlist_play_40),
+            contentDescription = stringResource(R.string.now_playing_add_to_playlist),
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = onAddCurrentSongToPlaylist,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true, radius = 20.dp),
+                )
+                .padding(4.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
         Icon(
             painter = painterResource(R.drawable.ic_baseline_piano_40),
             contentDescription = stringResource(R.string.now_playing_equalizer),
@@ -427,6 +494,21 @@ private fun QuickActionsRow(
                 .clip(RoundedCornerShape(8.dp))
                 .clickable(
                     onClick = onEqualizerClicked,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true, radius = 20.dp),
+                )
+                .padding(4.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        sleepTimer()
+        Icon(
+            painter = painterResource(R.drawable.ic_baseline_queue_music_40),
+            contentDescription = stringResource(R.string.queue_button),
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = onQueueClicked,
                     interactionSource = remember { MutableInteractionSource() },
                     indication = rememberRipple(bounded = true, radius = 20.dp),
                 )
@@ -447,21 +529,6 @@ private fun QuickActionsRow(
                 .padding(4.dp),
             tint = MaterialTheme.colorScheme.onSurface,
         )
-        sleepTimer()
-        Icon(
-            painter = painterResource(R.drawable.ic_baseline_playlist_play_40),
-            contentDescription = stringResource(R.string.now_playing_add_to_playlist),
-            modifier = Modifier
-                .size(34.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(
-                    onClick = onAddCurrentSongToPlaylist,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true, radius = 20.dp),
-                )
-                .padding(4.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
         Icon(
             painter = painterResource(R.drawable.ic_baseline_playlist_add_40),
             contentDescription = stringResource(R.string.save_queue_to_playlist),
@@ -475,6 +542,65 @@ private fun QuickActionsRow(
                 )
                 .padding(4.dp),
             tint = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun CompactFavoriteButton(
+    song: Song,
+    onFavouriteClicked: () -> Unit,
+) {
+    Image(
+        imageVector = if (song.favourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+        contentDescription = stringResource(R.string.favourite_button),
+        modifier = Modifier
+            .size(34.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(
+                onClick = onFavouriteClicked,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = rememberRipple(bounded = true, radius = 20.dp),
+            )
+            .padding(4.dp),
+        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
+    )
+}
+
+@Composable
+private fun SeekSkipRow(playerHelper: PlayerHelper) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.seek_back_10),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = { playerHelper.seekRelative(-10_000L) },
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true),
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        )
+        Text(
+            text = stringResource(R.string.seek_forward_10),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = { playerHelper.seekRelative(10_000L) },
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true),
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         )
     }
 }

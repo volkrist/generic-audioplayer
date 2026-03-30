@@ -31,6 +31,7 @@ import com.github.pakka_papad.data.services.SleepTimerService
 import com.github.pakka_papad.data.services.SongService
 import com.github.pakka_papad.toCorrectedParams
 import com.github.pakka_papad.toExoPlayerPlaybackParameters
+import com.github.pakka_papad.volume.VolumeBoosterManager
 import com.github.pakka_papad.widgets.PlayerWidgetManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -65,6 +66,7 @@ class ZenPlayer : MediaSessionService(), QueueService.Listener, ZenBroadcastRece
     @Inject lateinit var sessionCallback: SessionCallback
     @Inject lateinit var playerNotificationManager: PlayerNotificationManager
     @Inject lateinit var playerWidgetManager: PlayerWidgetManager
+    @Inject lateinit var volumeBoosterManager: VolumeBoosterManager
 
     private var broadcastReceiver: ZenBroadcastReceiver? = null
 
@@ -171,13 +173,6 @@ class ZenPlayer : MediaSessionService(), QueueService.Listener, ZenBroadcastRece
                 withContext(Dispatchers.Main) { exoPlayer.repeatMode = it.toExoPlayerRepeatMode() }
             }
         }
-        scope.launch {
-            preferencesProvider.volumeBoosterPercent.collect { percent ->
-                withContext(Dispatchers.Main) {
-                    exoPlayer.volume = percent / 100f
-                }
-            }
-        }
 
         setMediaNotificationProvider(playerNotificationManager)
     }
@@ -256,17 +251,53 @@ class ZenPlayer : MediaSessionService(), QueueService.Listener, ZenBroadcastRece
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
+    private data class QueuePersistSnapshot(
+        val locations: List<String>,
+        val queueStartIndex: Int,
+        val startPosition: Long,
+        val repeatModeOrdinal: Int,
+        val shuffleMode: Int,
+        val wasPlaying: Boolean,
+    )
+
+    /**
+     * Reads [ExoPlayer] state on the main thread only, then persistence runs on [Dispatchers.IO]
+     * so [runBlocking] does not block the main looper (avoids deadlock / ANR).
+     */
+    private fun readQueuePersistSnapshotOnMain(): QueuePersistSnapshot? {
+        if (queueService.queue.isEmpty()) return null
+        return QueuePersistSnapshot(
+            locations = queueService.queue.map { it.location },
+            queueStartIndex = exoPlayer.currentMediaItemIndex.coerceAtLeast(0),
+            startPosition = exoPlayer.currentPosition.coerceAtLeast(0),
+            repeatModeOrdinal = queueService.repeatMode.value.ordinal,
+            shuffleMode = 0,
+            wasPlaying = exoPlayer.isPlaying,
+        )
+    }
+
     private fun stopService() {
         isRunning.set(false)
         mainHandler.removeCallbacks(debouncedSaveRunnable)
         mainHandler.removeCallbacks(periodicSaveRunnable)
-        runBlocking {
-            try {
-                persistSnapshotIfPossible()
-            } catch (e: Exception) {
-                crashReporter.logException(e)
+        val snapshot = readQueuePersistSnapshotOnMain()
+        if (snapshot != null) {
+            runBlocking(Dispatchers.IO) {
+                try {
+                    queueStateProvider.persistStateNow(
+                        queue = snapshot.locations,
+                        queueStartIndex = snapshot.queueStartIndex,
+                        startPosition = snapshot.startPosition,
+                        repeatModeOrdinal = snapshot.repeatModeOrdinal,
+                        shuffleMode = snapshot.shuffleMode,
+                        wasPlaying = snapshot.wasPlaying,
+                    )
+                } catch (e: Exception) {
+                    crashReporter.logException(e)
+                }
             }
         }
+        volumeBoosterManager.releaseLoudnessEffect()
         with(queueService) {
             clearQueue()
             removeListener(this@ZenPlayer)

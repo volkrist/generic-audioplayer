@@ -130,4 +130,8 @@ class SettingsViewModel @Inject constructor(
     fun consumeAppUpdateInfo() {
         _appUpdateInfo.update { null }
     }
+
+    fun showPremiumPlaceholder() {
+        showMessage(messageStore.getString(R.string.settings_premium_desc))
+    }
 }

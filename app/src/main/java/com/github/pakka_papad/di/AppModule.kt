@@ -19,6 +19,7 @@ import com.github.pakka_papad.BuildConfig
 import com.github.pakka_papad.Constants
 import com.github.pakka_papad.data.AppDatabase
 import com.github.pakka_papad.data.Migration4To5
+import com.github.pakka_papad.data.Migration5To6
 import com.github.pakka_papad.data.QueueState
 import com.github.pakka_papad.data.QueueStateSerializer
 import com.github.pakka_papad.data.UserPreferences
@@ -76,7 +77,7 @@ object AppModule {
             context.applicationContext,
             AppDatabase::class.java,
             Constants.DATABASE_NAME
-        ).addMigrations(Migration4To5)
+        ).addMigrations(Migration4To5, Migration5To6)
             .build()
     }
 
