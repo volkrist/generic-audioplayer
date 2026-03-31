@@ -2,6 +2,7 @@ package com.github.pakka_papad.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -13,12 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.github.pakka_papad.R
 import com.github.pakka_papad.components.FullScreenSadMessage
 import com.github.pakka_papad.data.music.Album
+import com.github.pakka_papad.ui.theme.HomeLibraryTokens
+import com.github.pakka_papad.ui.theme.UiTokens
 
 @Composable
 fun Albums(
@@ -35,9 +38,10 @@ fun Albums(
     } else {
         LazyVerticalGrid(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .padding(horizontal = HomeLibraryTokens.contentHorizontalPadding),
             state = gridState,
-            columns = GridCells.Adaptive(150.dp),
+            columns = GridCells.Adaptive(HomeLibraryTokens.gridMinSize),
             contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Bottom).asPaddingValues(),
         ) {
             items(
@@ -58,13 +62,13 @@ fun AlbumCard(
     album: Album,
     onAlbumClicked: (Album) -> Unit,
 ) {
-    Column(
+        Column(
         modifier = Modifier
-            .widthIn(max = 200.dp)
+            .widthIn(max = UiTokens.gridCardMaxWidth)
             .fillMaxWidth()
             .clickable { onAlbumClicked(album) }
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(vertical = UiTokens.gridVerticalSpacing),
+        verticalArrangement = Arrangement.spacedBy(UiTokens.gridSpacing)
     ) {
         AsyncImage(
             model = album.albumArtUri,
@@ -72,15 +76,16 @@ fun AlbumCard(
             modifier = Modifier
                 .aspectRatio(ratio = 1f, matchHeightConstraintsFirst = false)
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium),
+                .clip(RoundedCornerShape(UiTokens.cornerLarge)),
             contentScale = ContentScale.Crop,
         )
         Text(
             text = album.name,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier
                 .fillMaxWidth(),
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
     }

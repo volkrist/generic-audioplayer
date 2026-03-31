@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -21,18 +22,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.github.pakka_papad.R
 import com.github.pakka_papad.components.more_options.OptionsAlertDialog
 import com.github.pakka_papad.components.more_options.SongOptions
 import com.github.pakka_papad.data.music.MiniSong
 import com.github.pakka_papad.data.music.Song
+import com.github.pakka_papad.ui.theme.UiTokens
 import kotlinx.coroutines.launch
 
 @Composable
@@ -47,23 +49,37 @@ private fun SongCardBase(
     onCurrentlyPlayingBackgroundColor: Color,
     songOptions: List<SongOptions>,
 ) {
-    val iconModifier = Modifier.size(26.dp)
-    val spacerModifier = Modifier.width(10.dp)
+    val iconModifier = Modifier.size(UiTokens.iconSizeSmall)
+    val spacerModifier = Modifier.width(UiTokens.paddingSection)
+    val rowBg = when {
+        currentlyPlaying -> currentlyPlayingBackgroundColor
+        else -> backgroundColor
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(UiTokens.listItemHeightCompact)
+            .padding(horizontal = UiTokens.paddingSection, vertical = UiTokens.playlistTileVerticalPadding)
+            .clip(RoundedCornerShape(UiTokens.cornerMedium))
+            .background(rowBg)
             .clickable(onClick = onSongClicked)
-            .background(if (currentlyPlaying) currentlyPlayingBackgroundColor else backgroundColor)
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = UiTokens.paddingItem, vertical = UiTokens.metaSpacingSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(
             model = song.artUri,
             contentDescription = stringResource(R.string.song_image),
             modifier = Modifier
-                .size(50.dp)
-                .clip(MaterialTheme.shapes.medium),
+                .size(UiTokens.artworkMini)
+                .clip(RoundedCornerShape(UiTokens.cornerSmall))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            MaterialTheme.colorScheme.surface,
+                        ),
+                    ),
+                ),
             contentScale = ContentScale.Crop
         )
         Spacer(spacerModifier)
@@ -75,19 +91,20 @@ private fun SongCardBase(
         ) {
             Text(
                 text = song.title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth(),
                 color = if (currentlyPlaying) onCurrentlyPlayingBackgroundColor else onBackgroundColor,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = song.artist,
                 maxLines = 1,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.fillMaxWidth(),
-                color = if (currentlyPlaying) onCurrentlyPlayingBackgroundColor else onBackgroundColor,
+                color = if (currentlyPlaying) onCurrentlyPlayingBackgroundColor.copy(alpha = 0.92f)
+                else onBackgroundColor.copy(alpha = 0.75f),
                 overflow = TextOverflow.Ellipsis,
             )
         }
@@ -127,7 +144,7 @@ private fun SongCardBase(
                     },
                     indication = rememberRipple(
                         bounded = false,
-                        radius = 20.dp
+                        radius = UiTokens.rippleSmall
                     ),
                     interactionSource = remember { MutableInteractionSource() }
                 ),
@@ -146,7 +163,7 @@ private fun SongCardBase(
                         },
                         indication = rememberRipple(
                             bounded = false,
-                            radius = 20.dp
+                            radius = UiTokens.rippleSmall
                         ),
                         interactionSource = remember { MutableInteractionSource() }
                     ),
@@ -177,10 +194,10 @@ fun SongCardV1(
     onSongClicked = onSongClicked,
     onFavouriteClicked = onFavouriteClicked,
     currentlyPlaying = currentlyPlaying,
-    backgroundColor = MaterialTheme.colorScheme.surface,
-    currentlyPlayingBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+    backgroundColor = Color.Transparent,
+    currentlyPlayingBackgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
     onBackgroundColor = MaterialTheme.colorScheme.onSurface,
-    onCurrentlyPlayingBackgroundColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    onCurrentlyPlayingBackgroundColor = MaterialTheme.colorScheme.onSurface,
     songOptions = songOptions,
 )
 
@@ -209,10 +226,10 @@ fun SongCardV3(
     onSongClicked: (Song) -> Unit,
 ) = Column(
     modifier = Modifier
-        .widthIn(max = 200.dp)
+        .widthIn(max = UiTokens.songCardGridMaxWidth)
         .fillMaxWidth()
         .clickable(onClick = { onSongClicked(song) })
-        .padding(10.dp),
+        .padding(UiTokens.gridSpacing),
     horizontalAlignment = Alignment.Start,
 ) {
     AsyncImage(
@@ -227,7 +244,7 @@ fun SongCardV3(
     Spacer(
         modifier = Modifier
             .fillMaxWidth()
-            .height(8.dp)
+            .height(UiTokens.paddingItem)
     )
     Text(
         text = song.title,
@@ -250,22 +267,22 @@ fun MiniSongCard(
     currentlyPlaying: Boolean = false,
     songOptions: List<SongOptions>,
 ) {
-    val iconModifier = Modifier.size(26.dp)
-    val spacerModifier = Modifier.width(10.dp)
+    val iconModifier = Modifier.size(UiTokens.artworkThumbMini)
+    val spacerModifier = Modifier.width(UiTokens.gridSpacing)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(UiTokens.listItemHeightStandard)
             .clickable(onClick = onSongClicked)
             .background(if (currentlyPlaying) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = UiTokens.gridSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(
             model = song.artUri,
             contentDescription = stringResource(R.string.song_image),
             modifier = Modifier
-                .size(50.dp)
+                .size(UiTokens.artworkPlaylistHero)
                 .clip(MaterialTheme.shapes.medium),
             contentScale = ContentScale.Crop
         )
@@ -307,7 +324,7 @@ fun MiniSongCard(
                         },
                         indication = rememberRipple(
                             bounded = false,
-                            radius = 20.dp
+                            radius = UiTokens.rippleSmall
                         ),
                         interactionSource = remember { MutableInteractionSource() }
                     ),

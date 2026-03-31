@@ -27,6 +27,9 @@ interface PlayerService {
     )
 
     suspend fun togglePlayPauseIfRunning()
+
+    /** Stops playback and clears Exo queue; call after [QueueService.clearQueue]. */
+    suspend fun stopPlaybackAndClearQueueIfRunning()
 }
 
 class PlayerServiceImpl(
@@ -100,6 +103,21 @@ class PlayerServiceImpl(
         ).buildAsync().await().apply {
             withContext(Dispatchers.Main) {
                 if (isPlaying) pause() else play()
+            }
+        }
+    }
+
+    @SuppressLint("RestrictedApi")
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    override suspend fun stopPlaybackAndClearQueueIfRunning() {
+        if (!ZenPlayer.isRunning.get()) return
+        MediaController.Builder(
+            context,
+            SessionToken(context, ComponentName(context, ZenPlayer::class.java)),
+        ).buildAsync().await().apply {
+            withContext(Dispatchers.Main) {
+                stop()
+                clearMediaItems()
             }
         }
     }

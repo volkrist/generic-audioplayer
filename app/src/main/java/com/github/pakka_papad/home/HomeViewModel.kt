@@ -26,12 +26,15 @@ import com.github.pakka_papad.storage_explorer.Directory
 import com.github.pakka_papad.storage_explorer.DirectoryContents
 import com.github.pakka_papad.storage_explorer.MusicFileExplorer
 import com.github.pakka_papad.player.ZenPlayer
+import com.github.pakka_papad.util.AudioFileActions
 import com.github.pakka_papad.util.MessageStore
 import com.github.pakka_papad.util.NaturalOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,6 +45,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import android.content.Context
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -58,6 +63,7 @@ class HomeViewModel @Inject constructor(
     private val playerService: PlayerService,
     private val queueStateProvider: QueueStateProvider,
     private val crashReporter: ZenCrashReporter,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     val songs = songService.songs
@@ -295,11 +301,68 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 blacklistService.blacklistSongs(listOf(song))
+                refreshQueueAfterRemovingSong(song)
                 showMessage(messageStore.getString(R.string.done))
             } catch (e: Exception) {
                 Timber.e(e)
                 showMessage(messageStore.getString(R.string.some_error_occurred))
             }
+        }
+    }
+
+    /**
+     * Deletes the file from storage and removes DB metadata; updates queue/player.
+     */
+    fun deleteSongFromDevice(song: Song) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val deleted = AudioFileActions.deleteAudioFileFromDevice(appContext, song.location)
+                if (!deleted) {
+                    withContext(Dispatchers.Main) {
+                        showMessage(messageStore.getString(R.string.player_delete_failed))
+                    }
+                    return@launch
+                }
+                songService.removeSongFromLibraryMetadata(song)
+                withContext(Dispatchers.Main) {
+                    refreshQueueAfterRemovingSong(song)
+                }
+                libraryRepository.updateLibraryFromMediaStore()
+                withContext(Dispatchers.Main) {
+                    showMessage(messageStore.getString(R.string.player_delete_ok))
+                }
+            } catch (e: Exception) {
+                Timber.e(e)
+                withContext(Dispatchers.Main) {
+                    showMessage(messageStore.getString(R.string.some_error_occurred))
+                }
+            }
+        }
+    }
+
+    private suspend fun refreshQueueAfterRemovingSong(song: Song) {
+        withContext(Dispatchers.Main) {
+            val q = queueService.queue
+            if (q.none { it.location == song.location }) return@withContext
+            val removedIndex = q.indexOfFirst { it.location == song.location }
+            val currentIndex = queueService.currentQueueIndex()
+            val newQueue = q.filter { it.location != song.location }
+            if (newQueue.isEmpty()) {
+                queueService.clearQueue()
+                playerService.stopPlaybackAndClearQueueIfRunning()
+                return@withContext
+            }
+            val newStartIndex = when {
+                removedIndex < currentIndex -> currentIndex - 1
+                removedIndex == currentIndex -> minOf(currentIndex, newQueue.size - 1)
+                else -> currentIndex
+            }.coerceIn(0, newQueue.lastIndex)
+            playerService.startServiceIfNotRunning(
+                songs = newQueue,
+                startPlayingFromPosition = newStartIndex,
+                startPositionMs = 0L,
+                autoPlay = true,
+            )
         }
     }
 

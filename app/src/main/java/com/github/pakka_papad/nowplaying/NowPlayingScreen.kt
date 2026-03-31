@@ -1,13 +1,20 @@
-package com.github.pakka_papad.nowplaying
+﻿package com.github.pakka_papad.nowplaying
 
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
-import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.with
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,18 +48,26 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -61,15 +77,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -88,13 +101,14 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import com.github.pakka_papad.nowplaying.RepeatMode as RepeatModeEnum
+import com.github.pakka_papad.ui.theme.UiTokens
 
 private val playbackSpeedPresets: List<Pair<String, Int>> = listOf(
-    "0.75×" to 75,
-    "1×" to 100,
-    "1.25×" to 125,
-    "1.5×" to 150,
-    "2×" to 200,
+    "0.75├Ч" to 75,
+    "1├Ч" to 100,
+    "1.25├Ч" to 125,
+    "1.5├Ч" to 150,
+    "2├Ч" to 200,
 )
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -126,36 +140,55 @@ fun NowPlayingScreen(
     onOpenArtist: () -> Unit,
     onOpenFolder: () -> Unit,
     onAddCurrentSongToPlaylist: () -> Unit,
+    keepScreenOn: Boolean,
+    onKeepScreenOnChange: (Boolean) -> Unit,
+    volumeBoosterPercent: Int,
+    onVolumeBoosterPercentChange: (Int) -> Unit,
+    onSettingsClicked: () -> Unit,
+    onPlayerActionEditTags: (Song) -> Unit = {},
+    onPlayerActionHideSong: (Song) -> Unit = {},
+    onPlayerActionDeleteSong: (Song) -> Unit = {},
+    onPlayerActionRingtone: (Song) -> Unit = {},
+    onPlayerActionChangeCover: (Song) -> Unit = {},
 ) {
     if (song == null || songPlaying == null) return
     val configuration = LocalConfiguration.current
     val screenHeight = max(configuration.screenHeightDp - 20, 0)
     val screenWidth = configuration.screenWidthDp
-    val gradient = Brush.verticalGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-            MaterialTheme.colorScheme.surface,
-        ),
-    )
-    if (configuration.orientation == ORIENTATION_LANDSCAPE) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(brush = gradient)
-                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                .padding(paddingValues),
-        ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
+    val artworkPalette = rememberNowPlayingArtworkPalette(song)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+            .padding(paddingValues),
+    ) {
+        NowPlayingArtworkBackgroundLayer(palette = artworkPalette)
+        if (configuration.orientation == ORIENTATION_LANDSCAPE) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
             val albumArtMaxWidth = ((0.48f) * screenWidth).toInt()
             if (albumArtMaxWidth >= 50 && screenHeight >= 50) {
                 val imageSize = min(albumArtMaxWidth, screenHeight)
                 AnimatedContent(
                     targetState = song.location,
+                    transitionSpec = {
+                        (
+                            fadeIn(animationSpec = tween(320, easing = FastOutSlowInEasing)) +
+                                scaleIn(
+                                    initialScale = 0.94f,
+                                    animationSpec = tween(320, easing = FastOutSlowInEasing),
+                                )
+                            ) with (
+                            fadeOut(animationSpec = tween(240)) +
+                                scaleOut(
+                                    targetScale = 0.96f,
+                                    animationSpec = tween(240),
+                                )
+                            )
+                    },
                     label = "npArtLand",
                 ) {
                     AlbumArt(
@@ -194,22 +227,24 @@ fun NowPlayingScreen(
                 onOpenArtist = onOpenArtist,
                 onOpenFolder = onOpenFolder,
                 onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
+                keepScreenOn = keepScreenOn,
+                onKeepScreenOnChange = onKeepScreenOnChange,
+                volumeBoosterPercent = volumeBoosterPercent,
+                onVolumeBoosterPercentChange = onVolumeBoosterPercentChange,
+                onSettingsClicked = onSettingsClicked,
+                onPlayerActionEditTags = onPlayerActionEditTags,
+                onPlayerActionHideSong = onPlayerActionHideSong,
+                onPlayerActionDeleteSong = onPlayerActionDeleteSong,
+                onPlayerActionRingtone = onPlayerActionRingtone,
+                onPlayerActionChangeCover = onPlayerActionChangeCover,
             )
-        }
-        }
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(brush = gradient)
-                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                .padding(paddingValues),
-        ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top,
-        ) {
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Top,
+            ) {
             Box(
                 modifier = Modifier
                     .weight(1.15f)
@@ -218,6 +253,21 @@ fun NowPlayingScreen(
             ) {
                 AnimatedContent(
                     targetState = song.location,
+                    transitionSpec = {
+                        (
+                            fadeIn(animationSpec = tween(320, easing = FastOutSlowInEasing)) +
+                                scaleIn(
+                                    initialScale = 0.94f,
+                                    animationSpec = tween(320, easing = FastOutSlowInEasing),
+                                )
+                            ) with (
+                            fadeOut(animationSpec = tween(240)) +
+                                scaleOut(
+                                    targetScale = 0.96f,
+                                    animationSpec = tween(240),
+                                )
+                            )
+                    },
                     label = "npArtPort",
                 ) {
                     AlbumArt(
@@ -257,8 +307,18 @@ fun NowPlayingScreen(
                 onOpenArtist = onOpenArtist,
                 onOpenFolder = onOpenFolder,
                 onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
+                keepScreenOn = keepScreenOn,
+                onKeepScreenOnChange = onKeepScreenOnChange,
+                volumeBoosterPercent = volumeBoosterPercent,
+                onVolumeBoosterPercentChange = onVolumeBoosterPercentChange,
+                onSettingsClicked = onSettingsClicked,
+                onPlayerActionEditTags = onPlayerActionEditTags,
+                onPlayerActionHideSong = onPlayerActionHideSong,
+                onPlayerActionDeleteSong = onPlayerActionDeleteSong,
+                onPlayerActionRingtone = onPlayerActionRingtone,
+                onPlayerActionChangeCover = onPlayerActionChangeCover,
             )
-        }
+            }
         }
     }
 }
@@ -268,10 +328,10 @@ private fun AlbumArt(
     song: Song,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(UiTokens.cornerExtraLarge)
     val base = modifier
         .shadow(
-            elevation = 20.dp,
+            elevation = UiTokens.elevationNowPlayingArt,
             shape = shape,
             clip = false,
         )
@@ -285,7 +345,7 @@ private fun AlbumArt(
             Image(
                 painter = painterResource(R.drawable.ic_outline_music_note_40),
                 contentDescription = null,
-                modifier = Modifier.size(96.dp),
+                modifier = Modifier.size(UiTokens.artworkNowPlayingPlaceholder),
                 colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)),
             )
         }
@@ -299,7 +359,7 @@ private fun AlbumArt(
     }
 }
 
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun InfoAndControls(
     song: Song,
@@ -328,33 +388,41 @@ private fun InfoAndControls(
     onOpenArtist: () -> Unit,
     onOpenFolder: () -> Unit,
     onAddCurrentSongToPlaylist: () -> Unit,
+    keepScreenOn: Boolean,
+    onKeepScreenOnChange: (Boolean) -> Unit,
+    volumeBoosterPercent: Int,
+    onVolumeBoosterPercentChange: (Int) -> Unit,
+    onSettingsClicked: () -> Unit,
+    onPlayerActionEditTags: (Song) -> Unit,
+    onPlayerActionHideSong: (Song) -> Unit,
+    onPlayerActionDeleteSong: (Song) -> Unit,
+    onPlayerActionRingtone: (Song) -> Unit,
+    onPlayerActionChangeCover: (Song) -> Unit,
 ) {
+    var showPlayerActionsSheet by remember { mutableStateOf(false) }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(UiTokens.metaSpacingSmall),
+        modifier = modifier.padding(vertical = UiTokens.rowSpacingComfort, horizontal = UiTokens.paddingSection),
     ) {
-        SongLyricsTabRow()
-        AnimatedContent(
-            targetState = song.location,
-            label = "npMeta",
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            SongInfo(
-                song = song,
-                onOpenAlbum = onOpenAlbum,
-                onOpenArtist = onOpenArtist,
-                onOpenFolder = onOpenFolder,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            IconButton(onClick = { showPlayerActionsSheet = true }) {
+                Icon(
+                    imageVector = Icons.Outlined.MoreVert,
+                    contentDescription = stringResource(R.string.player_actions_more),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
-        ReferenceQuickActionsRow(
-            song = song,
-            onFavouriteClicked = onFavouriteClicked,
-            onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
+        QuickActionsRow(
             onEqualizerClicked = onEqualizerClicked,
             onVolumeBoosterClicked = onVolumeBoosterClicked,
             onSaveQueueClicked = onSaveQueueClicked,
-            onQueueClicked = onQueueClicked,
+            onAddCurrentSongToPlaylist = onAddCurrentSongToPlaylist,
             sleepTimer = {
                 SleepTimerButton(
                     isRunning = isTimerRunning,
@@ -364,33 +432,6 @@ private fun InfoAndControls(
                 )
             },
         )
-        MusicSlider(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            playerHelper = playerHelper,
-            currentSongPlaying = currentSongPlaying,
-            duration = song.durationMillis,
-            song = song,
-        )
-        SeekSkipRow(playerHelper = playerHelper)
-        Row(
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-        ) {
-            ShuffleButton(onClick = onShuffleClicked)
-            PreviousButton(onPreviousPressed = onPreviousPressed)
-            PausePlayButton(
-                showPlayButton = showPlayButton,
-                onPausePlayPressed = onPausePlayPressed,
-            )
-            NextButton(onNextPressed = onNextPressed)
-            RepeatModeController(
-                currentRepeatMode = repeatMode,
-                toggleRepeatMode = toggleRepeatMode,
-            )
-        }
         PlaybackSpeedPresetsRow(
             playbackParams = playbackParams,
             updatePlaybackParams = updatePlaybackParams,
@@ -405,202 +446,353 @@ private fun InfoAndControls(
                 updatePlaybackParams = updatePlaybackParams,
             )
         }
+        AnimatedContent(
+            targetState = song.location,
+            transitionSpec = {
+                (
+                    fadeIn(animationSpec = tween(280, easing = FastOutSlowInEasing)) +
+                        slideInVertically { h -> h / 10 }
+                    ) with (
+                    fadeOut(animationSpec = tween(200)) +
+                        slideOutVertically { h -> -h / 10 }
+                    )
+            },
+            label = "npMeta",
+        ) {
+            SongInfo(
+                song = song,
+                onOpenAlbum = onOpenAlbum,
+                onOpenArtist = onOpenArtist,
+                onOpenFolder = onOpenFolder,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        MusicSlider(
+            modifier = Modifier.padding(horizontal = UiTokens.paddingScreen, vertical = UiTokens.smartSectionTitlePaddingBottom),
+            playerHelper = playerHelper,
+            currentSongPlaying = currentSongPlaying,
+            duration = song.durationMillis,
+            song = song,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(UiTokens.gridSpacing),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            LikeButton(
+                song = song,
+                onFavouriteClicked = onFavouriteClicked,
+                modifier = Modifier.weight(1f),
+            )
+            PreviousButton(
+                onPreviousPressed = onPreviousPressed,
+            )
+            PausePlayButton(
+                showPlayButton = showPlayButton,
+                onPausePlayPressed = onPausePlayPressed,
+            )
+            NextButton(
+                onNextPressed = onNextPressed,
+            )
+            QueueButton(
+                onQueueClicked = onQueueClicked,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Row(
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = UiTokens.smartSectionTitlePaddingBottom, bottom = UiTokens.paddingItem),
+        ) {
+            ShuffleButton(onClick = onShuffleClicked)
+            RepeatModeController(
+                currentRepeatMode = repeatMode,
+                toggleRepeatMode = toggleRepeatMode,
+            )
+        }
+    }
+    if (showPlayerActionsSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showPlayerActionsSheet = false },
+            sheetState = sheetState,
+        ) {
+            PlayerActionsSheetContent(
+                onDismiss = { showPlayerActionsSheet = false },
+                playbackParams = playbackParams,
+                updatePlaybackParams = updatePlaybackParams,
+                onQueueClicked = onQueueClicked,
+                volumeBoosterPercent = volumeBoosterPercent,
+                onVolumeBoosterPercentChange = onVolumeBoosterPercentChange,
+                onVolumeBoosterOpenFull = onVolumeBoosterClicked,
+                keepScreenOn = keepScreenOn,
+                onKeepScreenOnChange = onKeepScreenOnChange,
+                onSettingsClicked = onSettingsClicked,
+                onOpenAlbum = onOpenAlbum,
+                onPlayerActionEditTags = onPlayerActionEditTags,
+                onPlayerActionHideSong = onPlayerActionHideSong,
+                onPlayerActionDeleteSong = onPlayerActionDeleteSong,
+                onPlayerActionRingtone = onPlayerActionRingtone,
+                onPlayerActionChangeCover = onPlayerActionChangeCover,
+                currentSong = song,
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SongLyricsTabRow() {
-    val context = LocalContext.current
-    Row(
+private fun PlayerActionsSheetContent(
+    currentSong: Song,
+    onDismiss: () -> Unit,
+    playbackParams: PlaybackParams,
+    updatePlaybackParams: (speed: Int, pitch: Int) -> Unit,
+    onQueueClicked: () -> Unit,
+    volumeBoosterPercent: Int,
+    onVolumeBoosterPercentChange: (Int) -> Unit,
+    onVolumeBoosterOpenFull: () -> Unit,
+    keepScreenOn: Boolean,
+    onKeepScreenOnChange: (Boolean) -> Unit,
+    onSettingsClicked: () -> Unit,
+    onOpenAlbum: () -> Unit,
+    onPlayerActionEditTags: (Song) -> Unit,
+    onPlayerActionHideSong: (Song) -> Unit,
+    onPlayerActionDeleteSong: (Song) -> Unit,
+    onPlayerActionRingtone: (Song) -> Unit,
+    onPlayerActionChangeCover: (Song) -> Unit,
+) {
+    val scroll = rememberScrollState()
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+            .heightIn(max = UiTokens.actionSheetMaxHeight)
+            .verticalScroll(scroll)
+            .padding(bottom = UiTokens.paddingSheetBottom),
     ) {
         Text(
-            text = stringResource(R.string.now_playing_tab_song),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            text = stringResource(R.string.player_actions_sheet_title),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(horizontal = UiTokens.paddingSheetHorizontal, vertical = UiTokens.paddingItem),
         )
-        Text(
-            text = " | ",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = stringResource(R.string.now_playing_tab_lyrics),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .alpha(0.45f)
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(
-                    onClick = {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.now_playing_lyrics_placeholder),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    },
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true),
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.queue_button)) },
+            leadingContent = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_baseline_queue_music_40),
+                    contentDescription = null,
+                    modifier = Modifier.size(UiTokens.iconSizeSmall),
                 )
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+            },
+            modifier = Modifier.clickable {
+                onQueueClicked()
+                onDismiss()
+            },
+        )
+        Divider()
+        Text(
+            text = stringResource(R.string.speed_and_pitch_controller),
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(horizontal = UiTokens.paddingSheetHorizontal, vertical = UiTokens.paddingItem),
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = UiTokens.paddingScreen),
+            horizontalArrangement = Arrangement.spacedBy(UiTokens.paddingItem),
+        ) {
+            playbackSpeedPresets.forEach { (label, speedInt) ->
+                val selected = playbackParams.playbackSpeed == speedInt
+                FilterChip(
+                    selected = selected,
+                    onClick = {
+                        updatePlaybackParams(speedInt, playbackParams.playbackPitch)
+                    },
+                    label = { Text(label) },
+                )
+            }
+        }
+        Divider()
+        Text(
+            text = stringResource(R.string.now_playing_volume_booster),
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(horizontal = UiTokens.paddingSheetHorizontal, vertical = UiTokens.paddingItem),
+        )
+        Text(
+            text = stringResource(R.string.volume_booster_current, volumeBoosterPercent),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = UiTokens.paddingSheetHorizontal),
+        )
+        Slider(
+            value = volumeBoosterPercent.toFloat(),
+            onValueChange = { onVolumeBoosterPercentChange(it.toInt().coerceIn(100, 200)) },
+            valueRange = 100f..200f,
+            steps = 19,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = UiTokens.paddingScreen),
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.player_action_open_volume_booster_screen)) },
+            leadingContent = {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_speed_24),
+                    contentDescription = null,
+                    modifier = Modifier.size(UiTokens.iconSizeSmall),
+                )
+            },
+            modifier = Modifier.clickable {
+                onVolumeBoosterOpenFull()
+                onDismiss()
+            },
+        )
+        Divider()
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_keep_screen_on)) },
+            supportingContent = {
+                Text(stringResource(R.string.settings_keep_screen_on_desc))
+            },
+            trailingContent = {
+                Switch(
+                    checked = keepScreenOn,
+                    onCheckedChange = onKeepScreenOnChange,
+                )
+            },
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings)) },
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Outlined.Settings,
+                    contentDescription = null,
+                    modifier = Modifier.size(UiTokens.iconSizeSmall),
+                )
+            },
+            modifier = Modifier.clickable {
+                onSettingsClicked()
+                onDismiss()
+            },
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.now_playing_go_to_album)) },
+            modifier = Modifier.clickable {
+                onOpenAlbum()
+                onDismiss()
+            },
+        )
+        Divider()
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.player_action_edit_tags)) },
+            modifier = Modifier.clickable {
+                onPlayerActionEditTags(currentSong)
+                onDismiss()
+            },
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.player_action_change_cover)) },
+            modifier = Modifier.clickable {
+                onPlayerActionChangeCover(currentSong)
+                onDismiss()
+            },
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.player_action_hide_song)) },
+            modifier = Modifier.clickable {
+                onPlayerActionHideSong(currentSong)
+                onDismiss()
+            },
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.player_action_delete_song)) },
+            modifier = Modifier.clickable {
+                onPlayerActionDeleteSong(currentSong)
+                onDismiss()
+            },
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.player_action_ringtone)) },
+            modifier = Modifier.clickable {
+                onPlayerActionRingtone(currentSong)
+                onDismiss()
+            },
         )
     }
 }
 
 @Composable
-private fun ReferenceQuickActionsRow(
-    song: Song,
-    onFavouriteClicked: () -> Unit,
-    onAddCurrentSongToPlaylist: () -> Unit,
+private fun QuickActionsRow(
     onEqualizerClicked: () -> Unit,
     onVolumeBoosterClicked: () -> Unit,
     onSaveQueueClicked: () -> Unit,
-    onQueueClicked: () -> Unit,
+    onAddCurrentSongToPlaylist: () -> Unit,
     sleepTimer: @Composable () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = UiTokens.paddingItem),
+        horizontalArrangement = Arrangement.spacedBy(UiTokens.paddingItem),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CompactFavoriteButton(song = song, onFavouriteClicked = onFavouriteClicked)
-        Icon(
-            painter = painterResource(R.drawable.ic_baseline_playlist_play_40),
-            contentDescription = stringResource(R.string.now_playing_add_to_playlist),
-            modifier = Modifier
-                .size(34.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(
-                    onClick = onAddCurrentSongToPlaylist,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true, radius = 20.dp),
-                )
-                .padding(4.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
         Icon(
             painter = painterResource(R.drawable.ic_baseline_piano_40),
             contentDescription = stringResource(R.string.now_playing_equalizer),
             modifier = Modifier
-                .size(34.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(UiTokens.iconSizeMedium)
+                .clip(RoundedCornerShape(UiTokens.cornerXs))
                 .clickable(
                     onClick = onEqualizerClicked,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true, radius = 20.dp),
+                    indication = rememberRipple(bounded = true, radius = UiTokens.rippleSmall),
                 )
-                .padding(4.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
-        sleepTimer()
-        Icon(
-            painter = painterResource(R.drawable.ic_baseline_queue_music_40),
-            contentDescription = stringResource(R.string.queue_button),
-            modifier = Modifier
-                .size(34.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(
-                    onClick = onQueueClicked,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true, radius = 20.dp),
-                )
-                .padding(4.dp),
+                .padding(UiTokens.paddingItemTight),
             tint = MaterialTheme.colorScheme.onSurface,
         )
         Icon(
             painter = painterResource(R.drawable.baseline_speed_24),
             contentDescription = stringResource(R.string.now_playing_volume_booster),
             modifier = Modifier
-                .size(34.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(UiTokens.iconSizeMedium)
+                .clip(RoundedCornerShape(UiTokens.cornerXs))
                 .clickable(
                     onClick = onVolumeBoosterClicked,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true, radius = 20.dp),
+                    indication = rememberRipple(bounded = true, radius = UiTokens.rippleSmall),
                 )
-                .padding(4.dp),
+                .padding(UiTokens.paddingItemTight),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        sleepTimer()
+        Icon(
+            painter = painterResource(R.drawable.ic_baseline_playlist_play_40),
+            contentDescription = stringResource(R.string.now_playing_add_to_playlist),
+            modifier = Modifier
+                .size(UiTokens.iconSizeMedium)
+                .clip(RoundedCornerShape(UiTokens.cornerXs))
+                .clickable(
+                    onClick = onAddCurrentSongToPlaylist,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true, radius = UiTokens.rippleSmall),
+                )
+                .padding(UiTokens.paddingItemTight),
             tint = MaterialTheme.colorScheme.onSurface,
         )
         Icon(
             painter = painterResource(R.drawable.ic_baseline_playlist_add_40),
             contentDescription = stringResource(R.string.save_queue_to_playlist),
             modifier = Modifier
-                .size(34.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(UiTokens.iconSizeMedium)
+                .clip(RoundedCornerShape(UiTokens.cornerXs))
                 .clickable(
                     onClick = onSaveQueueClicked,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true, radius = 20.dp),
+                    indication = rememberRipple(bounded = true, radius = UiTokens.rippleSmall),
                 )
-                .padding(4.dp),
+                .padding(UiTokens.paddingItemTight),
             tint = MaterialTheme.colorScheme.onSurface,
-        )
-    }
-}
-
-@Composable
-private fun CompactFavoriteButton(
-    song: Song,
-    onFavouriteClicked: () -> Unit,
-) {
-    Image(
-        imageVector = if (song.favourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-        contentDescription = stringResource(R.string.favourite_button),
-        modifier = Modifier
-            .size(34.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(
-                onClick = onFavouriteClicked,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = true, radius = 20.dp),
-            )
-            .padding(4.dp),
-        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
-    )
-}
-
-@Composable
-private fun SeekSkipRow(playerHelper: PlayerHelper) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.seek_back_10),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(
-                    onClick = { playerHelper.seekRelative(-10_000L) },
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true),
-                )
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        )
-        Text(
-            text = stringResource(R.string.seek_forward_10),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(
-                    onClick = { playerHelper.seekRelative(10_000L) },
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true),
-                )
-                .padding(horizontal = 12.dp, vertical = 8.dp),
         )
     }
 }
@@ -616,8 +808,8 @@ private fun PlaybackSpeedPresetsRow(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(scroll)
-            .padding(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = UiTokens.paddingSection),
+        horizontalArrangement = Arrangement.spacedBy(UiTokens.paddingItem),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         playbackSpeedPresets.forEach { (label, speedInt) ->
@@ -641,14 +833,14 @@ private fun ShuffleButton(
         painter = painterResource(R.drawable.ic_baseline_shuffle_40),
         contentDescription = stringResource(R.string.shuffle_button),
         modifier = Modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .size(UiTokens.iconSizeTouch)
+            .clip(RoundedCornerShape(UiTokens.cornerPill))
             .clickable(
                 onClick = onClick,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = true, radius = 22.dp),
+                indication = rememberRipple(bounded = true, radius = UiTokens.rippleMedium),
             )
-            .padding(6.dp),
+            .padding(UiTokens.metaSpacingSmall),
         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
     )
 }
@@ -668,7 +860,7 @@ private fun LikeButton(
         imageVector = if (song.favourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
         contentDescription = stringResource(R.string.favourite_button),
         modifier = modifier
-            .size(50.dp)
+            .size(UiTokens.iconSizeLarge)
             .scale(favouriteButtonScale.value)
             .clickable(
                 onClick = {
@@ -695,11 +887,11 @@ private fun LikeButton(
                     }
                 },
                 indication = rememberRipple(
-                    bounded = false, radius = 25.dp
+                    bounded = false, radius = UiTokens.rippleLarge
                 ),
                 interactionSource = remember { MutableInteractionSource() }
             )
-            .padding(10.dp),
+            .padding(UiTokens.gridSpacing),
         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
     )
 }
@@ -712,16 +904,16 @@ private fun PreviousButton(
     painter = painterResource(R.drawable.ic_baseline_skip_previous_40),
     contentDescription = stringResource(R.string.previous_button),
     modifier = modifier
-        .size(70.dp)
-        .clip(RoundedCornerShape(35.dp))
+        .size(UiTokens.playControlSize)
+        .clip(CircleShape)
         .clickable(
             onClick = onPreviousPressed,
             interactionSource = remember { MutableInteractionSource() },
             indication = rememberRipple(
-                bounded = true, radius = 35.dp
+                bounded = true, radius = UiTokens.rippleHuge
             )
         )
-        .padding(10.dp),
+        .padding(UiTokens.gridSpacing),
     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
 )
 
@@ -738,19 +930,19 @@ private fun PausePlayButton(
         if (showPlayButton) R.string.play_button else R.string.pause_button
     ),
     modifier = modifier
-        .size(70.dp)
+        .size(UiTokens.playControlSize)
         .clip(CircleShape)
         .clickable(
             onClick = onPausePlayPressed,
             interactionSource = remember { MutableInteractionSource() },
             indication = rememberRipple(
-                bounded = true, radius = 35.dp
+                bounded = true, radius = UiTokens.rippleHuge
             )
         )
         .background(
             color = MaterialTheme.colorScheme.primary, shape = CircleShape
         )
-        .padding(10.dp),
+        .padding(UiTokens.gridSpacing),
     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onPrimary)
 )
 
@@ -762,16 +954,16 @@ private fun NextButton(
     painter = painterResource(R.drawable.ic_baseline_skip_next_40),
     contentDescription = stringResource(R.string.next_button),
     modifier = modifier
-        .size(70.dp)
-        .clip(RoundedCornerShape(35.dp))
+        .size(UiTokens.playControlSize)
+        .clip(CircleShape)
         .clickable(
             onClick = onNextPressed,
             interactionSource = remember { MutableInteractionSource() },
             indication = rememberRipple(
-                bounded = true, radius = 35.dp
+                bounded = true, radius = UiTokens.rippleHuge
             )
         )
-        .padding(10.dp),
+        .padding(UiTokens.gridSpacing),
     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
 )
 
@@ -783,15 +975,15 @@ private fun QueueButton(
     painter = painterResource(R.drawable.ic_baseline_queue_music_40),
     contentDescription = stringResource(R.string.queue_button),
     modifier = modifier
-        .size(50.dp)
+        .size(UiTokens.iconSizeLarge)
         .clickable(
             onClick = onQueueClicked,
             indication = rememberRipple(
-                bounded = false, radius = 25.dp
+                bounded = false, radius = UiTokens.rippleLarge
             ),
             interactionSource = remember { MutableInteractionSource() }
         )
-        .padding(10.dp),
+        .padding(UiTokens.gridSpacing),
     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
 )
 
@@ -803,7 +995,7 @@ private fun SongInfo(
     onOpenFolder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val spacerModifier = Modifier.height(6.dp)
+    val spacerModifier = Modifier.height(UiTokens.metaSpacingSmall)
     val albumOpenable = song.album.isNotBlank() && song.album != "Unknown"
     val artistOpenable = song.artist.isNotBlank() && song.artist != "Unknown"
     val parentFolder = remember(song.location) { File(song.location).parentFile }
@@ -811,7 +1003,7 @@ private fun SongInfo(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.padding(horizontal = 12.dp),
+        modifier = modifier.padding(horizontal = UiTokens.paddingSection),
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
@@ -868,26 +1060,26 @@ private fun SongInfo(
                 ),
         )
         if (folderOpenable && parentFolder != null) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(UiTokens.paddingItem))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(UiTokens.cornerXs))
                     .clickable(
                         onClick = onOpenFolder,
                         interactionSource = remember { MutableInteractionSource() },
                         indication = rememberRipple(bounded = true),
                     )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = UiTokens.paddingItem, vertical = UiTokens.smartSectionTitlePaddingBottom),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_outline_folder_40),
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(UiTokens.artworkThumbSmall),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(UiTokens.metaSpacingSmall))
                 Text(
                     text = parentFolder.name,
                     style = MaterialTheme.typography.labelLarge,
@@ -912,11 +1104,11 @@ fun PlaybackSpeedAndPitchController(
         painter = painterResource(R.drawable.ic_outline_music_note_40),
         contentDescription = stringResource(R.string.speed_and_pitch_controller),
         modifier = Modifier
-            .size(28.dp)
+            .size(UiTokens.iconSizeProminent)
             .clickable(
                 onClick = { showDialog = true },
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = false, radius = 20.dp)
+                indication = rememberRipple(bounded = false, radius = UiTokens.rippleSmall)
             ),
         tint = MaterialTheme.colorScheme.onSurface
     )
@@ -1010,14 +1202,14 @@ fun RepeatModeController(
         painter = painterResource(currentRepeatMode.iconResource),
         contentDescription = stringResource(R.string.repeat_mode_button),
         modifier = Modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .size(UiTokens.iconSizeTouch)
+            .clip(RoundedCornerShape(UiTokens.cornerPill))
             .clickable(
                 onClick = toggleRepeatMode,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = true, radius = 22.dp),
+                indication = rememberRipple(bounded = true, radius = UiTokens.rippleMedium),
             )
-            .padding(6.dp),
+            .padding(UiTokens.metaSpacingSmall),
         tint = MaterialTheme.colorScheme.onSurface
     )
 }
@@ -1034,14 +1226,14 @@ private fun SleepTimerButton(
         painter = painterResource(R.drawable.outline_timer_24),
         contentDescription = stringResource(R.string.sleep_timer_button),
         modifier = Modifier
-            .size(34.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .size(UiTokens.iconSizeMedium)
+            .clip(RoundedCornerShape(UiTokens.cornerXs))
             .clickable(
                 onClick = { showTimerDialog = true },
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = true, radius = 20.dp),
+                indication = rememberRipple(bounded = true, radius = UiTokens.rippleSmall),
             )
-            .padding(4.dp),
+            .padding(UiTokens.paddingItemTight),
         tint = MaterialTheme.colorScheme.onSurface
     )
     if (showTimerDialog) {
@@ -1069,7 +1261,7 @@ private fun SleepTimerButton(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp),
+                        .padding(vertical = UiTokens.paddingSection),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (isRunning) {
@@ -1098,12 +1290,12 @@ private fun SleepTimerButton(
                                 },
                                 textStyle = MaterialTheme.typography.titleLarge,
                                 modifier = Modifier
-                                    .width(80.dp)
+                                    .width(UiTokens.sleepTimerFieldWidth)
                             )
                             Text(
                                 text = ":",
                                 modifier = Modifier
-                                    .width(12.dp),
+                                    .width(UiTokens.sleepTimerSeparatorWidth),
                                 textAlign = TextAlign.Center,
                                 fontWeight = FontWeight.ExtraBold,
                                 style = MaterialTheme.typography.titleLarge
@@ -1131,7 +1323,7 @@ private fun SleepTimerButton(
                                 },
                                 textStyle = MaterialTheme.typography.titleLarge,
                                 modifier = Modifier
-                                    .width(80.dp)
+                                    .width(UiTokens.sleepTimerFieldWidth)
                             )
                         }
                     }

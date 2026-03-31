@@ -59,6 +59,9 @@ interface SongService {
     suspend fun getSongsByArtistName(artistName: String): List<Song>
 
     suspend fun getSongsUnderFolderPath(folderPath: String): List<Song>
+
+    /** Removes the song row and rebuilds aggregate tables (same cleanup as blacklist). */
+    suspend fun removeSongFromLibraryMetadata(song: Song)
 }
 
 class SongServiceImpl(
@@ -163,5 +166,15 @@ class SongServiceImpl(
 
     override suspend fun getSongsUnderFolderPath(folderPath: String): List<Song> {
         return songDao.getSongsUnderFolderPath(folderPath)
+    }
+
+    override suspend fun removeSongFromLibraryMetadata(song: Song) {
+        songDao.deleteSong(song)
+        albumDao.cleanAlbumTable()
+        artistDao.cleanArtistTable()
+        albumArtistDao.cleanAlbumArtistTable()
+        composerDao.cleanComposerTable()
+        lyricistDao.cleanLyricistTable()
+        genreDao.cleanGenreTable()
     }
 }

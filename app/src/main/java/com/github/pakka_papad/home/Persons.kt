@@ -3,6 +3,7 @@ package com.github.pakka_papad.home
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -10,20 +11,23 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.github.pakka_papad.R
 import com.github.pakka_papad.components.FullScreenSadMessage
 import com.github.pakka_papad.components.more_options.OptionsAlertDialog
 import com.github.pakka_papad.components.more_options.PersonOptions
 import com.github.pakka_papad.data.music.PersonWithSongCount
+import com.github.pakka_papad.ui.theme.HomeLibraryTokens
+import com.github.pakka_papad.ui.theme.UiTokens
 
 @Composable
 fun Persons(
@@ -43,7 +47,8 @@ fun Persons(
     } else {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .padding(horizontal = HomeLibraryTokens.contentHorizontalPadding),
             state = listState,
             contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Bottom)
                 .asPaddingValues(),
@@ -76,9 +81,10 @@ fun PersonCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(UiTokens.listItemHeightCompact)
+            .clip(RoundedCornerShape(UiTokens.cornerMedium))
             .clickable(onClick = { onPersonClicked(personWithSongCount) })
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = UiTokens.paddingSection, vertical = UiTokens.metaSpacingSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -89,11 +95,12 @@ fun PersonCard(
         ) {
             Text(
                 text = personWithSongCount.name,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth(),
                 overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = pluralStringResource(
@@ -102,9 +109,10 @@ fun PersonCard(
                     personWithSongCount.count
                 ),
                 maxLines = 1,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.fillMaxWidth(),
                 overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         if (options.isNotEmpty()) {
@@ -113,14 +121,14 @@ fun PersonCard(
                 imageVector = Icons.Outlined.MoreVert,
                 contentDescription = stringResource(R.string.more_menu_button),
                 modifier = Modifier
-                    .size(26.dp)
+                    .size(UiTokens.artworkThumbMini)
                     .clickable(
                         onClick = {
                             optionsVisible = true
                         },
                         indication = rememberRipple(
                             bounded = false,
-                            radius = 20.dp
+                            radius = UiTokens.rippleSmall
                         ),
                         interactionSource = remember { MutableInteractionSource() }
                     )
@@ -142,13 +150,15 @@ fun PersonFilter(
     selectedPerson: Person,
     onPersonSelect: (Person) -> Unit,
 ) {
+    val scheme = MaterialTheme.colorScheme
+    val pill = HomeLibraryTokens.navPill(scheme)
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .height(70.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .height(UiTokens.listItemHeightCompact),
+        horizontalArrangement = Arrangement.spacedBy(UiTokens.paddingItem),
         verticalAlignment = Alignment.CenterVertically,
-        contentPadding = PaddingValues(horizontal = 10.dp)
+        contentPadding = PaddingValues(horizontal = UiTokens.paddingItemTight, vertical = UiTokens.paddingItem)
     ) {
         items(
             items = Person.values(),
@@ -159,9 +169,18 @@ fun PersonFilter(
                 label = {
                     Text(
                         text = person.text,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium,
                     )
-                }
+                },
+                border = null,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = pill,
+                    selectedLabelColor = scheme.onSurface,
+                    selectedLeadingIconColor = scheme.onSurface,
+                    containerColor = scheme.surfaceVariant.copy(alpha = 0.35f),
+                    labelColor = scheme.onSurfaceVariant,
+                ),
             )
         }
     }

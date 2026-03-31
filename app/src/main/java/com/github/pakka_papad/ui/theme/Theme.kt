@@ -2,6 +2,7 @@ package com.github.pakka_papad.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -14,6 +15,29 @@ import androidx.compose.ui.platform.LocalContext
 import com.github.pakka_papad.data.UserPreferences
 import com.google.accompanist.systemuicontroller.SystemUiController
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+
+/**
+ * Dense dark “library shell” chrome for [com.github.pakka_papad.home.HomeFragment].
+ * Blends with dynamic [ColorScheme] so accent still follows user theme.
+ */
+object HomeLibraryTokens {
+    fun barBackground(scheme: ColorScheme): Color = scheme.surface
+    fun canvasBackground(scheme: ColorScheme): Color = scheme.surface
+    fun navBarBackground(scheme: ColorScheme): Color = scheme.surfaceVariant.copy(alpha = 0.55f)
+    fun navPill(scheme: ColorScheme): Color = scheme.secondary.copy(alpha = 0.4f)
+    fun rowHover(scheme: ColorScheme): Color = scheme.surfaceVariant.copy(alpha = 0.35f)
+    /** Mini player strip (row + thin progress) above bottom nav when a track is active. */
+    fun miniPlayerSurface(scheme: ColorScheme): Color =
+        scheme.surface.copy(alpha = 0.98f)
+
+    val gridMinSize get() = UiTokens.gridMinCellSize
+    val contentHorizontalPadding get() = UiTokens.paddingScreen
+    /** Reserved for bottom nav + system gesture (matches existing Home layout). */
+    val scaffoldBottomPaddingIdle get() = UiTokens.scaffoldBottomPaddingIdle
+    /** Row (art + meta + play) + progress line — keep in sync with [MiniPlayer] + indicator in HomeFragment. */
+    val miniPlayerPeekHeight get() = UiTokens.miniPlayerPeekHeight
+    val bottomNavHeight get() = UiTokens.bottomNavHeight
+}
 
 
 @Composable

@@ -16,15 +16,20 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 
+/**
+ * Vertical swipe between expanded [content] (full player) and collapsed [peekContent] (mini player).
+ * Bottom anchor height is [peekHeight]; does not handle system insets — host supplies padded [peekContent].
+ */
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun BottomSheet(
     peekHeight: Dp,
     peekContent: @Composable () -> Unit,
     content: @Composable () -> Unit,
-    swipeableState: SwipeableState<Int> = rememberSwipeableState(initialValue = 0)
+    swipeableState: SwipeableState<Int> = rememberSwipeableState(initialValue = 0),
+    modifier: Modifier = Modifier,
 ) {
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val anchors = mapOf(
             0f to 1,

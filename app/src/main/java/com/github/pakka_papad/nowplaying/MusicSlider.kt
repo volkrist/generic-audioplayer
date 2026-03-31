@@ -17,12 +17,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.github.pakka_papad.R
 import com.github.pakka_papad.data.music.Song
+import com.github.pakka_papad.ui.theme.UiTokens
 import com.github.pakka_papad.toMS
 import kotlinx.coroutines.delay
 
@@ -115,12 +115,12 @@ fun MusicSlider(
         ) {
             Text(
                 text = currentValue.toMS(),
-                fontSize = 14.sp,
+                fontSize = UiTokens.musicSliderTimeLabelSp,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = duration.toMS(),
-                fontSize = 14.sp,
+                fontSize = UiTokens.musicSliderTimeLabelSp,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }

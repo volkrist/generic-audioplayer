@@ -28,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.github.pakka_papad.R
+import com.github.pakka_papad.ui.theme.HomeLibraryTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +40,9 @@ fun HomeNavigationDrawer(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                drawerContainerColor = HomeLibraryTokens.barBackground(MaterialTheme.colorScheme),
+            ) {
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = stringResource(R.string.drawer_header_title),

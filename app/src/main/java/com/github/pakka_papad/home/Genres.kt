@@ -14,17 +14,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.github.pakka_papad.R
 import com.github.pakka_papad.components.FullScreenSadMessage
 import com.github.pakka_papad.components.more_options.GenreOptions
 import com.github.pakka_papad.components.more_options.OptionsAlertDialog
 import com.github.pakka_papad.data.music.GenreWithSongCount
+import com.github.pakka_papad.ui.theme.HomeLibraryTokens
+import com.github.pakka_papad.ui.theme.UiTokens
 
 @Composable
 fun Genres(
@@ -40,7 +43,8 @@ fun Genres(
     }
     LazyColumn(
         modifier = Modifier
-            .fillMaxSize(),
+            .fillMaxSize()
+            .padding(horizontal = HomeLibraryTokens.contentHorizontalPadding),
         state = listState,
         contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Bottom).asPaddingValues(),
     ) {
@@ -65,9 +69,10 @@ fun GenreCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(UiTokens.listItemHeightCompact)
+            .clip(RoundedCornerShape(UiTokens.cornerMedium))
             .clickable(onClick = { onGenreClicked(genreWithSongCount) })
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = UiTokens.paddingSection, vertical = UiTokens.metaSpacingSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -78,11 +83,12 @@ fun GenreCard(
         ) {
             Text(
                 text = genreWithSongCount.genreName,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth(),
                 overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = pluralStringResource(
@@ -91,9 +97,10 @@ fun GenreCard(
                     genreWithSongCount.count
                 ),
                 maxLines = 1,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.fillMaxWidth(),
                 overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         if (options.isNotEmpty()) {
@@ -102,14 +109,14 @@ fun GenreCard(
                 imageVector = Icons.Outlined.MoreVert,
                 contentDescription = stringResource(R.string.more_menu_button),
                 modifier = Modifier
-                    .size(26.dp)
+                    .size(UiTokens.artworkThumbMini)
                     .clickable(
                         onClick = {
                             optionsVisible = true
                         },
                         indication = rememberRipple(
                             bounded = false,
-                            radius = 20.dp
+                            radius = UiTokens.rippleSmall
                         ),
                         interactionSource = remember { MutableInteractionSource() }
                     )

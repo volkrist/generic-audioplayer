@@ -7,12 +7,20 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.with
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +46,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalAbsoluteTonalElevation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -58,12 +67,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,7 +93,10 @@ import com.github.pakka_papad.nowplaying.NowPlayingScreen
 import com.github.pakka_papad.nowplaying.PlayerHelper
 import com.github.pakka_papad.nowplaying.Queue
 import com.github.pakka_papad.player.ZenBroadcastReceiver
+import com.github.pakka_papad.ui.theme.HomeLibraryTokens
+import com.github.pakka_papad.ui.theme.UiTokens
 import com.github.pakka_papad.ui.theme.ZenTheme
+import com.github.pakka_papad.util.AudioFileActions
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -168,7 +181,6 @@ class HomeFragment : Fragment() {
                     val allPersonsListState = rememberLazyListState()
 
                     val playlistsWithSongCount by viewModel.playlistsWithSongCount.collectAsStateWithLifecycle()
-                    val smartPlaylistCounts by viewModel.smartPlaylistCounts.collectAsStateWithLifecycle()
                     val allPlaylistsListState = rememberLazyGridState()
 
                     val genresWithSongCount by viewModel.genresWithSongCount.collectAsStateWithLifecycle()
@@ -187,7 +199,8 @@ class HomeFragment : Fragment() {
 
                     val swipeableState = rememberSwipeableState(initialValue = 0)
                     val bottomBarColor = MaterialTheme.colorScheme
-                        .surfaceColorAtElevation(3.dp + LocalAbsoluteTonalElevation.current)
+                        .surfaceColorAtElevation(UiTokens.elevationTonalBlend + LocalAbsoluteTonalElevation.current)
+                    val homeCanvas = HomeLibraryTokens.canvasBackground(MaterialTheme.colorScheme)
 
                     LaunchedEffect(currentSong) {
                         if (currentSong != null) return@LaunchedEffect
@@ -229,26 +242,40 @@ class HomeFragment : Fragment() {
                         }
                     }
 
-                    val bottomBarYOffset by remember {
+                    /** 1f = mini player strip fully visible; 0f = full player expanded. Matches [BottomSheet] peek alpha logic. */
+                    val miniPlayerPeekProgress by remember {
                         derivedStateOf {
-                            val progress = if (swipeableState.progress.from == 0) {
-                                // at 0 or moving away from 0
+                            if (swipeableState.progress.from == 0) {
                                 if (swipeableState.progress.to == 0) 1f
                                 else if (swipeableState.progress.fraction < 0.25f) 1f - swipeableState.progress.fraction * 4
                                 else 0f
                             } else {
-                                // at 1 or moving away from 1
                                 if (swipeableState.progress.to == 1) 0f
-                                else if (swipeableState.progress.fraction > 0.75f) 1f - (1f - swipeableState.progress.fraction) * 4
-                                else 0f
+                                else if (swipeableState.progress.fraction > 0.75f) {
+                                    1f - (1f - swipeableState.progress.fraction) * 4
+                                } else {
+                                    0f
+                                }
                             }
-                            500 * (1f - progress)
+                        }
+                    }
+                    val bottomBarYOffset by remember {
+                        derivedStateOf {
+                            500 * (1f - miniPlayerPeekProgress)
+                        }
+                    }
+                    val libraryBehindPlayerDimAlpha by remember {
+                        derivedStateOf {
+                            if (currentSong == null) 0f
+                            else (1f - miniPlayerPeekProgress) * UiTokens.libraryBehindPlayerDimAlpha
                         }
                     }
                     val windowInsets = WindowInsets.systemBars.asPaddingValues()
 
                     val queue = viewModel.queue
                     val playbackParams by preferenceProvider.playbackParams.collectAsStateWithLifecycle()
+                    val keepScreenOn by preferenceProvider.keepScreenOn.collectAsStateWithLifecycle()
+                    val volumeBoosterPercent by preferenceProvider.volumeBoosterPercent.collectAsStateWithLifecycle()
                     val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
                     val playerScaffoldState = rememberBottomSheetScaffoldState(
                         bottomSheetState = rememberStandardBottomSheetState(skipHiddenState = false)
@@ -272,8 +299,11 @@ class HomeFragment : Fragment() {
                                 scope.launch { drawerState.close() }
                             } else if (swipeableState.currentValue == 1) {
                                 scope.launch {
-                                    if (isQueueBottomSheetExpanded) playerScaffoldState.bottomSheetState.hide()
-                                    else swipeableState.animateTo(0)
+                                    if (isQueueBottomSheetExpanded) {
+                                        playerScaffoldState.bottomSheetState.hide()
+                                    } else {
+                                        swipeableState.animateTo(0)
+                                    }
                                 }
                             } else {
                                 viewModel.moveToParent()
@@ -289,8 +319,10 @@ class HomeFragment : Fragment() {
                     val miniPlayerPlayPauseClicked = remember { {
                         if (swipeableState.currentValue == 0) { viewModel.onMiniPlayerPlayPause() }
                     } }
-                    val expandQueueBottomSheet = remember<() -> Unit> {
-                        { scope.launch { playerScaffoldState.bottomSheetState.expand() } }
+                    val expandQueueBottomSheet: () -> Unit = remember(playerScaffoldState, scope) {
+                        {
+                            scope.launch { playerScaffoldState.bottomSheetState.expand() }
+                        }
                     }
                     val updateScreen = remember<(Screens) -> Unit> { {
                         if (currentScreen == it) {
@@ -311,7 +343,12 @@ class HomeFragment : Fragment() {
 
                     val homeScreenBottomPadding by remember(currentSong) {
                         derivedStateOf {
-                            if (currentSong == null) 88.dp else 146.dp
+                            if (currentSong == null) {
+                                HomeLibraryTokens.scaffoldBottomPaddingIdle
+                            } else {
+                                HomeLibraryTokens.scaffoldBottomPaddingIdle +
+                                    HomeLibraryTokens.miniPlayerPeekHeight
+                            }
                         }
                     }
 
@@ -338,12 +375,14 @@ class HomeFragment : Fragment() {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surface),
+                            .background(homeCanvas),
                         contentAlignment = Alignment.BottomCenter
                     ) {
                         Scaffold(
                             modifier = Modifier
                                 .padding(bottom = homeScreenBottomPadding),
+                            containerColor = homeCanvas,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
                             topBar = {
                                 HomeTopBar(
                                     onMenuClicked = { scope.launch { drawerState.open() } },
@@ -374,7 +413,16 @@ class HomeFragment : Fragment() {
                                     } else {
                                         AnimatedContent(
                                             targetState = currentScreen,
-                                            label = ""
+                                            transitionSpec = {
+                                                (
+                                                    fadeIn(tween(280, easing = FastOutSlowInEasing)) +
+                                                        slideInVertically { h -> h / 24 }
+                                                    ) with (
+                                                    fadeOut(tween(220)) +
+                                                        slideOutVertically { h -> -h / 24 }
+                                                    )
+                                            },
+                                            label = "homeTabContent",
                                         ) { targetScreen ->
                                             when (targetScreen) {
                                                 Screens.Songs -> {
@@ -409,16 +457,43 @@ class HomeFragment : Fragment() {
                                                 }
                                                 Screens.Playlists -> {
                                                     Playlists(
+                                                        allSongs = songs,
                                                         playlistsWithSongCount = playlistsWithSongCount,
-                                                        smartPlaylistCounts = smartPlaylistCounts,
                                                         onPlaylistClicked = navHelper::navigateToViewDetails,
                                                         listState = allPlaylistsListState,
                                                         onPlaylistCreate = viewModel::onPlaylistCreate,
-                                                        onFavouritesClicked = navHelper::navigateToViewDetails,
-                                                        onRecentlyAddedClicked = navHelper::navigateToRecentlyAddedCollection,
-                                                        onRecentlyPlayedClicked = navHelper::navigateToRecentlyPlayedCollection,
-                                                        onTopTracksClicked = navHelper::navigateToTopTracksCollection,
                                                         onDeletePlaylistClicked = viewModel::deletePlaylist,
+                                                        onSmartPlaylist = { action ->
+                                                            when (action) {
+                                                                HomeSmartPlaylistAction.Favourites ->
+                                                                    navHelper.navigateToViewDetails()
+                                                                HomeSmartPlaylistAction.RecentlyAdded -> {
+                                                                    val list = songs
+                                                                        ?.sortedByDescending { it.dateModifiedSec }
+                                                                        .orEmpty()
+                                                                    if (list.isNotEmpty()) {
+                                                                        viewModel.setQueue(list, 0)
+                                                                    }
+                                                                }
+                                                                HomeSmartPlaylistAction.RecentlyPlayed -> {
+                                                                    val list = songs
+                                                                        ?.filter { it.lastPlayed != null && it.lastPlayed!! > 0L }
+                                                                        ?.sortedByDescending { it.lastPlayed }
+                                                                        .orEmpty()
+                                                                    if (list.isNotEmpty()) {
+                                                                        viewModel.setQueue(list, 0)
+                                                                    }
+                                                                }
+                                                                HomeSmartPlaylistAction.TopTracks -> {
+                                                                    val list = songs
+                                                                        ?.sortedByDescending { it.playCount }
+                                                                        .orEmpty()
+                                                                    if (list.isNotEmpty()) {
+                                                                        viewModel.setQueue(list, 0)
+                                                                    }
+                                                                }
+                                                            }
+                                                        },
                                                     )
                                                 }
                                                 Screens.Genres -> {
@@ -451,61 +526,97 @@ class HomeFragment : Fragment() {
                                 )
                             }
                         )
+                        if (libraryBehindPlayerDimAlpha > 0.02f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = libraryBehindPlayerDimAlpha)),
+                            )
+                        }
                         BottomSheet(
                             peekHeight = homeScreenBottomPadding + windowInsets.calculateBottomPadding(),
                             peekContent = {
+                                val scheme = MaterialTheme.colorScheme
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(bottomBarColor)
                                         .padding(
                                             start = windowInsets.calculateStartPadding(LayoutDirection.Ltr),
                                             end = windowInsets.calculateEndPadding(LayoutDirection.Ltr),
-                                        )
+                                        ),
                                 ) {
-                                    MiniPlayer(
-                                        onPausePlayPressed = miniPlayerPlayPauseClicked,
-                                        song = currentSong,
-                                        showPlayButton = songPlaying == false,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(56.dp)
-                                    )
-
-                                    var progress by remember { mutableStateOf(0f) }
-
-                                    DisposableEffect(Unit) {
-                                        progress =
-                                            playerHelper.currentPosition/ playerHelper.duration
-                                        val listener = object : Player.Listener {
-                                            override fun onMediaItemTransition(
-                                                mediaItem: MediaItem?,
-                                                reason: Int
-                                            ) {
-                                                super.onMediaItemTransition(mediaItem, reason)
-                                                progress = 0f
+                                    if (currentSong != null) {
+                                        Surface(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .graphicsLayer {
+                                                    val s = UiTokens.miniPlayerPeekScaleCollapsed +
+                                                        (UiTokens.miniPlayerPeekScaleExpanded - UiTokens.miniPlayerPeekScaleCollapsed) *
+                                                        miniPlayerPeekProgress
+                                                    scaleX = s
+                                                    scaleY = s
+                                                    transformOrigin = TransformOrigin(0.5f, 1f)
+                                                },
+                                            shape = RoundedCornerShape(
+                                                topStart = UiTokens.sheetCornerTopSmall,
+                                                topEnd = UiTokens.sheetCornerTopSmall,
+                                            ),
+                                            shadowElevation = UiTokens.elevationSurface * miniPlayerPeekProgress,
+                                            tonalElevation = UiTokens.elevationTonalLow,
+                                            color = HomeLibraryTokens.miniPlayerSurface(scheme),
+                                        ) {
+                                            Column {
+                                                MiniPlayer(
+                                                    onPausePlayPressed = miniPlayerPlayPauseClicked,
+                                                    song = currentSong,
+                                                    showPlayButton = songPlaying == false,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                )
+                                                var progress by remember { mutableStateOf(0f) }
+                                                DisposableEffect(currentSong) {
+                                                    progress = if (playerHelper.duration > 0) {
+                                                        playerHelper.currentPosition / playerHelper.duration
+                                                    } else {
+                                                        0f
+                                                    }
+                                                    val listener = object : Player.Listener {
+                                                        override fun onMediaItemTransition(
+                                                            mediaItem: MediaItem?,
+                                                            reason: Int,
+                                                        ) {
+                                                            super.onMediaItemTransition(mediaItem, reason)
+                                                            progress = 0f
+                                                        }
+                                                    }
+                                                    playerHelper.addListener(listener)
+                                                    onDispose {
+                                                        playerHelper.removeListener(listener)
+                                                    }
+                                                }
+                                                if (songPlaying == true && swipeableState.currentValue == 0) {
+                                                    LaunchedEffect(Unit) {
+                                                        while (true) {
+                                                            progress = if (playerHelper.duration > 0) {
+                                                                (playerHelper.currentPosition / playerHelper.duration)
+                                                                    .coerceIn(0f, 1f)
+                                                            } else {
+                                                                0f
+                                                            }
+                                                            delay(40)
+                                                        }
+                                                    }
+                                                }
+                                                LinearProgressIndicator(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(UiTokens.progressBarThin),
+                                                    progress = progress.coerceIn(0f, 1f),
+                                                    color = scheme.primary,
+                                                    trackColor = scheme.surfaceVariant.copy(alpha = 0.55f),
+                                                )
                                             }
                                         }
-                                        playerHelper.addListener(listener)
-                                        onDispose {
-                                            playerHelper.removeListener(listener)
-                                        }
                                     }
-                                    if (songPlaying == true && swipeableState.currentValue == 0) {
-                                        LaunchedEffect(Unit) {
-                                            while (true) {
-                                                progress =
-                                                    playerHelper.currentPosition / playerHelper.duration
-                                                delay(40)
-                                            }
-                                        }
-                                    }
-                                    LinearProgressIndicator(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(2.dp),
-                                        progress = progress
-                                    )
                                 }
                             },
                             content = {
@@ -546,6 +657,58 @@ class HomeFragment : Fragment() {
                                                 onAddCurrentSongToPlaylist = {
                                                     navHelper.navigateToChoosePlaylist(it)
                                                 },
+                                                keepScreenOn = keepScreenOn,
+                                                onKeepScreenOnChange = preferenceProvider::updateKeepScreenOn,
+                                                volumeBoosterPercent = volumeBoosterPercent,
+                                                onVolumeBoosterPercentChange = preferenceProvider::updateVolumeBoosterPercent,
+                                                onSettingsClicked = navHelper::navigateToSettings,
+                                                onPlayerActionEditTags = { song ->
+                                                    if (!AudioFileActions.tryOpenAudioTagEditor(
+                                                            context,
+                                                            song.location,
+                                                        )
+                                                    ) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            context.getString(R.string.player_action_no_editor_app),
+                                                            Toast.LENGTH_LONG,
+                                                        ).show()
+                                                    }
+                                                },
+                                                onPlayerActionHideSong = { song ->
+                                                    viewModel.onSongBlacklist(song)
+                                                },
+                                                onPlayerActionDeleteSong = { song ->
+                                                    viewModel.deleteSongFromDevice(song)
+                                                },
+                                                onPlayerActionRingtone = { song ->
+                                                    if (AudioFileActions.setAsRingtone(context, song.location)) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            context.getString(R.string.player_ringtone_ok),
+                                                            Toast.LENGTH_SHORT,
+                                                        ).show()
+                                                    } else {
+                                                        Toast.makeText(
+                                                            context,
+                                                            context.getString(R.string.player_ringtone_failed),
+                                                            Toast.LENGTH_LONG,
+                                                        ).show()
+                                                    }
+                                                },
+                                                onPlayerActionChangeCover = { song ->
+                                                    if (!AudioFileActions.tryOpenAudioForCoverChange(
+                                                            context,
+                                                            song.location,
+                                                        )
+                                                    ) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            context.getString(R.string.player_action_no_editor_app),
+                                                            Toast.LENGTH_LONG,
+                                                        ).show()
+                                                    }
+                                                },
                                             )
                                         },
                                         sheetContent = {
@@ -559,12 +722,12 @@ class HomeFragment : Fragment() {
                                             )
                                         },
                                         sheetShape = RoundedCornerShape(
-                                            topStart = 30.dp,
-                                            topEnd = 30.dp,
-                                            bottomStart = 0.dp,
-                                            bottomEnd = 0.dp
+                                            topStart = UiTokens.sheetCornerTopLarge,
+                                            topEnd = UiTokens.sheetCornerTopLarge,
+                                            bottomStart = UiTokens.elevationNone,
+                                            bottomEnd = UiTokens.elevationNone,
                                         ),
-                                        sheetPeekHeight = 0.dp,
+                                        sheetPeekHeight = UiTokens.elevationNone,
                                         sheetContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                                     )
                                 }

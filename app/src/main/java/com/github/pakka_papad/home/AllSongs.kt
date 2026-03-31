@@ -26,6 +26,7 @@ import com.github.pakka_papad.components.SongCardV1
 import com.github.pakka_papad.components.more_options.SongOptions
 import com.github.pakka_papad.data.music.Song
 import com.github.pakka_papad.formatToDate
+import com.github.pakka_papad.ui.theme.HomeLibraryTokens
 
 @Composable
 fun AllSongs(
@@ -49,7 +50,8 @@ fun AllSongs(
     } else {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .padding(horizontal = HomeLibraryTokens.contentHorizontalPadding),
             state = listState,
             contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Bottom).asPaddingValues()
         ) {

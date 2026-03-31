@@ -25,18 +25,21 @@ import com.github.pakka_papad.R
 private fun BaseTopBar(
     appBar: @Composable BoxScope.() -> Unit,
     backgroundColor: Color,
+    showBottomDivider: Boolean = true,
 ) = Box(
     contentAlignment = Alignment.BottomCenter,
     modifier = Modifier
         .background(backgroundColor),
     content = {
         appBar()
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        )
+        if (showBottomDivider) {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+        }
     }
 )
 
@@ -91,6 +94,7 @@ fun SmallTopBar(
     backgroundColor: Color = MaterialTheme.colorScheme.surface,
     onBackgroundColor: Color = MaterialTheme.colorScheme.onSurface,
     titleMaxLines: Int,
+    showBottomDivider: Boolean = true,
 ) = BaseTopBar(
     appBar = {
         TopAppBar(
@@ -113,7 +117,8 @@ fun SmallTopBar(
             )
         )
     },
-    backgroundColor = backgroundColor
+    backgroundColor = backgroundColor,
+    showBottomDivider = showBottomDivider,
 )
 
 @Composable

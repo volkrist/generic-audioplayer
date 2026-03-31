@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,15 +32,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.github.pakka_papad.R
 import com.github.pakka_papad.components.more_options.OptionsAlertDialog
 import com.github.pakka_papad.components.more_options.PlaylistOptions
 import com.github.pakka_papad.data.music.PlaylistWithSongCount
+import com.github.pakka_papad.ui.theme.UiTokens
 
 @Composable
 private fun BasePlaylistCard(
@@ -48,14 +50,14 @@ private fun BasePlaylistCard(
 ) = Row(
     modifier = Modifier
         .fillMaxWidth()
-        .height(80.dp)
-        .padding(12.dp)
+        .height(UiTokens.listItemHeightTall)
+        .padding(UiTokens.paddingSection)
         .clip(MaterialTheme.shapes.medium)
         .background(MaterialTheme.colorScheme.secondaryContainer)
         .clickable(onClick = onCardClicked)
-        .padding(horizontal = 12.dp),
+        .padding(horizontal = UiTokens.paddingSection),
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(12.dp),
+    horizontalArrangement = Arrangement.spacedBy(UiTokens.paddingSection),
     content = content
 )
 
@@ -84,7 +86,7 @@ fun SelectablePlaylistCard(
             Icon(
                 imageVector = Icons.Outlined.Check,
                 contentDescription = "Check mark",
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(UiTokens.artworkThumbSmall),
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
             )
         }
@@ -100,9 +102,9 @@ fun PlaylistCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(UiTokens.listItemHeightStandard)
             .clickable(onClick = { onPlaylistClicked(playlistWithSongCount.playlistId) })
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = UiTokens.gridSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -132,14 +134,14 @@ fun PlaylistCard(
             imageVector = Icons.Outlined.MoreVert,
             contentDescription = null,
             modifier = Modifier
-                .size(26.dp)
+                .size(UiTokens.artworkThumbMini)
                 .clickable(
                     onClick = {
                         optionsVisible = true
                     },
                     indication = rememberRipple(
                         bounded = false,
-                        radius = 20.dp
+                        radius = UiTokens.rippleSmall
                     ),
                     interactionSource = remember { MutableInteractionSource() }
                 )
@@ -161,12 +163,13 @@ fun PlaylistCardV2(
     options: List<PlaylistOptions> = listOf(),
 ) {
     var optionsVisible by remember { mutableStateOf(false) }
+    val scheme = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
-            .widthIn(max = 200.dp)
+            .widthIn(max = UiTokens.gridCardMaxWidth)
             .clickable(onClick = { onPlaylistClicked(playlistWithSongCount.playlistId) })
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = UiTokens.metaSpacingSmall, vertical = UiTokens.paddingItem),
+        verticalArrangement = Arrangement.spacedBy(UiTokens.gridSpacing)
     ) {
         AsyncImage(
             model = playlistWithSongCount.artUri,
@@ -174,32 +177,52 @@ fun PlaylistCardV2(
             modifier = Modifier
                 .aspectRatio(ratio = 1f, matchHeightConstraintsFirst = false)
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium),
+                .clip(RoundedCornerShape(UiTokens.cornerLarge))
+                .background(scheme.surfaceVariant),
             contentScale = ContentScale.Crop,
         )
         Row(
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = playlistWithSongCount.playlistName,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
+            Column(
                 modifier = Modifier.weight(1f),
-                fontWeight = FontWeight.Bold,
-                overflow = TextOverflow.Ellipsis
-            )
+                verticalArrangement = Arrangement.spacedBy(UiTokens.textLineGapTight),
+            ) {
+                Text(
+                    text = playlistWithSongCount.playlistName,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    fontWeight = FontWeight.SemiBold,
+                    overflow = TextOverflow.Ellipsis,
+                    color = scheme.onSurface,
+                )
+                Text(
+                    text = pluralStringResource(
+                        id = R.plurals.song_count,
+                        count = playlistWithSongCount.count,
+                        playlistWithSongCount.count,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Icon(
                 imageVector = Icons.Outlined.MoreVert,
                 contentDescription = stringResource(R.string.more_menu_button),
                 modifier = Modifier
-                    .size(26.dp)
+                    .size(UiTokens.artworkThumbMini)
                     .clickable(
                         onClick = {
                             optionsVisible = true
                         },
-                        indication = rememberRipple(bounded = false, radius = 20.dp),
+                        indication = rememberRipple(bounded = false, radius = UiTokens.rippleSmall),
                         interactionSource = remember { MutableInteractionSource() }
-                    )
+                    ),
+                tint = scheme.onSurfaceVariant,
             )
         }
         if (optionsVisible) {
