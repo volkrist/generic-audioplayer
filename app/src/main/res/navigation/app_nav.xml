@@ -6,7 +6,7 @@
 
     <fragment
         android:id="@+id/homeFragment"
-        android:name="com.github.pakka_papad.home.HomeFragment"
+        android:name="com.generic.audioplayes.home.HomeFragment"
         android:label="HomeFragment" >
         <action
             android:id="@+id/action_homeFragment_to_collectionFragment"
@@ -88,7 +88,7 @@
     </fragment>
     <fragment
         android:id="@+id/collectionFragment"
-        android:name="com.github.pakka_papad.collection.CollectionFragment"
+        android:name="com.generic.audioplayes.collection.CollectionFragment"
         android:label="CollectionFragment" >
         <action
             android:id="@+id/action_collectionFragment_to_selectPlaylistFragment"
@@ -99,13 +99,13 @@
             app:popExitAnim="@anim/exit_to_bottom"/>
         <argument
             android:name="collectionType"
-            app:argType="com.github.pakka_papad.collection.CollectionType"
+            app:argType="com.generic.audioplayes.collection.CollectionType"
             app:nullable="true"
             android:defaultValue="@null" />
     </fragment>
     <fragment
         android:id="@+id/settingsFragment"
-        android:name="com.github.pakka_papad.settings.SettingsFragment"
+        android:name="com.generic.audioplayes.settings.SettingsFragment"
         android:label="SettingsFragment" >
         <action
             android:id="@+id/action_settingsFragment_to_restoreFragment"
@@ -166,7 +166,7 @@
     </fragment>
     <fragment
         android:id="@+id/splashFragment"
-        android:name="com.github.pakka_papad.splash.SplashFragment"
+        android:name="com.generic.audioplayes.splash.SplashFragment"
         android:label="fragment_splash">
         <action
             android:id="@+id/action_splashFragment_to_homeFragment"
@@ -181,7 +181,7 @@
     </fragment>
     <fragment
         android:id="@+id/onBoardingFragment"
-        android:name="com.github.pakka_papad.onboarding.OnBoardingFragment"
+        android:name="com.generic.audioplayes.onboarding.OnBoardingFragment"
         android:label="OnBoardingFragment" >
         <action
             android:id="@+id/action_onBoardingFragment_to_homeFragment"
@@ -193,7 +193,7 @@
     </fragment>
     <fragment
         android:id="@+id/selectPlaylistFragment"
-        android:name="com.github.pakka_papad.select_playlist.SelectPlaylistFragment"
+        android:name="com.generic.audioplayes.select_playlist.SelectPlaylistFragment"
         android:label="SelectPlaylistFragment" >
         <argument
             android:name="songLocations"
@@ -201,7 +201,7 @@
     </fragment>
     <fragment
         android:id="@+id/searchFragment"
-        android:name="com.github.pakka_papad.search.SearchFragment"
+        android:name="com.generic.audioplayes.search.SearchFragment"
         android:label="SearchFragment" >
         <action
             android:id="@+id/action_searchFragment_to_collectionFragment"
@@ -220,23 +220,23 @@
     </fragment>
     <fragment
         android:id="@+id/backupRestoreFragment"
-        android:name="com.github.pakka_papad.backup.BackupRestoreFragment"
+        android:name="com.generic.audioplayes.backup.BackupRestoreFragment"
         android:label="BackupRestoreFragment" />
     <fragment
         android:id="@+id/restoreFragment"
-        android:name="com.github.pakka_papad.restore.RestoreFragment"
+        android:name="com.generic.audioplayes.restore.RestoreFragment"
         android:label="RestoreFragment" />
     <fragment
         android:id="@+id/whatsNewFragment"
-        android:name="com.github.pakka_papad.whatsnew.WhatsNewFragment"
+        android:name="com.generic.audioplayes.whatsnew.WhatsNewFragment"
         android:label="WhatsNewFragment" />
     <fragment
         android:id="@+id/restoreFolderFragment"
-        android:name="com.github.pakka_papad.restore_folder.RestoreFolderFragment"
+        android:name="com.generic.audioplayes.restore_folder.RestoreFolderFragment"
         android:label="RestoreFolderFragment" />
     <fragment
         android:id="@+id/placeholderFragment"
-        android:name="com.github.pakka_papad.drawer.PlaceholderFragment"
+        android:name="com.generic.audioplayes.drawer.PlaceholderFragment"
         android:label="PlaceholderFragment" >
         <argument
             android:name="screenTitle"
@@ -244,27 +244,27 @@
     </fragment>
     <fragment
         android:id="@+id/sleepTimerFragment"
-        android:name="com.github.pakka_papad.sleeptimer.SleepTimerFragment"
+        android:name="com.generic.audioplayes.sleeptimer.SleepTimerFragment"
         android:label="SleepTimerFragment" />
     <fragment
         android:id="@+id/volumeBoosterFragment"
-        android:name="com.github.pakka_papad.volume.VolumeBoosterFragment"
+        android:name="com.generic.audioplayes.volume.VolumeBoosterFragment"
         android:label="VolumeBoosterFragment" />
     <fragment
         android:id="@+id/equalizerFragment"
-        android:name="com.github.pakka_papad.equalizer.EqualizerFragment"
+        android:name="com.generic.audioplayes.equalizer.EqualizerFragment"
         android:label="EqualizerFragment" />
     <fragment
         android:id="@+id/dictaphoneFragment"
-        android:name="com.github.pakka_papad.dictaphone.DictaphoneFragment"
+        android:name="com.generic.audioplayes.dictaphone.DictaphoneFragment"
         android:label="DictaphoneFragment" />
     <fragment
         android:id="@+id/themeFragment"
-        android:name="com.github.pakka_papad.theme.ThemeFragment"
+        android:name="com.generic.audioplayes.theme.ThemeFragment"
         android:label="ThemeFragment" />
     <fragment
         android:id="@+id/playlistEditorFragment"
-        android:name="com.github.pakka_papad.playlisteditor.PlaylistEditorFragment"
+        android:name="com.generic.audioplayes.playlisteditor.PlaylistEditorFragment"
         android:label="PlaylistEditorFragment" >
         <argument
             android:name="playlistId"
@@ -279,7 +279,7 @@
     </fragment>
     <fragment
         android:id="@+id/addSongsToPlaylistFragment"
-        android:name="com.github.pakka_papad.playlisteditor.AddSongsToPlaylistFragment"
+        android:name="com.generic.audioplayes.playlisteditor.AddSongsToPlaylistFragment"
         android:label="AddSongsToPlaylistFragment" >
         <argument
             android:name="playlistId"

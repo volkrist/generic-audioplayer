@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+option java_package = "com.generic.audioplayes.data";
+option java_multiple_files = true;
+
+message UserPreferences {
+  bool useMaterialYouTheme = 1;
+  enum Theme {
+    LIGHT_MODE = 0;
+    DARK_MODE = 1;
+    USE_SYSTEM_MODE = 2;
+    AMOLED_MODE = 3;
+  }
+  Theme chosenTheme = 2;
+  bool onBoardingComplete = 3;
+  enum Accent {
+    Default = 0;
+    Malibu = 1;
+    Melrose = 2;
+    Elm = 3;
+    Magenta = 4;
+    JacksonsPurple = 5;
+  }
+  Accent chosenAccent = 4;
+  bool crashlyticsDisabled = 5;
+  message PlaybackParams {
+    int32 playbackSpeed = 1;
+    int32 playbackPitch = 2;
+  }
+  PlaybackParams playbackParams = 6;
+  repeated int32 selectedTabs = 7;
+  map<int32, int32> chosenSortOrder = 8;
+  // Sleep timer: wall-clock end time for duration-based timer (ms since epoch); 0 = inactive
+  int64 sleep_timer_end_epoch_ms = 9;
+  bool sleep_timer_stop_after_current_track = 10;
+  // In-app volume multiplier percent (100 = unity, 200 = 2x). Does not change system volume.
+  int32 volume_booster_percent = 11;
+
+  enum EqualizerPreset {
+    EQUALIZER_PRESET_NORMAL = 0;
+    EQUALIZER_PRESET_BASS = 1;
+    EQUALIZER_PRESET_ROCK = 2;
+    EQUALIZER_PRESET_POP = 3;
+    EQUALIZER_PRESET_CLASSICAL = 4;
+    EQUALIZER_PRESET_CUSTOM = 5;
+  }
+  EqualizerPreset equalizer_preset = 12;
+  // CUSTOM curve only; for presets levels are derived at runtime
+  repeated int32 equalizer_custom_band_mb = 13;
+  int32 bass_boost_strength = 14;
+  int32 virtualizer_strength = 15;
+
+  // Playback / UI toggles (seeded once for existing installs — see ZenPreferenceProvider)
+  bool crossfade_enabled = 16;
+  bool gapless_playback_enabled = 17;
+  bool keep_screen_on = 18;
+  bool show_on_lock_screen = 19;
+  bool pause_on_headset_disconnect = 20;
+  int32 playback_prefs_seed_version = 21;
+  // When false, EQ / bass boost / virtualizer are bypassed (effects stay attached but disabled)
+  bool equalizer_enabled = 22;
+  // 0 = legacy datastore before this field; migration sets enabled=true once
+  int32 equalizer_prefs_seed_version = 23;
+  // Last successful local JSON backup export (epoch ms); 0 = never
+  int64 last_backup_export_epoch_ms = 24;
+}

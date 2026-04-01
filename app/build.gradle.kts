@@ -31,11 +31,11 @@ android {
             keyPassword = props["IR_KEY_PASSWORD"] as String? ?: ""
         }
     }
-    namespace = "com.github.pakka_papad"
+    namespace = "com.generic.audioplayes"
     compileSdk = Api.compileSdk
 
     defaultConfig {
-        applicationId = "com.github.pakka_papad"
+        applicationId = "com.generic.audioplayes"
         minSdk = Api.minSdk
         targetSdk = Api.targetSdk
         versionCode = AppVersion.Code

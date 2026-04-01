@@ -1,0 +1,100 @@
+package com.generic.audioplayes.search
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.generic.audioplayes.R
+
+@Composable
+fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onBackArrowPressed: () -> Unit,
+    onClearRequest: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp))
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
+    ) {
+        val containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+        TextField(
+            modifier = Modifier.fillMaxWidth(),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = containerColor,
+                unfocusedContainerColor = containerColor,
+                disabledContainerColor = containerColor,
+                errorContainerColor = containerColor,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+                errorIndicatorColor = Color.Transparent,
+            ),
+            value = query,
+            onValueChange = onQueryChange,
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Outlined.ArrowBack,
+                    contentDescription = stringResource(R.string.back_button),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .padding(9.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = rememberRipple(
+                                bounded = false,
+                                radius = 25.dp,
+                            ),
+                            onClick = onBackArrowPressed,
+                        ),
+                )
+            },
+            trailingIcon = {
+                Icon(
+                    imageVector = if (query.isEmpty()) Icons.Outlined.Search else Icons.Outlined.Close,
+                    contentDescription = stringResource(
+                        if (query.isEmpty()) R.string.search_icon else R.string.clear_button,
+                    ),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .padding(9.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = rememberRipple(
+                                bounded = false,
+                                radius = 25.dp,
+                            ),
+                            onClick = onClearRequest,
+                        ),
+                )
+            },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.search_global_hint),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.titleMedium,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        )
+    }
+}

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Zen Müzik</string>
+    <string name="app_name">Generic AudioPlayes</string>
     <string name="player_widget_medium_description">Şimdi çalıyor (orta)</string>
     <string name="player_widget_small_description">Oynatıcı (kompakt)</string>
 
@@ -133,7 +133,7 @@
     <string name="stopping_in">1$s\'de durduruluyor</string>
     <string name="playlist_art">Oynatma listesi resmi</string>
     <string name="songs_tab_cannot_be_removed">Şarkılar sekmesi kaldırılamaz</string>
-    <string name="maximum_of_five_tab_selections_are_allowed">En fazla beş sekme seçimine izin verilir</string>
+    <string name="maximum_tab_selections_are_allowed">En fazla %1$d sekme seçimine izin verilir</string>
     <string name="minimum_one_tab_selection_is_required">En az bir sekme seçimi gereklidir</string>
 
     <!-- plural strings -->
