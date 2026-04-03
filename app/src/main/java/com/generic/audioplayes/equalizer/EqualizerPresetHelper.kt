@@ -4,10 +4,11 @@ import com.generic.audioplayes.data.UserPreferences
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
-internal object EqualizerPresetHelper {
+object EqualizerPresetHelper {
 
     private val REF_NORMAL = intArrayOf(0, 0, 0, 0, 0)
-    private val REF_BASS = intArrayOf(420, 280, 100, -40, -100)
+    /** ~+0.6 / +0.4 / +0.1 dB on lows, flat on highs (millibels) */
+    private val REF_BASS = intArrayOf(60, 40, 10, 0, 0)
     private val REF_ROCK = intArrayOf(300, 140, -100, 120, 300)
     private val REF_POP = intArrayOf(-80, 20, 200, 160, 120)
     private val REF_CLASSICAL = intArrayOf(-100, -50, 0, 100, 200)
@@ -56,8 +57,12 @@ internal object EqualizerPresetHelper {
         }
     }
 
-    fun defaultCenterFreqHz(bandCount: Int): List<Float> {
+    private val displayFiveBandHz = listOf(60f, 230f, 910f, 3600f, 14000f)
+
+    /** Center frequency labels for the equalizer UI (matches typical 5-band layout). */
+    fun displayCenterFreqHz(bandCount: Int): List<Float> {
         if (bandCount <= 0) return emptyList()
+        if (bandCount == 5) return displayFiveBandHz
         if (bandCount == 1) return listOf(1000f)
         val minHz = 60f
         val maxHz = 14000f
@@ -66,6 +71,8 @@ internal object EqualizerPresetHelper {
             minHz * (maxHz / minHz).pow(t)
         }
     }
+
+    fun defaultCenterFreqHz(bandCount: Int): List<Float> = displayCenterFreqHz(bandCount)
 
     fun computeLevels(
         settings: com.generic.audioplayes.data.EqualizerSettings,

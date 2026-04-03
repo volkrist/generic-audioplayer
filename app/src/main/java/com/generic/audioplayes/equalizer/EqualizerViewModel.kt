@@ -2,13 +2,13 @@ package com.generic.audioplayes.equalizer
 
 import androidx.lifecycle.ViewModel
 import com.generic.audioplayes.data.UserPreferences
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
 class EqualizerViewModel @Inject constructor(
-    private val prefs: ZenPreferenceProvider,
+    private val prefs: AudioPlayerPreferenceProvider,
     private val equalizerManager: EqualizerManager,
 ) : ViewModel() {
 
@@ -20,13 +20,14 @@ class EqualizerViewModel @Inject constructor(
     }
 
     fun onBandLevelChange(index: Int, mb: Int) {
-        val state = equalizerManager.uiState.value
-        val clamped = mb.coerceIn(state.levelMinMb, state.levelMaxMb)
-        val newLevels = state.levelsMb.toMutableList()
-        if (index in newLevels.indices) {
-            newLevels[index] = clamped
-            prefs.updateEqualizerCustomBands(newLevels)
-        }
+        val settings = prefs.equalizerSettings.value
+        val ui = equalizerManager.uiState.value
+        val count = settings.uiBandCount.coerceIn(5, 10)
+        val levels = EqualizerPresetHelper.computeLevels(settings, count).toMutableList()
+        if (index !in levels.indices) return
+        val clamped = mb.coerceIn(ui.levelMinMb, ui.levelMaxMb)
+        levels[index] = clamped
+        prefs.updateEqualizerCustomBands(levels)
     }
 
     fun onBassChange(strength: Int) {
@@ -37,8 +38,12 @@ class EqualizerViewModel @Inject constructor(
         prefs.updateVirtualizerStrength(strength)
     }
 
-    fun reset() {
-        prefs.resetEqualizerToDefaults()
+    fun onReverbPreset(presetId: Int) {
+        prefs.updateReverbPreset(presetId)
+    }
+
+    fun onUiBandCountChange(count: Int) {
+        prefs.updateEqualizerUiBandCount(count)
     }
 
     fun onEqualizerMasterEnabled(enabled: Boolean) {

@@ -30,8 +30,8 @@ import com.generic.audioplayes.R
 import com.generic.audioplayes.components.BlockingProgressIndicator
 import com.generic.audioplayes.components.Snackbar
 import com.generic.audioplayes.components.TopBarWithBackArrow
-import com.generic.audioplayes.data.ZenPreferenceProvider
-import com.generic.audioplayes.ui.theme.ZenTheme
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -44,7 +44,7 @@ class BackupRestoreFragment : Fragment() {
     private val viewModel: BackupRestoreViewModel by viewModels()
 
     @Inject
-    lateinit var preferenceProvider: ZenPreferenceProvider
+    lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
     private val createBackupLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -105,7 +105,7 @@ class BackupRestoreFragment : Fragment() {
                     }
                 }
 
-                ZenTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference, systemUiController) {
                     Scaffold(
                         topBar = {
                             TopBarWithBackArrow(
@@ -131,7 +131,7 @@ class BackupRestoreFragment : Fragment() {
                                 BackupRestoreScreen(
                                     lastBackupEpochMs = lastBackup,
                                     onExportClick = {
-                                        createBackupLauncher.launch("zen_backup.json")
+                                        createBackupLauncher.launch("audio_player_backup.json")
                                     },
                                     onImportClick = {
                                         openBackupLauncher.launch(

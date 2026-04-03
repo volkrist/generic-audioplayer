@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.generic.audioplayes.Constants
 import com.generic.audioplayes.R
 import com.generic.audioplayes.components.SortOptions
-import com.generic.audioplayes.data.ZenCrashReporter
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.data.services.PlayerService
 import com.generic.audioplayes.data.services.PlaylistService
@@ -38,7 +38,7 @@ class CollectionViewModel @Inject constructor(
     private val songService: SongService,
     private val playerService: PlayerService,
     private val queueService: QueueService,
-    private val crashReporter: ZenCrashReporter,
+    private val crashReporter: AudioPlayerCrashReporter,
 ) : ViewModel() {
 
     val currentSong = queueService.currentSong

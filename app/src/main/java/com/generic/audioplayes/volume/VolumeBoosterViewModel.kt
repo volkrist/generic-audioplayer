@@ -1,13 +1,13 @@
 package com.generic.audioplayes.volume
 
 import androidx.lifecycle.ViewModel
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
 class VolumeBoosterViewModel @Inject constructor(
-    private val prefs: ZenPreferenceProvider,
+    private val prefs: AudioPlayerPreferenceProvider,
 ) : ViewModel() {
 
     val percent = prefs.volumeBoosterPercent

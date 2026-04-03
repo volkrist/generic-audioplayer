@@ -1,37 +1,48 @@
 package com.generic.audioplayes.sleeptimer
 
+import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.generic.audioplayes.R
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.fragment.app.Fragment
+import androidx.core.view.WindowCompat
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
-import com.generic.audioplayes.components.TopBarWithBackArrow
-import com.generic.audioplayes.data.ZenPreferenceProvider
-import com.generic.audioplayes.ui.theme.ZenTheme
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.compose.material3.Scaffold
-import androidx.compose.ui.res.stringResource
-import com.generic.audioplayes.R
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SleepTimerFragment : Fragment() {
+class SleepTimerFragment : DialogFragment() {
 
     private val viewModel: SleepTimerViewModel by viewModels()
 
-    @Inject lateinit var preferenceProvider: ZenPreferenceProvider
+    @Inject lateinit var preferenceProvider: AudioPlayerPreferenceProvider
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setStyle(STYLE_NO_FRAME, R.style.Theme_AudioPlayer_SleepTimerDialog)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.apply {
+            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            WindowCompat.setDecorFitsSystemWindows(this, false)
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -39,30 +50,21 @@ class SleepTimerFragment : Fragment() {
         savedInstanceState: Bundle?,
     ): View {
         return ComposeView(requireContext()).apply {
+            setBackgroundColor(AndroidColor.TRANSPARENT)
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                ZenTheme(themePreference, systemUiController) {
-                    Scaffold(
+                AudioPlayerTheme(themePreference, systemUiController) {
+                    Surface(
                         modifier = Modifier.fillMaxSize(),
-                        topBar = {
-                            TopBarWithBackArrow(
-                                onBackArrowPressed = { findNavController().navigateUp() },
-                                title = stringResource(R.string.sleep_timer),
-                                actions = {},
-                            )
-                        },
-                    ) { padding ->
-                        Surface(
+                        color = Color.Transparent,
+                    ) {
+                        SleepTimerScreen(
+                            viewModel = viewModel,
+                            onDismiss = { findNavController().navigateUp() },
                             modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.surface,
-                        ) {
-                            SleepTimerScreen(
-                                viewModel = viewModel,
-                                modifier = Modifier.padding(padding),
-                            )
-                        }
+                        )
                     }
                 }
             }

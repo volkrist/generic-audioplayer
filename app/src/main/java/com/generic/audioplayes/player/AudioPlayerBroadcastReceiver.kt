@@ -6,15 +6,15 @@ import android.content.Intent
 import com.generic.audioplayes.Constants
 import timber.log.Timber
 
-class ZenBroadcastReceiver: BroadcastReceiver() {
+class AudioPlayerBroadcastReceiver: BroadcastReceiver() {
 
     companion object {
         const val AUDIO_CONTROL = "audio_control"
-        const val ZEN_PLAYER_PAUSE_PLAY = Constants.PACKAGE_NAME + ".ACTION_PAUSE"
-        const val ZEN_PLAYER_NEXT = Constants.PACKAGE_NAME + ".ACTION_NEXT"
-        const val ZEN_PLAYER_PREVIOUS = Constants.PACKAGE_NAME + ".ACTION_PREVIOUS"
-        const val ZEN_PLAYER_CANCEL = Constants.PACKAGE_NAME + ".ACTION_CANCEL"
-        const val ZEN_PLAYER_LIKE = Constants.PACKAGE_NAME + ".ACTION_LIKE"
+        const val AUDIO_PLAYER_PAUSE_PLAY = Constants.PACKAGE_NAME + ".ACTION_PAUSE"
+        const val AUDIO_PLAYER_NEXT = Constants.PACKAGE_NAME + ".ACTION_NEXT"
+        const val AUDIO_PLAYER_PREVIOUS = Constants.PACKAGE_NAME + ".ACTION_PREVIOUS"
+        const val AUDIO_PLAYER_CANCEL = Constants.PACKAGE_NAME + ".ACTION_CANCEL"
+        const val AUDIO_PLAYER_LIKE = Constants.PACKAGE_NAME + ".ACTION_LIKE"
         const val PAUSE_PLAY_ACTION_REQUEST_CODE = 1001
         const val NEXT_ACTION_REQUEST_CODE = 1002
         const val PREVIOUS_ACTION_REQUEST_CODE = 1003
@@ -27,11 +27,11 @@ class ZenBroadcastReceiver: BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         val action = intent?.extras?.getString(AUDIO_CONTROL) ?: return
         when(action){
-            ZEN_PLAYER_NEXT -> callback?.onBroadcastNext()
-            ZEN_PLAYER_PAUSE_PLAY -> callback?.onBroadcastPausePlay()
-            ZEN_PLAYER_PREVIOUS -> callback?.onBroadcastPrevious()
-            ZEN_PLAYER_LIKE -> callback?.onBroadcastLike()
-            ZEN_PLAYER_CANCEL -> callback?.onBroadcastCancel()
+            AUDIO_PLAYER_NEXT -> callback?.onBroadcastNext()
+            AUDIO_PLAYER_PAUSE_PLAY -> callback?.onBroadcastPausePlay()
+            AUDIO_PLAYER_PREVIOUS -> callback?.onBroadcastPrevious()
+            AUDIO_PLAYER_LIKE -> callback?.onBroadcastLike()
+            AUDIO_PLAYER_CANCEL -> callback?.onBroadcastCancel()
             else -> {
                 Timber.d("no action matched -> $action")
             }

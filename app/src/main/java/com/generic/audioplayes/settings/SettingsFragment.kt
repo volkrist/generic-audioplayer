@@ -7,14 +7,14 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.os.bundleOf
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
@@ -26,125 +26,60 @@ import androidx.navigation.fragment.findNavController
 import com.generic.audioplayes.R
 import com.generic.audioplayes.components.Snackbar
 import com.generic.audioplayes.components.TopBarWithBackArrow
-import com.generic.audioplayes.data.ZenCrashReporter
-import com.generic.audioplayes.data.ZenPreferenceProvider
-import com.generic.audioplayes.ui.theme.ZenTheme
-import com.google.android.play.core.appupdate.AppUpdateManager
-import com.google.android.play.core.appupdate.AppUpdateOptions
-import com.google.android.play.core.install.model.AppUpdateType
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
 
-    private val viewModel :SettingsViewModel by viewModels()
+    private val viewModel: SettingsViewModel by viewModels()
 
     private lateinit var navController: NavController
 
-    @Inject lateinit var preferenceProvider: ZenPreferenceProvider
+    @Inject lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
-    @Inject lateinit var appUpdateManager: AppUpdateManager
-
-    @Inject lateinit var crashReporter: ZenCrashReporter
+    @Inject lateinit var crashReporter: AudioPlayerCrashReporter
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         navController = findNavController()
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                val scanStatus by viewModel.scanStatus.collectAsStateWithLifecycle()
-                val isCrashlyticsDisabled by preferenceProvider.isCrashlyticsDisabled.collectAsStateWithLifecycle()
-
-                val tabsSelection by viewModel.tabsSelection.collectAsStateWithLifecycle()
-
-                val isAppUpdateAvailable by remember { derivedStateOf {
-                    viewModel.appUpdateInfo.value != null
-                } }
-
+                val showOnLockScreen by preferenceProvider.showOnLockScreen.collectAsStateWithLifecycle()
+                val pauseOnHeadset by preferenceProvider.pauseOnHeadsetDisconnect.collectAsStateWithLifecycle()
                 val crossfadeEnabled by preferenceProvider.crossfadeEnabled.collectAsStateWithLifecycle()
                 val gaplessEnabled by preferenceProvider.gaplessPlaybackEnabled.collectAsStateWithLifecycle()
                 val keepScreenOn by preferenceProvider.keepScreenOn.collectAsStateWithLifecycle()
-                val showOnLockScreen by preferenceProvider.showOnLockScreen.collectAsStateWithLifecycle()
-                val pauseOnHeadset by preferenceProvider.pauseOnHeadsetDisconnect.collectAsStateWithLifecycle()
+                val lastBackupEpochMs by preferenceProvider.lastBackupExportEpochMs.collectAsStateWithLifecycle()
 
-                val hiddenMusicTitle = stringResource(R.string.settings_hidden_music)
+                val settingsTopBarBrush = remember {
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF0B1028),
+                            Color(0xFF12102A),
+                        ),
+                    )
+                }
+
                 val privacyPolicyUrl = stringResource(R.string.settings_privacy_policy_url)
                 val faqUrl = stringResource(R.string.settings_faq_url)
                 val termsUrl = stringResource(R.string.settings_terms_url)
                 val appVersionDisplay = stringResource(R.string.app_version_name)
 
-                val restoreClicked = remember{ {
-                    if (navController.currentDestination?.id == R.id.settingsFragment){
-                        navController.navigate(R.id.action_settingsFragment_to_restoreFragment)
-                    }
-                } }
-                val whatsNewClicked = remember{ {
-                    if (navController.currentDestination?.id == R.id.settingsFragment){
-                        navController.navigate(R.id.action_settingsFragment_to_whatsNewFragment)
-                    }
-                } }
-                val onRestoreFoldersClicked = remember{ {
-                    if (navController.currentDestination?.id == R.id.settingsFragment){
-                        navController.navigate(R.id.action_settingsFragment_to_restoreFolderFragment)
-                    }
-                } }
-
-                val onBackupRestoreClicked = remember {
-                    {
-                        if (navController.currentDestination?.id == R.id.settingsFragment) {
-                            navController.navigate(R.id.action_settingsFragment_to_backupRestoreFragment)
-                        }
-                    }
-                }
-                val onEqualizerClicked = remember {
-                    {
-                        if (navController.currentDestination?.id == R.id.settingsFragment) {
-                            navController.navigate(R.id.action_settingsFragment_to_equalizerFragment)
-                        }
-                    }
-                }
-                val onSleepTimerClicked = remember {
-                    {
-                        if (navController.currentDestination?.id == R.id.settingsFragment) {
-                            navController.navigate(R.id.action_settingsFragment_to_sleepTimerFragment)
-                        }
-                    }
-                }
-                val onGraphicThemeClicked = remember {
-                    {
-                        if (navController.currentDestination?.id == R.id.settingsFragment) {
-                            navController.navigate(R.id.action_settingsFragment_to_themeFragment)
-                        }
-                    }
-                }
-                val onHiddenMusicClicked = remember(hiddenMusicTitle) {
-                    {
-                        if (navController.currentDestination?.id == R.id.settingsFragment) {
-                            navController.navigate(
-                                R.id.action_settingsFragment_to_placeholderFragment,
-                                bundleOf("screenTitle" to hiddenMusicTitle),
-                            )
-                        }
-                    }
-                }
                 val onFaqClicked = remember(faqUrl) {
                     {
                         try {
                             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(faqUrl)))
                         } catch (e: Exception) {
                             crashReporter.logException(e)
-                            if (navController.currentDestination?.id == R.id.settingsFragment) {
-                                navController.navigate(
-                                    R.id.action_settingsFragment_to_placeholderFragment,
-                                    bundleOf("screenTitle" to getString(R.string.settings_faq)),
-                                )
-                            }
                         }
                     }
                 }
@@ -154,12 +89,6 @@ class SettingsFragment : Fragment() {
                             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(termsUrl)))
                         } catch (e: Exception) {
                             crashReporter.logException(e)
-                            if (navController.currentDestination?.id == R.id.settingsFragment) {
-                                navController.navigate(
-                                    R.id.action_settingsFragment_to_placeholderFragment,
-                                    bundleOf("screenTitle" to getString(R.string.settings_terms_of_use)),
-                                )
-                            }
                         }
                     }
                 }
@@ -167,8 +96,8 @@ class SettingsFragment : Fragment() {
                     {
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
                             data = Uri.parse("mailto:")
-                            putExtra(Intent.EXTRA_EMAIL, arrayOf("music.zen@outlook.com"))
-                            putExtra(Intent.EXTRA_SUBJECT, "Generic AudioPlayes | Feedback")
+                            putExtra(Intent.EXTRA_EMAIL, arrayOf("audioplayer.app@outlook.com"))
+                            putExtra(Intent.EXTRA_SUBJECT, "AudioPlayer | Feedback")
                         }
                         try {
                             startActivity(intent)
@@ -219,65 +148,63 @@ class SettingsFragment : Fragment() {
                         }
                     }
                 }
-                val onPremiumClicked = remember { { viewModel.showPremiumPlaceholder() } }
 
                 val snackbarHostState = remember { SnackbarHostState() }
 
                 val message by viewModel.message.collectAsStateWithLifecycle()
-                LaunchedEffect(key1 = message){
+                LaunchedEffect(key1 = message) {
                     if (message.isEmpty()) return@LaunchedEffect
                     snackbarHostState.showSnackbar(message)
                 }
 
-                ZenTheme(themePreference) {
+                val onHiddenMusicClicked = remember {
+                    {
+                        navController.navigate(R.id.action_settingsFragment_to_restoreFragment)
+                    }
+                }
+                val onBackupRestoreClicked = remember {
+                    {
+                        navController.navigate(R.id.action_settingsFragment_to_backupRestoreFragment)
+                    }
+                }
+
+                AudioPlayerTheme(themePreference) {
                     Scaffold(
+                        containerColor = Color.Transparent,
                         topBar = {
                             TopBarWithBackArrow(
                                 onBackArrowPressed = navController::popBackStack,
                                 title = stringResource(R.string.settings),
-                                actions = { }
+                                actions = { },
+                                onBackgroundColor = Color.White,
+                                centerTitle = false,
+                                showBottomDivider = false,
+                                backgroundBrush = settingsTopBarBrush,
                             )
                         },
                         content = { paddingValues ->
                             SettingsList(
                                 paddingValues = paddingValues,
-                                isAppUpdateAvailable = isAppUpdateAvailable,
-                                onAppUpdateClicked = ::onAppUpdateClicked,
-                                themePreference = themePreference,
-                                onThemePreferenceChanged = preferenceProvider::updateTheme,
-                                scanStatus = scanStatus,
-                                onScanClicked = viewModel::scanForMusic,
-                                onRestoreClicked = restoreClicked,
-                                disabledCrashlytics = isCrashlyticsDisabled,
-                                onAutoReportCrashClicked = preferenceProvider::toggleCrashlytics,
-                                onWhatsNewClicked = whatsNewClicked,
-                                onRestoreFoldersClicked = onRestoreFoldersClicked,
-                                tabsSelection = tabsSelection,
-                                onTabsSelectChange = viewModel::onTabsSelectChanged,
-                                onTabsOrderChanged = viewModel::onTabsOrderChanged,
-                                onTabsOrderConfirmed = viewModel::saveTabsOrder,
+                                lastBackupEpochMs = lastBackupEpochMs,
                                 crossfadeEnabled = crossfadeEnabled,
                                 onCrossfadeChanged = preferenceProvider::updateCrossfadeEnabled,
-                                gaplessEnabled = gaplessEnabled,
+                                gaplessPlaybackEnabled = gaplessEnabled,
                                 onGaplessChanged = preferenceProvider::updateGaplessPlaybackEnabled,
                                 keepScreenOn = keepScreenOn,
                                 onKeepScreenOnChanged = preferenceProvider::updateKeepScreenOn,
+                                onHiddenMusicClicked = onHiddenMusicClicked,
+                                onBackupRestoreClicked = onBackupRestoreClicked,
                                 showOnLockScreen = showOnLockScreen,
                                 onShowOnLockScreenChanged = preferenceProvider::updateShowOnLockScreen,
                                 pauseOnHeadsetDisconnect = pauseOnHeadset,
                                 onPauseOnHeadsetChanged = preferenceProvider::updatePauseOnHeadsetDisconnect,
-                                onEqualizerClicked = onEqualizerClicked,
-                                onSleepTimerClicked = onSleepTimerClicked,
-                                onGraphicThemeClicked = onGraphicThemeClicked,
-                                onHiddenMusicClicked = onHiddenMusicClicked,
-                                onBackupRestoreClicked = onBackupRestoreClicked,
+                                onLanguageClicked = onLanguageClicked,
                                 onFaqClicked = onFaqClicked,
                                 onFeedbackClicked = onFeedbackClicked,
                                 onRateUsClicked = onRateUsClicked,
+                                onPremiumClicked = { viewModel.showPremiumPlaceholder() },
                                 onPrivacyPolicyClicked = onPrivacyPolicyClicked,
                                 onTermsClicked = onTermsClicked,
-                                onLanguageClicked = onLanguageClicked,
-                                onPremiumClicked = onPremiumClicked,
                                 appVersionDisplay = appVersionDisplay,
                             )
                         },
@@ -286,28 +213,12 @@ class SettingsFragment : Fragment() {
                                 hostState = snackbarHostState,
                                 snackbar = {
                                     Snackbar(it)
-                                }
+                                },
                             )
-                        }
+                        },
                     )
                 }
             }
-        }
-    }
-
-    private fun onAppUpdateClicked() {
-        val appUpdateInfo = viewModel.appUpdateInfo.value
-        viewModel.consumeAppUpdateInfo()
-        try {
-            appUpdateInfo?.let {
-                appUpdateManager.startUpdateFlow(
-                    it,
-                    requireActivity(),
-                    AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE)
-                )
-            }
-        } catch (e: Exception) {
-            crashReporter.logException(e)
         }
     }
 }

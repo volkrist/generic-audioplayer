@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.generic.audioplayes.R
 import com.generic.audioplayes.data.backup.BackupImportResult
-import com.generic.audioplayes.data.backup.ZenBackupService
+import com.generic.audioplayes.data.backup.AudioPlayerBackupService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +27,7 @@ sealed interface BackupRestoreUiState {
 @HiltViewModel
 class BackupRestoreViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val backupService: ZenBackupService,
+    private val backupService: AudioPlayerBackupService,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<BackupRestoreUiState>(BackupRestoreUiState.Idle)

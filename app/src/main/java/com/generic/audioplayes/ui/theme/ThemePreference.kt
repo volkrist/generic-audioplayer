@@ -27,6 +27,12 @@ data class ThemePreference(
     /** Matches [UserPreferencesSerializer] defaults; avoids UNRECOGNIZED flash before first DataStore emit. */
     val theme: UserPreferences.Theme = UserPreferences.Theme.DARK_MODE,
     val accent: UserPreferences.Accent = UserPreferences.Accent.Elm,
+    /** Built-in library shell preset id (0 = default). Ignored when [graphicWallpaperCustomUri] is non-empty. */
+    val graphicWallpaperPreset: Int = 0,
+    /** Gallery image URI for library shell background. */
+    val graphicWallpaperCustomUri: String = "",
+    /** Selected swatch index on the graphic theme color grid (0..14). */
+    val graphicColorSlot: Int = 0,
 )
 
 fun UserPreferences.Accent.getColorScheme(isDark: Boolean): ColorScheme {

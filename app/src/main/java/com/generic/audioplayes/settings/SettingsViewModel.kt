@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.generic.audioplayes.Constants
 import com.generic.audioplayes.R
 import com.generic.audioplayes.Screens
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.music.ScanStatus
 import com.generic.audioplayes.data.music.SongExtractor
 import com.generic.audioplayes.util.MessageStore
@@ -25,7 +25,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val songExtractor: SongExtractor,
-    private val prefs: ZenPreferenceProvider,
+    private val prefs: AudioPlayerPreferenceProvider,
     private val messageStore: MessageStore,
     private val appUpdateManager: AppUpdateManager,
 ) : ViewModel() {

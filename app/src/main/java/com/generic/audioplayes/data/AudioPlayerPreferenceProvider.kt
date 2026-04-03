@@ -5,6 +5,7 @@ import com.generic.audioplayes.Screens
 import com.generic.audioplayes.components.SortOptions
 import com.generic.audioplayes.data.UserPreferences.EqualizerPreset
 import com.generic.audioplayes.data.UserPreferences.PlaybackParams
+import com.generic.audioplayes.equalizer.EqualizerPresetHelper
 import com.generic.audioplayes.ui.theme.ThemePreference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -19,12 +20,16 @@ data class EqualizerSettings(
     val customBandsMb: List<Int>,
     val bassStrength: Int,
     val virtualizerStrength: Int,
+    /** UI band count: 5 or 10 */
+    val uiBandCount: Int,
+    /** [android.media.audiofx.PresetReverb] preset constant */
+    val reverbPreset: Int,
 )
 
-class ZenPreferenceProvider @Inject constructor(
+class AudioPlayerPreferenceProvider @Inject constructor(
     private val userPreferences: DataStore<UserPreferences>,
     private val coroutineScope: CoroutineScope,
-    private val crashReporter: ZenCrashReporter,
+    private val crashReporter: AudioPlayerCrashReporter,
 ) {
 
     val theme = userPreferences.data
@@ -33,6 +38,9 @@ class ZenPreferenceProvider @Inject constructor(
                 useMaterialYou = it.useMaterialYouTheme,
                 theme = it.chosenTheme,
                 accent = it.chosenAccent,
+                graphicWallpaperPreset = it.graphicWallpaperPreset,
+                graphicWallpaperCustomUri = it.graphicWallpaperCustomUri,
+                graphicColorSlot = it.graphicThemeColorSlot,
             )
         }.stateIn(
             scope = coroutineScope,
@@ -50,6 +58,9 @@ class ZenPreferenceProvider @Inject constructor(
                     useMaterialYouTheme = newThemePreference.useMaterialYou
                     chosenTheme = newThemePreference.theme
                     chosenAccent = newThemePreference.accent
+                    graphicWallpaperPreset = newThemePreference.graphicWallpaperPreset
+                    graphicWallpaperCustomUri = newThemePreference.graphicWallpaperCustomUri
+                    graphicThemeColorSlot = newThemePreference.graphicColorSlot
                 }
             }
         }
@@ -149,12 +160,15 @@ class ZenPreferenceProvider @Inject constructor(
 
     val equalizerSettings: StateFlow<EqualizerSettings> = userPreferences.data
         .map { prefs ->
+            val uiBands = prefs.equalizerUiBandCount.let { n -> if (n == 5 || n == 10) n else 5 }
             EqualizerSettings(
                 enabled = prefs.equalizerEnabled,
                 preset = prefs.equalizerPreset,
                 customBandsMb = prefs.equalizerCustomBandMbList.map { it.toInt() },
                 bassStrength = prefs.bassBoostStrength.coerceIn(0, 1000),
                 virtualizerStrength = prefs.virtualizerStrength.coerceIn(0, 1000),
+                uiBandCount = uiBands,
+                reverbPreset = prefs.reverbPreset.coerceIn(0, 6),
             )
         }
         .stateIn(
@@ -166,6 +180,8 @@ class ZenPreferenceProvider @Inject constructor(
                 customBandsMb = emptyList(),
                 bassStrength = 0,
                 virtualizerStrength = 0,
+                uiBandCount = 5,
+                reverbPreset = 0,
             ),
         )
 
@@ -216,6 +232,45 @@ class ZenPreferenceProvider @Inject constructor(
         coroutineScope.launch {
             userPreferences.updateData {
                 it.copy { virtualizerStrength = s }
+            }
+        }
+    }
+
+    fun updateReverbPreset(presetId: Int) {
+        val p = presetId.coerceIn(0, 6)
+        coroutineScope.launch {
+            userPreferences.updateData {
+                it.copy { reverbPreset = p }
+            }
+        }
+    }
+
+    fun updateEqualizerUiBandCount(newCount: Int) {
+        val c = if (newCount == 10) 10 else 5
+        coroutineScope.launch {
+            userPreferences.updateData { p ->
+                val old = p.equalizerUiBandCount.let { n -> if (n == 5 || n == 10) n else 5 }
+                if (old == c) return@updateData p
+                val settings = EqualizerSettings(
+                    enabled = p.equalizerEnabled,
+                    preset = p.equalizerPreset,
+                    customBandsMb = p.equalizerCustomBandMbList.map { it.toInt() },
+                    bassStrength = p.bassBoostStrength,
+                    virtualizerStrength = p.virtualizerStrength,
+                    uiBandCount = old,
+                    reverbPreset = p.reverbPreset,
+                )
+                p.copy {
+                    equalizerUiBandCount = c
+                    if (settings.preset == EqualizerPreset.EQUALIZER_PRESET_CUSTOM &&
+                        settings.customBandsMb.isNotEmpty()
+                    ) {
+                        equalizerCustomBandMb.clear()
+                        equalizerCustomBandMb.addAll(
+                            EqualizerPresetHelper.resizeBands(settings.customBandsMb, c).toList(),
+                        )
+                    }
+                }
             }
         }
     }
@@ -293,6 +348,8 @@ class ZenPreferenceProvider @Inject constructor(
                     equalizerCustomBandMb.clear()
                     bassBoostStrength = 0
                     virtualizerStrength = 0
+                    equalizerUiBandCount = 5
+                    reverbPreset = 0
                 }
             }
         }

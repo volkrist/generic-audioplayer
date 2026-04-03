@@ -7,9 +7,9 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.work.await
 import com.generic.audioplayes.data.music.Song
-import com.generic.audioplayes.data.ZenCrashReporter
-import com.generic.audioplayes.data.ZenPreferenceProvider
-import com.generic.audioplayes.player.ZenPlayer
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.player.AudioPlayerService
 import com.generic.audioplayes.player.toMediaItem
 import com.generic.audioplayes.toCorrectedParams
 import com.generic.audioplayes.toExoPlayerPlaybackParameters
@@ -35,8 +35,8 @@ interface PlayerService {
 class PlayerServiceImpl(
     private val context: Context,
     private val queueService: QueueService,
-    private val preferenceProvider: ZenPreferenceProvider,
-    private val crashReporter: ZenCrashReporter,
+    private val preferenceProvider: AudioPlayerPreferenceProvider,
+    private val crashReporter: AudioPlayerCrashReporter,
 ) : PlayerService {
 
     private val lastCallTime = AtomicLong(0)
@@ -61,10 +61,10 @@ class PlayerServiceImpl(
 
         queueService.setQueue(songs, startPlayingFromPosition)
 
-        if (ZenPlayer.isRunning.get()) {
+        if (AudioPlayerService.isRunning.get()) {
             MediaController.Builder(
                 context,
-                SessionToken(context, ComponentName(context, ZenPlayer::class.java)),
+                SessionToken(context, ComponentName(context, AudioPlayerService::class.java)),
             ).buildAsync().await().apply {
                 withContext(Dispatchers.Main) {
                     seekTo(startPlayingFromPosition, startPositionMs)
@@ -76,7 +76,7 @@ class PlayerServiceImpl(
 
         MediaController.Builder(
             context,
-            SessionToken(context, ComponentName(context, ZenPlayer::class.java)),
+            SessionToken(context, ComponentName(context, AudioPlayerService::class.java)),
         ).buildAsync().await().apply {
             withContext(Dispatchers.Main) {
                 stop()
@@ -96,10 +96,10 @@ class PlayerServiceImpl(
     @SuppressLint("RestrictedApi")
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override suspend fun togglePlayPauseIfRunning() {
-        if (!ZenPlayer.isRunning.get()) return
+        if (!AudioPlayerService.isRunning.get()) return
         MediaController.Builder(
             context,
-            SessionToken(context, ComponentName(context, ZenPlayer::class.java)),
+            SessionToken(context, ComponentName(context, AudioPlayerService::class.java)),
         ).buildAsync().await().apply {
             withContext(Dispatchers.Main) {
                 if (isPlaying) pause() else play()
@@ -110,10 +110,10 @@ class PlayerServiceImpl(
     @SuppressLint("RestrictedApi")
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override suspend fun stopPlaybackAndClearQueueIfRunning() {
-        if (!ZenPlayer.isRunning.get()) return
+        if (!AudioPlayerService.isRunning.get()) return
         MediaController.Builder(
             context,
-            SessionToken(context, ComponentName(context, ZenPlayer::class.java)),
+            SessionToken(context, ComponentName(context, AudioPlayerService::class.java)),
         ).buildAsync().await().apply {
             withContext(Dispatchers.Main) {
                 stop()

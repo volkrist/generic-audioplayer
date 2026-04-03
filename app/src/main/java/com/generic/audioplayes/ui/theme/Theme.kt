@@ -57,7 +57,7 @@ object HomeLibraryTokens {
 
 @Composable
 fun DefaultTheme(content: @Composable () -> Unit) {
-    ZenTheme(
+    AudioPlayerTheme(
         themePreference = ThemePreference(
             useMaterialYou = true,
             theme = UserPreferences.Theme.USE_SYSTEM_MODE,
@@ -68,7 +68,7 @@ fun DefaultTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun ZenTheme(
+fun AudioPlayerTheme(
     themePreference: ThemePreference,
     systemUiController: SystemUiController = rememberSystemUiController(),
     content: @Composable () -> Unit,
@@ -106,7 +106,7 @@ fun ZenTheme(
     }
     MaterialTheme(
         colorScheme = colourScheme,
-        typography = ZenTypography,
+        typography = AudioPlayerTypography,
         content = {
             CompositionLocalProvider(LocalThemePreference provides themePreference) {
                 content()

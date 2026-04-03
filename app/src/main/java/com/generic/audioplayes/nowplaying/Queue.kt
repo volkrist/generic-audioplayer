@@ -24,11 +24,18 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,7 +48,7 @@ import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.ui.theme.UiTokens
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ColumnScope.Queue(
     queue: List<Song>,
@@ -50,7 +57,17 @@ fun ColumnScope.Queue(
     expanded: Boolean,
     playerHelper: PlayerHelper,
     onDrag: (fromIndex: Int, toIndex: Int) -> Unit,
+    onQueueSongPlayNext: (Song) -> Unit,
+    onQueueSongAddToPlaylist: (Song) -> Unit,
+    onQueueSongRemoveFromQueue: (Song) -> Unit,
+    onQueueSongOpenAlbum: (Song) -> Unit,
+    onQueueSongEditTags: (Song) -> Unit,
+    onQueueSongHide: (Song) -> Unit,
+    onQueueSongDelete: (Song) -> Unit,
+    onQueueSongRingtone: (Song) -> Unit,
+    onQueueSongChangeCover: (Song) -> Unit,
 ) {
+    var menuSong by remember { mutableStateOf<Song?>(null) }
     val listState = rememberLazyListState()
     LaunchedEffect(key1 = currentSong, key2 = expanded) {
         delay(600)
@@ -140,8 +157,82 @@ fun ColumnScope.Queue(
                     onSongClicked = { if(!isPlaying){ playerHelper.seekTo(index,0) } },
                     onFavouriteClicked = onFavouriteClicked,
                     currentlyPlaying = isPlaying,
+                    onOverflowClick = { menuSong = song },
                 )
             }
         }
+    }
+    menuSong?.let { song ->
+        QueueSongActionsBottomSheet(
+            song = song,
+            visible = true,
+            onDismiss = { menuSong = null },
+            onPlayNext = { onQueueSongPlayNext(song) },
+            onAddToPlaylist = { onQueueSongAddToPlaylist(song) },
+            onRemoveFromQueue = { onQueueSongRemoveFromQueue(song) },
+            onOpenAlbum = { onQueueSongOpenAlbum(song) },
+            onPlayerActionEditTags = onQueueSongEditTags,
+            onPlayerActionHideSong = onQueueSongHide,
+            onPlayerActionDeleteSong = onQueueSongDelete,
+            onPlayerActionRingtone = onQueueSongRingtone,
+            onPlayerActionChangeCover = onQueueSongChangeCover,
+        )
+    }
+}
+
+/**
+ * Queue as a standalone [ModalBottomSheet]. Use this instead of [androidx.compose.material3.BottomSheetScaffold]
+ * sheet content so it does not fight with [com.generic.audioplayes.nowplaying.PlayerActionsSheetModal] (same window layer).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun QueueBottomSheetModal(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+    queue: List<Song>,
+    onFavouriteClicked: (Song) -> Unit,
+    currentSong: Song?,
+    playerHelper: PlayerHelper,
+    onDrag: (fromIndex: Int, toIndex: Int) -> Unit,
+    onQueueSongPlayNext: (Song) -> Unit,
+    onQueueSongAddToPlaylist: (Song) -> Unit,
+    onQueueSongRemoveFromQueue: (Song) -> Unit,
+    onQueueSongOpenAlbum: (Song) -> Unit,
+    onQueueSongEditTags: (Song) -> Unit,
+    onQueueSongHide: (Song) -> Unit,
+    onQueueSongDelete: (Song) -> Unit,
+    onQueueSongRingtone: (Song) -> Unit,
+    onQueueSongChangeCover: (Song) -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    if (!visible) return
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        scrimColor = Color.Black.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(
+            topStart = UiTokens.sheetCornerTopLarge,
+            topEnd = UiTokens.sheetCornerTopLarge,
+        ),
+    ) {
+        Queue(
+            queue = queue,
+            onFavouriteClicked = onFavouriteClicked,
+            currentSong = currentSong,
+            expanded = true,
+            playerHelper = playerHelper,
+            onDrag = onDrag,
+            onQueueSongPlayNext = onQueueSongPlayNext,
+            onQueueSongAddToPlaylist = onQueueSongAddToPlaylist,
+            onQueueSongRemoveFromQueue = onQueueSongRemoveFromQueue,
+            onQueueSongOpenAlbum = onQueueSongOpenAlbum,
+            onQueueSongEditTags = onQueueSongEditTags,
+            onQueueSongHide = onQueueSongHide,
+            onQueueSongDelete = onQueueSongDelete,
+            onQueueSongRingtone = onQueueSongRingtone,
+            onQueueSongChangeCover = onQueueSongChangeCover,
+        )
     }
 }

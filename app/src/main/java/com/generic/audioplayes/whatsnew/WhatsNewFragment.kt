@@ -22,8 +22,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
 import com.generic.audioplayes.components.FullScreenSadMessage
-import com.generic.audioplayes.data.ZenPreferenceProvider
-import com.generic.audioplayes.ui.theme.ZenTheme
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.generic.audioplayes.util.Resource
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -33,7 +33,7 @@ class WhatsNewFragment: Fragment() {
 
     private lateinit var navController: NavController
 
-    @Inject lateinit var preferenceProvider: ZenPreferenceProvider
+    @Inject lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
     private val viewModel: WhatsNewViewModel by viewModels()
 
@@ -48,7 +48,7 @@ class WhatsNewFragment: Fragment() {
             setContent {
                 val theme by preferenceProvider.theme.collectAsStateWithLifecycle()
                 val changelogsResource by viewModel.changelogsFlow.collectAsStateWithLifecycle()
-                ZenTheme(theme) {
+                AudioPlayerTheme(theme) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()

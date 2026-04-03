@@ -2,7 +2,7 @@ package com.generic.audioplayes
 
 object Constants {
     const val QUEUE_STATE_FILE = "queue_state.pb"
-    const val DATABASE_NAME = "zen_app_db"
+    const val DATABASE_NAME = "audio_player_app_db"
     object Tables {
         const val SONG_TABLE = "song_table"
         const val ALBUM_TABLE = "album_table"

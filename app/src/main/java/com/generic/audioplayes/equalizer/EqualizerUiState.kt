@@ -2,8 +2,10 @@ package com.generic.audioplayes.equalizer
 
 data class EqualizerUiState(
     val equalizerEnabled: Boolean,
-    val bandCount: Int,
+    /** 5 or 10 — number of vertical sliders shown */
+    val uiBandCount: Int,
     val centerFreqHz: List<Float>,
+    /** Display / logical band levels in millibels (size = uiBandCount) */
     val levelsMb: List<Int>,
     val levelMinMb: Int,
     val levelMaxMb: Int,
@@ -11,14 +13,16 @@ data class EqualizerUiState(
     val virtualizerStrength: Int,
     val virtualizerSupported: Boolean,
     val effectsAttached: Boolean,
+    val reverbPreset: Int,
+    val reverbSupported: Boolean,
 ) {
     companion object {
         fun initial(): EqualizerUiState {
             val n = 5
             return EqualizerUiState(
                 equalizerEnabled = true,
-                bandCount = n,
-                centerFreqHz = EqualizerPresetHelper.defaultCenterFreqHz(n),
+                uiBandCount = n,
+                centerFreqHz = EqualizerPresetHelper.displayCenterFreqHz(n),
                 levelsMb = List(n) { 0 },
                 levelMinMb = -1500,
                 levelMaxMb = 1500,
@@ -26,6 +30,8 @@ data class EqualizerUiState(
                 virtualizerStrength = 0,
                 virtualizerSupported = false,
                 effectsAttached = false,
+                reverbPreset = 0,
+                reverbSupported = true,
             )
         }
     }

@@ -1,6 +1,6 @@
 <p align="center">
     <img src="app/src/main/res/ic_launcher-playstore.png" height="128" style="border-radius: 70px;">
-    <h1 align="center">Generic AudioPlayes</h1>
+    <h1 align="center">AudioPlayer</h1>
 </p>
 
 <h3 style="width: 100vw; text-align: center;">

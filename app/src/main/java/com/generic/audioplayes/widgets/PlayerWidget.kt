@@ -41,7 +41,7 @@ import androidx.glance.text.TextStyle
 import com.generic.audioplayes.Constants
 import com.generic.audioplayes.MainActivity
 import com.generic.audioplayes.R
-import com.generic.audioplayes.player.ZenBroadcastReceiver
+import com.generic.audioplayes.player.AudioPlayerBroadcastReceiver
 
 /**
  * Medium / resizable widget: artwork, title, artist, transport controls. Tap artwork or text to open the app.
@@ -54,26 +54,26 @@ object PlayerWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         pendingPausePlayIntent = PendingIntent.getBroadcast(
-            context, ZenBroadcastReceiver.PAUSE_PLAY_ACTION_REQUEST_CODE,
+            context, AudioPlayerBroadcastReceiver.PAUSE_PLAY_ACTION_REQUEST_CODE,
             Intent(Constants.PACKAGE_NAME).putExtra(
-                ZenBroadcastReceiver.AUDIO_CONTROL,
-                ZenBroadcastReceiver.ZEN_PLAYER_PAUSE_PLAY,
+                AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+                AudioPlayerBroadcastReceiver.AUDIO_PLAYER_PAUSE_PLAY,
             ),
             PendingIntent.FLAG_IMMUTABLE,
         )
         pendingPreviousIntent = PendingIntent.getBroadcast(
-            context, ZenBroadcastReceiver.PREVIOUS_ACTION_REQUEST_CODE,
+            context, AudioPlayerBroadcastReceiver.PREVIOUS_ACTION_REQUEST_CODE,
             Intent(Constants.PACKAGE_NAME).putExtra(
-                ZenBroadcastReceiver.AUDIO_CONTROL,
-                ZenBroadcastReceiver.ZEN_PLAYER_PREVIOUS,
+                AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+                AudioPlayerBroadcastReceiver.AUDIO_PLAYER_PREVIOUS,
             ),
             PendingIntent.FLAG_IMMUTABLE,
         )
         pendingNextIntent = PendingIntent.getBroadcast(
-            context, ZenBroadcastReceiver.NEXT_ACTION_REQUEST_CODE,
+            context, AudioPlayerBroadcastReceiver.NEXT_ACTION_REQUEST_CODE,
             Intent(Constants.PACKAGE_NAME).putExtra(
-                ZenBroadcastReceiver.AUDIO_CONTROL,
-                ZenBroadcastReceiver.ZEN_PLAYER_NEXT,
+                AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+                AudioPlayerBroadcastReceiver.AUDIO_PLAYER_NEXT,
             ),
             PendingIntent.FLAG_IMMUTABLE,
         )

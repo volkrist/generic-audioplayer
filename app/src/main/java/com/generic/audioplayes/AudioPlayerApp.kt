@@ -2,6 +2,8 @@ package com.generic.audioplayes
 
 import android.app.Application
 import android.graphics.Bitmap
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.OneTimeWorkRequestBuilder
@@ -11,7 +13,7 @@ import cat.ereza.customactivityoncrash.config.CaocConfig.BACKGROUND_MODE_SILENT
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.generic.audioplayes.BuildConfig
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.services.SleepTimerService
 import com.generic.audioplayes.equalizer.EqualizerManager
 import com.generic.audioplayes.volume.VolumeBoosterManager
@@ -22,7 +24,7 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @HiltAndroidApp
-class ZenApp: Application(), ImageLoaderFactory, Configuration.Provider {
+class AudioPlayerApp: Application(), ImageLoaderFactory, Configuration.Provider {
 
     @Inject lateinit var hiltWorkerFactory: HiltWorkerFactory
     @Inject lateinit var sleepTimerService: SleepTimerService
@@ -31,12 +33,15 @@ class ZenApp: Application(), ImageLoaderFactory, Configuration.Provider {
 
     @Inject lateinit var volumeBoosterManager: VolumeBoosterManager
 
-    @Inject lateinit var preferenceProvider: ZenPreferenceProvider
+    @Inject lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
     override fun onCreate() {
         super.onCreate()
 
-        // Theme is loaded from DataStore via ZenPreferenceProvider.theme (Eagerly); touch ensures early read.
+        // Use system locale until the user picks an in-app language (LocaleListCompat.empty = follow OS).
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+
+        // Theme is loaded from DataStore via AudioPlayerPreferenceProvider.theme (Eagerly); touch ensures early read.
         preferenceProvider.theme.value
 
         sleepTimerService.restoreIfNeeded()

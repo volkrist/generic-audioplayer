@@ -5,6 +5,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
 import androidx.navigation.NavController
 import com.generic.audioplayes.R
+import com.generic.audioplayes.collection.CollectionFragmentDirections
 import com.generic.audioplayes.collection.CollectionType
 import com.generic.audioplayes.data.music.Album
 import com.generic.audioplayes.data.music.AlbumArtistWithSongCount
@@ -22,190 +23,184 @@ class HomeNavHelper(
     private val navController: NavController,
     private val lifecycle: Lifecycle,
 ) {
-    private fun check(): Boolean {
-        return navController.currentDestination?.id == R.id.homeFragment
+    private fun navigateToCollection(collectionType: CollectionType) {
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(
+                HomeFragmentDirections.actionHomeFragmentToCollectionFragment(collectionType),
+            )
+            R.id.collectionFragment -> navController.navigate(
+                CollectionFragmentDirections.actionCollectionFragmentToCollectionFragment(collectionType),
+            )
+            else -> {}
+        }
     }
 
     fun navigateToSettings() {
-        if (!check()) return
-        navController.navigate(R.id.action_homeFragment_to_settingsFragment)
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(R.id.action_homeFragment_to_settingsFragment)
+            R.id.collectionFragment -> navController.navigate(R.id.action_collectionFragment_to_settingsFragment)
+            else -> {}
+        }
     }
 
     fun navigateToPlaceholder(screenTitle: String) {
-        if (!check()) return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToPlaceholderFragment(screenTitle)
-        )
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(
+                HomeFragmentDirections.actionHomeFragmentToPlaceholderFragment(screenTitle),
+            )
+            R.id.collectionFragment -> navController.navigate(
+                CollectionFragmentDirections.actionCollectionFragmentToPlaceholderFragment(screenTitle),
+            )
+            else -> {}
+        }
     }
 
     fun navigateToSleepTimer() {
-        if (!check()) return
-        navController.navigate(R.id.action_homeFragment_to_sleepTimerFragment)
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(R.id.action_homeFragment_to_sleepTimerFragment)
+            R.id.collectionFragment -> navController.navigate(R.id.action_collectionFragment_to_sleepTimerFragment)
+            else -> {}
+        }
     }
 
     fun navigateToVolumeBooster() {
-        if (!check()) return
-        navController.navigate(R.id.action_homeFragment_to_volumeBoosterFragment)
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(R.id.action_homeFragment_to_volumeBoosterFragment)
+            R.id.collectionFragment -> navController.navigate(R.id.action_collectionFragment_to_volumeBoosterFragment)
+            else -> {}
+        }
     }
 
     fun navigateToEqualizer() {
-        if (!check()) return
-        navController.navigate(R.id.action_homeFragment_to_equalizerFragment)
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(R.id.action_homeFragment_to_equalizerFragment)
+            R.id.collectionFragment -> navController.navigate(R.id.action_collectionFragment_to_equalizerFragment)
+            else -> {}
+        }
     }
 
     fun navigateToDictaphone() {
-        if (!check()) return
-        navController.navigate(R.id.action_homeFragment_to_dictaphoneFragment)
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(R.id.action_homeFragment_to_dictaphoneFragment)
+            R.id.collectionFragment -> navController.navigate(R.id.action_collectionFragment_to_dictaphoneFragment)
+            else -> {}
+        }
     }
 
     fun navigateToTheme() {
-        if (!check()) return
-        navController.navigate(R.id.action_homeFragment_to_themeFragment)
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(R.id.action_homeFragment_to_themeFragment)
+            R.id.collectionFragment -> navController.navigate(R.id.action_collectionFragment_to_themeFragment)
+            else -> {}
+        }
+    }
+
+    fun navigateToWidgets() {
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(R.id.action_homeFragment_to_widgetsFragment)
+            R.id.collectionFragment -> navController.navigate(R.id.action_collectionFragment_to_widgetsFragment)
+            else -> {}
+        }
     }
 
     fun navigateToSearch() {
-        if (!check()) return
-        navController.navigate(R.id.action_homeFragment_to_searchFragment)
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(R.id.action_homeFragment_to_searchFragment)
+            R.id.collectionFragment -> navController.navigate(R.id.action_collectionFragment_to_searchFragment)
+            else -> {}
+        }
     }
 
     fun navigateToViewDetails(album: Album) {
-        if (!check()) return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                CollectionType(CollectionType.AlbumType, album.name)
-            )
-        )
+        navigateToCollection(CollectionType(CollectionType.AlbumType, album.name))
     }
 
     fun navigateToViewDetails(personWithSongCount: PersonWithSongCount) {
-        if (!check()) return
         when (personWithSongCount) {
-            is ArtistWithSongCount -> {
-                navController.navigate(
-                    HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                        CollectionType(CollectionType.ArtistType, personWithSongCount.name)
-                    )
-                )
-            }
-            is AlbumArtistWithSongCount -> {
-                navController.navigate(
-                    HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                        CollectionType(CollectionType.AlbumArtistType, personWithSongCount.name)
-                    )
-                )
-            }
-            is ComposerWithSongCount -> {
-                navController.navigate(
-                    HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                        CollectionType(CollectionType.ComposerType, personWithSongCount.name)
-                    )
-                )
-            }
-            is LyricistWithSongCount -> {
-                navController.navigate(
-                    HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                        CollectionType(CollectionType.LyricistType, personWithSongCount.name)
-                    )
-                )
-            }
+            is ArtistWithSongCount -> navigateToCollection(
+                CollectionType(CollectionType.ArtistType, personWithSongCount.name),
+            )
+            is AlbumArtistWithSongCount -> navigateToCollection(
+                CollectionType(CollectionType.AlbumArtistType, personWithSongCount.name),
+            )
+            is ComposerWithSongCount -> navigateToCollection(
+                CollectionType(CollectionType.ComposerType, personWithSongCount.name),
+            )
+            is LyricistWithSongCount -> navigateToCollection(
+                CollectionType(CollectionType.LyricistType, personWithSongCount.name),
+            )
         }
     }
 
     fun navigateToViewDetails(playlistId: Long) {
-        if (!check()) return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToPlaylistEditorFragment(playlistId)
-        )
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(
+                HomeFragmentDirections.actionHomeFragmentToPlaylistEditorFragment(playlistId),
+            )
+            R.id.collectionFragment -> navController.navigate(
+                CollectionFragmentDirections.actionCollectionFragmentToPlaylistEditorFragment(playlistId),
+            )
+            else -> {}
+        }
     }
 
     fun navigateToViewDetails(genreWithSongCount: GenreWithSongCount) {
-        if (!check()) return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                CollectionType(CollectionType.GenreType, genreWithSongCount.genreName)
-            )
-        )
+        navigateToCollection(CollectionType(CollectionType.GenreType, genreWithSongCount.genreName))
     }
 
     fun navigateToViewDetails() {
-        if (!check()) return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                CollectionType(CollectionType.FavouritesType)
-            )
-        )
+        navigateToCollection(CollectionType(CollectionType.FavouritesType))
     }
 
     fun navigateToRecentlyAddedCollection() {
-        if (!check()) return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                CollectionType(CollectionType.RecentlyAddedType)
-            )
-        )
+        navigateToCollection(CollectionType(CollectionType.RecentlyAddedType))
     }
 
     fun navigateToRecentlyPlayedCollection() {
-        if (!check()) return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                CollectionType(CollectionType.RecentlyPlayedType)
-            )
-        )
+        navigateToCollection(CollectionType(CollectionType.RecentlyPlayedType))
     }
 
     fun navigateToTopTracksCollection() {
-        if (!check()) return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                CollectionType(CollectionType.TopTracksType)
-            )
-        )
+        navigateToCollection(CollectionType(CollectionType.TopTracksType))
     }
 
     fun navigateToAlbumByName(albumName: String) {
-        if (!check()) return
         if (albumName.isBlank() || albumName == "Unknown") return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                CollectionType(CollectionType.AlbumType, albumName)
-            )
-        )
+        navigateToCollection(CollectionType(CollectionType.AlbumType, albumName))
     }
 
     fun navigateToArtistByName(artistName: String) {
-        if (!check()) return
         if (artistName.isBlank() || artistName == "Unknown") return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToCollectionFragment(
-                CollectionType(CollectionType.ArtistType, artistName)
-            )
-        )
+        navigateToCollection(CollectionType(CollectionType.ArtistType, artistName))
     }
 
     private fun navigateToChoosePlaylists(locations: List<String>) {
-        if (!check()) return
-        navController.navigate(
-            HomeFragmentDirections.actionHomeFragmentToSelectPlaylistFragment(
-                locations.toTypedArray()
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(
+                HomeFragmentDirections.actionHomeFragmentToSelectPlaylistFragment(
+                    locations.toTypedArray(),
+                ),
             )
-        )
+            R.id.collectionFragment -> navController.navigate(
+                CollectionFragmentDirections.actionCollectionFragmentToSelectPlaylistFragment(
+                    locations.toTypedArray(),
+                ),
+            )
+            else -> {}
+        }
     }
 
     fun navigateToChoosePlaylist(song: Song) {
-        if (!check()) return
         navigateToChoosePlaylists(listOf(song.location))
     }
 
     fun navigateToChoosePlaylist(songs: List<Song>) {
-        if (!check()) return
         lifecycle.coroutineScope.launch {
             navigateToChoosePlaylists(songs.map { it.location })
         }
     }
 
     fun navigateToChoosePlaylist(song: MiniSong) {
-        if (!check()) return
         navigateToChoosePlaylists(listOf(song.location))
     }
 }

@@ -19,7 +19,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
 import com.generic.audioplayes.R
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.ui.theme.DefaultTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -32,7 +32,7 @@ class OnBoardingFragment : Fragment() {
     private lateinit var navController: NavController
 
     @Inject
-    lateinit var preferenceProvider: ZenPreferenceProvider
+    lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
     override fun onCreateView(
         inflater: LayoutInflater,

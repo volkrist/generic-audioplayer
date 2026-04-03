@@ -17,7 +17,7 @@ import javax.inject.Singleton
 class QueueStateProvider @Inject constructor(
     private val queueState: DataStore<QueueState>,
     private val coroutineScope: CoroutineScope,
-    private val crashReporter: ZenCrashReporter,
+    private val crashReporter: AudioPlayerCrashReporter,
 ) {
     val state: Flow<QueueState>
         get() = queueState.data
@@ -72,7 +72,7 @@ class QueueStateProvider @Inject constructor(
     }
 
     /**
-     * Restores in-memory queue and repeat mode from disk. Does not start [ZenPlayer].
+     * Restores in-memory queue and repeat mode from disk. Does not start [AudioPlayerService].
      * @return true if a non-empty queue was restored
      */
     suspend fun restoreQueueIfPossible(

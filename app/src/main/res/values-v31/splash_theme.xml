@@ -7,6 +7,6 @@
         <item name="windowSplashScreenAnimationDuration">800</item>
 
         <item name="android:windowLightStatusBar">false</item>
-        <item name="postSplashScreenTheme">@style/Theme.Zen</item>
+        <item name="postSplashScreenTheme">@style/Theme.AudioPlayer</item>
     </style>
 </resources>

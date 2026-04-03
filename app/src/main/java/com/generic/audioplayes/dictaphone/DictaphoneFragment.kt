@@ -18,8 +18,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.generic.audioplayes.R
 import com.generic.audioplayes.components.TopBarWithBackArrow
-import com.generic.audioplayes.data.ZenPreferenceProvider
-import com.generic.audioplayes.ui.theme.ZenTheme
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -32,7 +32,7 @@ class DictaphoneFragment : Fragment() {
 
     private val viewModel: DictaphoneViewModel by viewModels()
 
-    @Inject lateinit var preferenceProvider: ZenPreferenceProvider
+    @Inject lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
     override fun onPause() {
         super.onPause()
@@ -50,7 +50,7 @@ class DictaphoneFragment : Fragment() {
             setContent {
                 val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                ZenTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference, systemUiController) {
                     val recordAudioPermission = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
                     Column(Modifier.fillMaxSize()) {
                         TopBarWithBackArrow(

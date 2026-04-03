@@ -16,8 +16,13 @@ interface QueueService {
 
     fun append(song: Song): Boolean
     fun append(songs: List<Song>): Boolean
+    /** Inserts songs immediately after the current track (or at start if queue is empty). */
+    fun insertSongsAfterCurrent(songs: List<Song>): Boolean
     fun update(song: Song): Boolean
     fun moveSong(initialPosition: Int, finalPosition: Int): Boolean
+
+    /** Removes one track from the queue by index. Returns false if the index is invalid. */
+    fun removeSongAt(index: Int): Boolean
 
     fun clearQueue()
     fun setQueue(songs: List<Song>, startPlayingFromPosition: Int)
@@ -36,8 +41,10 @@ interface QueueService {
     interface Listener {
         fun onAppend(song: Song)
         fun onAppend(songs: List<Song>)
+        fun onInsert(atIndex: Int, songs: List<Song>)
         fun onUpdate(updatedSong: Song, position: Int)
         fun onMove(from: Int, to: Int)
+        fun onRemoveAt(index: Int)
         fun onClear()
         fun onSetQueue(songs: List<Song>, startPlayingFromPosition: Int)
     }
@@ -80,6 +87,19 @@ class QueueServiceImpl() : QueueService {
         return true
     }
 
+    override fun insertSongsAfterCurrent(songs: List<Song>): Boolean {
+        val toInsert = songs.filter { !locations.contains(it.location) }
+        if (toInsert.isEmpty()) return false
+        val curIdx = currentQueueIndex()
+        val insertAt = (curIdx + 1).coerceAtMost(mutableQueue.size)
+        toInsert.forEachIndexed { i, song ->
+            mutableQueue.add(insertAt + i, song)
+            locations.add(song.location)
+        }
+        callbacks.forEach { it.onInsert(insertAt, toInsert) }
+        return true
+    }
+
     override fun update(song: Song): Boolean {
         if (!locations.contains(song.location)) return false
         var position = -1
@@ -107,6 +127,23 @@ class QueueServiceImpl() : QueueService {
             add(finalPosition, removeAt(initialPosition))
         }
         callbacks.forEach { it.onMove(initialPosition, finalPosition) }
+        return true
+    }
+
+    override fun removeSongAt(index: Int): Boolean {
+        if (index < 0 || index >= mutableQueue.size) return false
+        val curIdx = currentQueueIndex()
+        mutableQueue.removeAt(index).also { removed ->
+            locations.remove(removed.location)
+        }
+        when {
+            mutableQueue.isEmpty() -> _currentSong.update { null }
+            index == curIdx -> {
+                val newIdx = index.coerceAtMost(mutableQueue.size - 1)
+                _currentSong.update { mutableQueue[newIdx] }
+            }
+        }
+        callbacks.forEach { it.onRemoveAt(index) }
         return true
     }
 

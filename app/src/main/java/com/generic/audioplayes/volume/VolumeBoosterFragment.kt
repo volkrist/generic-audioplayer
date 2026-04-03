@@ -20,8 +20,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.generic.audioplayes.R
 import com.generic.audioplayes.components.TopBarWithBackArrow
-import com.generic.audioplayes.data.ZenPreferenceProvider
-import com.generic.audioplayes.ui.theme.ZenTheme
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -31,7 +31,7 @@ class VolumeBoosterFragment : Fragment() {
 
     private val viewModel: VolumeBoosterViewModel by viewModels()
 
-    @Inject lateinit var preferenceProvider: ZenPreferenceProvider
+    @Inject lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -43,7 +43,7 @@ class VolumeBoosterFragment : Fragment() {
             setContent {
                 val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                ZenTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference, systemUiController) {
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         topBar = {

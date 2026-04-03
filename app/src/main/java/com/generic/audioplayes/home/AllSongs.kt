@@ -46,8 +46,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.generic.audioplayes.R
 import com.generic.audioplayes.components.FullScreenSadMessage
 import com.generic.audioplayes.components.SongCardHomeSongsRow
-import com.generic.audioplayes.components.more_options.SongOptions
 import com.generic.audioplayes.data.music.Song
+import com.generic.audioplayes.nowplaying.HomeLibrarySongActionsBottomSheet
 import com.generic.audioplayes.formatToDate
 import com.generic.audioplayes.ui.theme.HomeLibraryTokens
 
@@ -153,7 +153,13 @@ fun AllSongs(
     onPlayAllClicked: () -> Unit,
     onShuffleClicked: () -> Unit,
     onAddToPlaylistsClicked: (Song) -> Unit,
-    onBlacklistClicked: (Song) -> Unit,
+    onPlayLibrarySongNext: (Song) -> Unit,
+    onOpenAlbum: (Song) -> Unit,
+    onPlayerActionEditTags: (Song) -> Unit,
+    onPlayerActionHideSong: (Song) -> Unit,
+    onPlayerActionDeleteSong: (Song) -> Unit,
+    onPlayerActionRingtone: (Song) -> Unit,
+    onPlayerActionChangeCover: (Song) -> Unit,
 ) {
     if (songs == null) return
     if (songs.isEmpty()) {
@@ -162,6 +168,7 @@ fun AllSongs(
             paddingValues = WindowInsets.systemBars.only(WindowInsetsSides.Bottom).asPaddingValues()
         )
     } else {
+        var trackSheetSong by remember { mutableStateOf<Song?>(null) }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -182,25 +189,32 @@ fun AllSongs(
                     song.location
                 }
             ) { index, song ->
-                var infoVisible by remember { mutableStateOf(false) }
                 SongCardHomeSongsRow(
                     song = song,
                     onSongClicked = {
                         onSongClicked(index)
                     },
                     onFavouriteClicked = onFavouriteClicked,
-                    songOptions = listOf(
-                        SongOptions.Info { infoVisible = true },
-                        SongOptions.AddToQueue { onAddToQueueClicked(song) },
-                        SongOptions.AddToPlaylist { onAddToPlaylistsClicked(song) },
-                        SongOptions.Blacklist { onBlacklistClicked(song) }
-                    ),
+                    onOverflowMenuClick = { trackSheetSong = song },
                     currentlyPlaying = (song.location == currentSong?.location)
                 )
-                if (infoVisible) {
-                    SongInfo(song) { infoVisible = false }
-                }
             }
+        }
+        trackSheetSong?.let { sheetSong ->
+            HomeLibrarySongActionsBottomSheet(
+                song = sheetSong,
+                visible = true,
+                onDismiss = { trackSheetSong = null },
+                onPlayNext = { onPlayLibrarySongNext(sheetSong) },
+                onAddToQueue = { onAddToQueueClicked(sheetSong) },
+                onAddToPlaylist = { onAddToPlaylistsClicked(sheetSong) },
+                onOpenAlbum = { onOpenAlbum(sheetSong) },
+                onPlayerActionEditTags = onPlayerActionEditTags,
+                onPlayerActionHideSong = onPlayerActionHideSong,
+                onPlayerActionDeleteSong = onPlayerActionDeleteSong,
+                onPlayerActionRingtone = onPlayerActionRingtone,
+                onPlayerActionChangeCover = onPlayerActionChangeCover,
+            )
         }
     }
 }

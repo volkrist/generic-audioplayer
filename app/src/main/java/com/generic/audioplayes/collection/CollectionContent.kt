@@ -11,10 +11,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -25,10 +21,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.generic.audioplayes.components.SongCardV1
-import com.generic.audioplayes.components.more_options.SongOptions
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.home.PlayShuffleCard
-import com.generic.audioplayes.home.SongInfo
 
 
 fun LazyListScope.collectionContent(
@@ -36,12 +30,9 @@ fun LazyListScope.collectionContent(
     onSongClicked: (index: Int) -> Unit,
     onSongFavouriteClicked: (Song) -> Unit,
     currentSong: Song?,
-    onAddToQueueClicked: (Song) -> Unit,
     onPlayAllClicked: () -> Unit,
     onShuffleClicked: () -> Unit,
-    onAddToPlaylistsClicked: (Song) -> Unit,
-    isPlaylistCollection: Boolean,
-    onRemoveFromPlaylistClicked: (Song) -> Unit,
+    onTrackOverflowClick: (Song) -> Unit,
 ) {
     item {
         PlayShuffleCard(
@@ -51,29 +42,20 @@ fun LazyListScope.collectionContent(
     }
     itemsIndexed(
         items = songs,
-        key = { index, song ->
+        key = { _, song ->
             song.location
         }
     ) { index, song ->
-        var infoVisible by remember { mutableStateOf(false) }
         SongCardV1(
             song = song,
             onSongClicked = {
                 onSongClicked(index)
             },
             onFavouriteClicked = onSongFavouriteClicked,
-            songOptions = listOf(
-                SongOptions.Info { infoVisible = true },
-                SongOptions.AddToQueue { onAddToQueueClicked(song) },
-                SongOptions.AddToPlaylist { onAddToPlaylistsClicked(song) },
-            ) + if (isPlaylistCollection) listOf(
-                SongOptions.RemoveFromPlaylist { onRemoveFromPlaylistClicked(song) }
-            ) else listOf(),
+            songOptions = emptyList(),
+            onOverflowClick = { onTrackOverflowClick(song) },
             currentlyPlaying = (song.location == currentSong?.location)
         )
-        if (infoVisible) {
-            SongInfo(song) { infoVisible = false }
-        }
     }
 }
 

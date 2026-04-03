@@ -130,6 +130,8 @@ object UiTokens {
 
     // --- Now Playing / MusicSlider ---
     val musicSliderTimeLabelSp = 14.sp
+    /** Horizontal inset for full player so content stays inside safe drawing area. */
+    val nowPlayingScreenHorizontalPadding = 20.dp
 
     /**
      * Max alpha for the library scrim behind the expanded player (multiplied by full-player fraction).

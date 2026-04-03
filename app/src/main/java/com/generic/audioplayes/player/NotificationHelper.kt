@@ -21,7 +21,7 @@ import kotlin.math.roundToInt
 object NotificationHelper {
 
     const val PLAYER_NOTIFICATION_ID = 20
-    const val PLAYER_CHANNEL_ID = "zen_player"
+    const val PLAYER_CHANNEL_ID = "audio_player_playback"
 
     fun ensureNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -57,10 +57,10 @@ object NotificationHelper {
     fun stopPlaybackPendingIntent(context: Context): PendingIntent =
         PendingIntent.getBroadcast(
             context,
-            ZenBroadcastReceiver.CANCEL_ACTION_REQUEST_CODE,
+            AudioPlayerBroadcastReceiver.CANCEL_ACTION_REQUEST_CODE,
             Intent(Constants.PACKAGE_NAME).putExtra(
-                ZenBroadcastReceiver.AUDIO_CONTROL,
-                ZenBroadcastReceiver.ZEN_PLAYER_CANCEL,
+                AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+                AudioPlayerBroadcastReceiver.AUDIO_PLAYER_CANCEL,
             ),
             PendingIntent.FLAG_IMMUTABLE,
         )

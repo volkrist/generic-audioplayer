@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Generic AudioPlayes</string>
+    <string name="app_name">AudioPlayer</string>
     <string name="player_widget_medium_description">Şimdi çalıyor (orta)</string>
     <string name="player_widget_small_description">Oynatıcı (kompakt)</string>
 
@@ -38,13 +38,13 @@
     <string name="notification_access">Bildirim erişimi</string>
     <string name="notification_access_granted">Bildirim erişimi verildi</string>
     <string name="grant_access_to_notification">Bildirime erişim izni ver</string>
-    <string name="zen_needs_access_to_post_notifications_regarding_the_media_playing">Zen\'in medya oynatımı ile ilgili bildirimleri göndermek için erişime ihtiyacı vardır</string>
+    <string name="audio_player_needs_access_to_post_notifications_regarding_the_media_playing">AudioPlayer\'ın medya oynatımı ile ilgili bildirimleri göndermek için erişime ihtiyacı vardır</string>
     <string name="audio_files_access">Ses dosyalarına erişim</string>
     <string name="access_granted">Erişim izni verildi</string>
     <string name="grant_access_to_read_audio">Ses okumaya erişim izni ver</string>
-    <string name="zen_needs_access_to_read_audio_files_present_on_the_device">Zen\'in cihazda bulunan ses dosyalarını okumak için erişime ihtiyacı vardır</string>
+    <string name="audio_player_needs_access_to_read_audio_files_present_on_the_device">AudioPlayer\'ın cihazda bulunan ses dosyalarını okumak için erişime ihtiyacı vardır</string>
     <string name="storage_access">Depolama erişimi</string>
-    <string name="zen_needs_storage_access_to_read_audio_files_present_on_the_device">Zen, cihazda bulunan ses dosyalarını okumak için depolama erişimine ihtiyaç duyar</string>
+    <string name="audio_player_needs_storage_access_to_read_audio_files_present_on_the_device">AudioPlayer, cihazda bulunan ses dosyalarını okumak için depolama erişimine ihtiyaç duyar</string>
     <string name="grant_access_to_read_storage">Depolama alanına erişim izni ver</string>
     <string name="finish">Bitir</string>
     <string name="next">İleri</string>

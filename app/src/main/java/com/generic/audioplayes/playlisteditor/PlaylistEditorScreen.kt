@@ -53,8 +53,8 @@ import com.generic.audioplayes.R
 import com.generic.audioplayes.components.FullScreenSadMessage
 import com.generic.audioplayes.components.Snackbar
 import com.generic.audioplayes.components.SongCardV2
-import com.generic.audioplayes.components.more_options.SongOptions
 import com.generic.audioplayes.data.music.Song
+import com.generic.audioplayes.nowplaying.HomeLibrarySongActionsBottomSheet
 import com.generic.audioplayes.nowplaying.DraggableItem
 import com.generic.audioplayes.nowplaying.dragContainer
 import com.generic.audioplayes.nowplaying.rememberDragDropState
@@ -68,6 +68,16 @@ fun PlaylistEditorScreen(
     onExportM3u: () -> Unit,
     onImportM3u: () -> Unit,
     onFavouriteClicked: (Song) -> Unit,
+    onPlayLibrarySongNext: (Song) -> Unit,
+    onAddToQueue: (Song) -> Unit,
+    onAddToPlaylist: (Song) -> Unit,
+    onOpenAlbum: (Song) -> Unit,
+    onPlayerActionEditTags: (Song) -> Unit,
+    onPlayerActionHideSong: (Song) -> Unit,
+    onPlayerActionDeleteSong: (Song) -> Unit,
+    onPlayerActionRingtone: (Song) -> Unit,
+    onPlayerActionChangeCover: (Song) -> Unit,
+    onRemoveFromPlaylist: (Song) -> Unit,
 ) {
     val playlistWithSongs by viewModel.playlistWithSongs.collectAsStateWithLifecycle()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
@@ -75,6 +85,7 @@ fun PlaylistEditorScreen(
     val message by viewModel.message.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    var trackSheetSong by remember { mutableStateOf<Song?>(null) }
 
     LaunchedEffect(message) {
         if (message.isEmpty()) return@LaunchedEffect
@@ -255,17 +266,36 @@ fun PlaylistEditorScreen(
                                 onSongClicked = { viewModel.playFromIndex(index) },
                                 onFavouriteClicked = onFavouriteClicked,
                                 currentlyPlaying = false,
-                                songOptions = listOf(
-                                    SongOptions.RemoveFromPlaylist {
-                                        viewModel.removeSong(song.location)
-                                    },
-                                ),
+                                songOptions = emptyList(),
+                                onOverflowClick = { trackSheetSong = song },
                             )
                         }
                     }
                 }
             }
         }
+    }
+
+    trackSheetSong?.let { sheetSong ->
+        HomeLibrarySongActionsBottomSheet(
+            song = sheetSong,
+            visible = true,
+            onDismiss = { trackSheetSong = null },
+            onPlayNext = {
+                onPlayLibrarySongNext(sheetSong)
+            },
+            onAddToQueue = { onAddToQueue(sheetSong) },
+            onAddToPlaylist = { onAddToPlaylist(sheetSong) },
+            onOpenAlbum = { onOpenAlbum(sheetSong) },
+            onPlayerActionEditTags = onPlayerActionEditTags,
+            onPlayerActionHideSong = onPlayerActionHideSong,
+            onPlayerActionDeleteSong = onPlayerActionDeleteSong,
+            onPlayerActionRingtone = onPlayerActionRingtone,
+            onPlayerActionChangeCover = onPlayerActionChangeCover,
+            onRemoveFromPlaylist = {
+                onRemoveFromPlaylist(sheetSong)
+            },
+        )
     }
 
     if (showRename) {

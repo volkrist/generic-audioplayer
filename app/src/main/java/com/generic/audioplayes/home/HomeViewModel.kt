@@ -9,9 +9,9 @@ import com.generic.audioplayes.Constants
 import com.generic.audioplayes.R
 import com.generic.audioplayes.components.SortOptions
 import com.generic.audioplayes.data.QueueStateProvider
-import com.generic.audioplayes.data.ZenCrashReporter
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
 import com.generic.audioplayes.data.library.LibraryRepository
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.music.MiniSong
 import com.generic.audioplayes.data.music.PlaylistWithSongCount
 import com.generic.audioplayes.data.music.SmartPlaylistCounts
@@ -25,7 +25,7 @@ import com.generic.audioplayes.data.services.SongService
 import com.generic.audioplayes.storage_explorer.Directory
 import com.generic.audioplayes.storage_explorer.DirectoryContents
 import com.generic.audioplayes.storage_explorer.MusicFileExplorer
-import com.generic.audioplayes.player.ZenPlayer
+import com.generic.audioplayes.player.AudioPlayerService
 import com.generic.audioplayes.util.AudioFileActions
 import com.generic.audioplayes.util.MediaDeleteResult
 import com.generic.audioplayes.util.MessageStore
@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -52,6 +53,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.net.Uri
 import java.io.File
+import java.util.LinkedHashMap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -60,14 +62,14 @@ class HomeViewModel @Inject constructor(
     private val exoPlayer: ExoPlayer,
     private val songExtractor: SongExtractor,
     private val libraryRepository: LibraryRepository,
-    private val prefs: ZenPreferenceProvider,
+    private val prefs: AudioPlayerPreferenceProvider,
     private val playlistService: PlaylistService,
     private val blacklistService: BlacklistService,
     private val songService: SongService,
     private val queueService: QueueService,
     private val playerService: PlayerService,
     private val queueStateProvider: QueueStateProvider,
-    private val crashReporter: ZenCrashReporter,
+    private val crashReporter: AudioPlayerCrashReporter,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -219,6 +221,12 @@ class HomeViewModel @Inject constructor(
             viewModelScope.launch(Dispatchers.Main.immediate) { queue.addAll(songs) }
         }
 
+        override fun onInsert(atIndex: Int, songs: List<Song>) {
+            viewModelScope.launch(Dispatchers.Main.immediate) {
+                queue.addAll(atIndex, songs)
+            }
+        }
+
         override fun onUpdate(updatedSong: Song, position: Int) {
             if (position < 0 || position >= queue.size) return
             viewModelScope.launch(Dispatchers.Main.immediate) { queue[position] = updatedSong }
@@ -227,6 +235,11 @@ class HomeViewModel @Inject constructor(
         override fun onMove(from: Int, to: Int) {
             if (from < 0 || to < 0 || from >= queue.size || to >= queue.size) return
             viewModelScope.launch(Dispatchers.Main.immediate) { queue.apply { add(to, removeAt(from)) } }
+        }
+
+        override fun onRemoveAt(index: Int) {
+            if (index < 0 || index >= queue.size) return
+            viewModelScope.launch(Dispatchers.Main.immediate) { queue.removeAt(index) }
         }
 
         override fun onClear() {
@@ -274,7 +287,7 @@ class HomeViewModel @Inject constructor(
     fun onMiniPlayerPlayPause() {
         viewModelScope.launch {
             if (queueService.queue.isEmpty()) return@launch
-            if (ZenPlayer.isRunning.get()) {
+            if (AudioPlayerService.isRunning.get()) {
                 playerService.togglePlayPauseIfRunning()
             } else {
                 playerService.startServiceIfNotRunning(
@@ -332,7 +345,7 @@ class HomeViewModel @Inject constructor(
     fun deleteSongFromDevice(song: Song) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                when (val result = AudioFileActions.deleteAudioFileFromDevice(appContext, song.location)) {
+                when (val result = AudioFileActions.deleteAudioFileFromDeviceWithFallback(appContext, song.location)) {
                     MediaDeleteResult.Success -> completeDeleteAfterFileRemoved(song)
                     is MediaDeleteResult.Recoverable -> {
                         pendingDeleteSong = song
@@ -430,6 +443,157 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    suspend fun getSongsInFolderRecursive(directory: Directory): List<Song> =
+        withContext(Dispatchers.IO) {
+            songExtractor.extractAllSongsUnderFolderRecursive(directory.absolutePath)
+        }
+
+    fun playAllInFolder(folder: Directory) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val songs = songExtractor.extractAllSongsUnderFolderRecursive(folder.absolutePath)
+            if (songs.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    showMessage(messageStore.getString(R.string.folder_empty_or_inaccessible))
+                }
+                return@launch
+            }
+            withContext(Dispatchers.Main) {
+                setQueue(songs, 0)
+            }
+        }
+    }
+
+    fun playFolderNext(folder: Directory) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val songs = songExtractor.extractAllSongsUnderFolderRecursive(folder.absolutePath)
+            if (songs.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    showMessage(messageStore.getString(R.string.folder_empty_or_inaccessible))
+                }
+                return@launch
+            }
+            withContext(Dispatchers.Main) {
+                if (queueService.queue.isEmpty()) {
+                    setQueue(songs, 0)
+                } else {
+                    queueService.insertSongsAfterCurrent(songs)
+                    showMessage(messageStore.getString(R.string.folder_queued_after_current))
+                }
+            }
+        }
+    }
+
+    fun addFolderToQueue(folder: Directory) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val songs = songExtractor.extractAllSongsUnderFolderRecursive(folder.absolutePath)
+            if (songs.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    showMessage(messageStore.getString(R.string.folder_empty_or_inaccessible))
+                }
+                return@launch
+            }
+            withContext(Dispatchers.Main) {
+                if (queueService.queue.isEmpty()) {
+                    setQueue(songs, 0)
+                } else {
+                    queueService.append(songs)
+                    showMessage(messageStore.getString(R.string.folder_added_to_queue))
+                }
+            }
+        }
+    }
+
+    /**
+     * Prefer Room paths (same as single-track delete), merge with MediaStore scan for files not yet indexed.
+     */
+    private suspend fun resolveFolderSongsForDeletion(folder: Directory): List<Song> {
+        val raw = folder.absolutePath.trimEnd('/')
+        val candidates = buildList {
+            add(raw)
+            try {
+                add(File(raw).canonicalFile.absolutePath.trimEnd('/'))
+            } catch (_: Exception) {
+            }
+        }.distinct()
+        val merged = LinkedHashMap<String, Song>()
+        for (p in candidates) {
+            songService.getSongsUnderFolderPath(p).forEach { merged[it.location] = it }
+        }
+        val primary = candidates.firstOrNull() ?: return merged.values.toList()
+        songExtractor.extractAllSongsUnderFolderRecursive(primary).forEach { song ->
+            merged.putIfAbsent(song.location, song)
+        }
+        return merged.values.toList()
+    }
+
+    fun deleteFolderFromDevice(folder: Directory) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val dir = File(folder.absolutePath)
+                if (!dir.exists()) {
+                    withContext(Dispatchers.Main) {
+                        showMessage(messageStore.getString(R.string.folder_delete_failed))
+                    }
+                    return@launch
+                }
+                val songs = resolveFolderSongsForDeletion(folder)
+                if (songs.isEmpty()) {
+                    val ok = dir.deleteRecursively()
+                    withContext(Dispatchers.Main) {
+                        if (ok) {
+                            libraryRepository.updateLibraryFromMediaStore()
+                            showMessage(messageStore.getString(R.string.folder_delete_ok))
+                        } else {
+                            showMessage(messageStore.getString(R.string.folder_delete_failed))
+                        }
+                    }
+                    return@launch
+                }
+                var deleted = 0
+                for (song in songs) {
+                    when (
+                        val result = AudioFileActions.deleteAudioFileFromDeviceWithFallback(
+                            appContext,
+                            song.location,
+                        )
+                    ) {
+                        MediaDeleteResult.Success -> {
+                            songService.removeSongFromLibraryMetadata(song)
+                            withContext(Dispatchers.Main) {
+                                refreshQueueAfterRemovingSong(song)
+                            }
+                            deleted++
+                        }
+                        is MediaDeleteResult.Recoverable -> {
+                            pendingDeleteSong = song
+                            pendingDeleteUri = result.uri
+                            deleteConfirmationSenderInternal.emit(result.pendingIntent)
+                            return@launch
+                        }
+                        MediaDeleteResult.Failed -> Unit
+                    }
+                }
+                libraryRepository.updateLibraryFromMediaStore()
+                try {
+                    dir.deleteRecursively()
+                } catch (_: Exception) {
+                }
+                withContext(Dispatchers.Main) {
+                    if (deleted > 0) {
+                        showMessage(messageStore.getString(R.string.folder_delete_ok))
+                    } else {
+                        showMessage(messageStore.getString(R.string.folder_delete_failed))
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e)
+                withContext(Dispatchers.Main) {
+                    showMessage(messageStore.getString(R.string.folder_delete_failed))
+                }
+            }
+        }
+    }
+
     fun onFolderBlacklist(folder: Directory){
         viewModelScope.launch {
             try {
@@ -455,6 +619,97 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 Timber.e(e)
                 showMessage(messageStore.getString(R.string.some_error_occurred))
+            }
+        }
+    }
+
+    fun addSongsToPlaylistFromPlayer(songLocations: List<String>, playlistId: Long) {
+        viewModelScope.launch {
+            try {
+                val blacklisted = blacklistService.blacklistedSongs.first()
+                    .map { it.location }
+                    .toSet()
+                val validSongs = songLocations.filter { !blacklisted.contains(it) }
+                val anyBlacklisted = songLocations.any { blacklisted.contains(it) }
+                if (validSongs.isEmpty()) {
+                    showMessage(messageStore.getString(R.string.blacklisted_songs_have_not_been_added_to_playlist))
+                    return@launch
+                }
+                playlistService.addSongsToPlaylist(validSongs, playlistId)
+                val msg = messageStore.getString(R.string.done) +
+                    if (anyBlacklisted) {
+                        ". " + messageStore.getString(R.string.blacklisted_songs_have_not_been_added_to_playlist)
+                    } else {
+                        ""
+                    }
+                showMessage(msg)
+            } catch (e: Exception) {
+                Timber.e(e)
+                showMessage(messageStore.getString(R.string.some_error_occurred))
+            }
+        }
+    }
+
+    fun createPlaylistAndAddSongsFromPlayer(playlistName: String, songLocations: List<String>) {
+        viewModelScope.launch {
+            try {
+                if (!playlistService.createPlaylist(playlistName)) {
+                    showMessage(messageStore.getString(R.string.some_error_occurred))
+                    return@launch
+                }
+                val playlists = playlistService.playlists.first()
+                val trimmed = playlistName.trim()
+                val playlist = playlists
+                    .filter { it.playlistName == trimmed }
+                    .maxByOrNull { it.createdAt }
+                    ?: playlists.maxByOrNull { it.createdAt }
+                if (playlist == null) {
+                    showMessage(messageStore.getString(R.string.some_error_occurred))
+                    return@launch
+                }
+                val blacklisted = blacklistService.blacklistedSongs.first()
+                    .map { it.location }
+                    .toSet()
+                val validSongs = songLocations.filter { !blacklisted.contains(it) }
+                val anyBlacklisted = songLocations.any { blacklisted.contains(it) }
+                if (validSongs.isEmpty()) {
+                    showMessage(messageStore.getString(R.string.blacklisted_songs_have_not_been_added_to_playlist))
+                    return@launch
+                }
+                playlistService.addSongsToPlaylist(validSongs, playlist.playlistId)
+                val msg = messageStore.getString(R.string.done) +
+                    if (anyBlacklisted) {
+                        ". " + messageStore.getString(R.string.blacklisted_songs_have_not_been_added_to_playlist)
+                    } else {
+                        ""
+                    }
+                showMessage(msg)
+            } catch (e: Exception) {
+                Timber.e(e)
+                showMessage(messageStore.getString(R.string.some_error_occurred))
+            }
+        }
+    }
+
+    fun addSongsToFavouritesFromPlayer(songLocations: List<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                songLocations.forEach { loc ->
+                    val song = songExtractor.resolveSong(loc) ?: return@forEach
+                    if (!song.favourite) {
+                        val updated = song.copy(favourite = true)
+                        queueService.update(updated)
+                        songService.updateSong(updated)
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    showMessage(messageStore.getString(R.string.done))
+                }
+            } catch (e: Exception) {
+                Timber.e(e)
+                withContext(Dispatchers.Main) {
+                    showMessage(messageStore.getString(R.string.some_error_occurred))
+                }
             }
         }
     }
@@ -514,6 +769,32 @@ class HomeViewModel @Inject constructor(
 
     fun onSongDrag(fromIndex: Int, toIndex: Int) = queueService.moveSong(fromIndex, toIndex)
 
+    fun removeSongFromQueue(song: Song) {
+        val idx = queue.indexOfFirst { it.location == song.location }
+        if (idx >= 0) queueService.removeSongAt(idx)
+    }
+
+    /** Puts this track immediately after the current one in the queue (no-op if already playing or already next). */
+    fun moveQueueSongToPlayNext(song: Song) {
+        val q = queueService.queue
+        val from = q.indexOfFirst { it.location == song.location }
+        if (from < 0) return
+        val cur = queueService.currentQueueIndex()
+        if (from == cur) return
+        val insertAfter = cur + 1
+        if (from == insertAfter) return
+        val to = if (from < cur) cur else cur + 1
+        queueService.moveSong(from, to.coerceAtMost(q.size - 1))
+    }
+
+    /** From library lists: insert after current if not in queue, else reorder like [moveQueueSongToPlayNext]. */
+    fun playLibrarySongNext(song: Song) {
+        if (queueService.insertSongsAfterCurrent(listOf(song))) {
+            showMessage(messageStore.getString(R.string.added_to_queue, song.title))
+            return
+        }
+        moveQueueSongToPlayNext(song)
+    }
 
     private val _filesInCurrentDestination = MutableStateFlow(DirectoryContents())
     val filesInCurrentDestination = _filesInCurrentDestination

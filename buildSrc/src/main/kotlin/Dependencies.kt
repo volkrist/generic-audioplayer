@@ -17,7 +17,7 @@ object Versions {
     const val androidxGlance = "1.1.1"
     const val androidxWorkManager = "2.8.1"
 
-    const val appCompat = "1.4.2"
+    const val appCompat = "1.6.1"
     const val navigation = "2.5.3"
 
     const val room = "2.5.0"
@@ -94,6 +94,7 @@ object Libraries {
     const val appUpdate = "com.google.android.play:app-update-ktx:${Versions.appUpdate}"
 
     const val androidxComposeMaterial = "androidx.compose.material:material:${Versions.androidxComposeMaterial}"
+    const val androidxMaterialIconsExtended = "androidx.compose.material:material-icons-extended:${Versions.androidxComposeMaterial}"
 
     const val junit = "junit:junit:${Versions.junit}"
     const val androidxJunit = "androidx.test.ext:junit:${Versions.androidxJunit}"

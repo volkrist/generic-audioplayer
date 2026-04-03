@@ -1,7 +1,7 @@
 package com.generic.audioplayes.data.library
 
 import com.generic.audioplayes.data.music.SongExtractor
-import com.generic.audioplayes.data.ZenCrashReporter
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -14,7 +14,7 @@ import javax.inject.Singleton
 @Singleton
 class LibraryRepository @Inject constructor(
     private val songExtractor: SongExtractor,
-    private val crashReporter: ZenCrashReporter,
+    private val crashReporter: AudioPlayerCrashReporter,
 ) {
 
     suspend fun loadLibraryFromCache(): Boolean =

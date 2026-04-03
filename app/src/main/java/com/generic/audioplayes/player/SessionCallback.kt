@@ -11,7 +11,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.generic.audioplayes.Constants
 import com.generic.audioplayes.data.QueueState
-import com.generic.audioplayes.data.ZenCrashReporter
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.data.services.QueueService
 import com.generic.audioplayes.data.services.SongService
@@ -33,7 +33,7 @@ class SessionCallback @Inject constructor(
     private val songService: SongService,
     private val scope: CoroutineScope,
     private val queueState: DataStore<QueueState>,
-    private val crashReporter: ZenCrashReporter,
+    private val crashReporter: AudioPlayerCrashReporter,
 ): MediaSession.Callback {
 
     override fun onConnect(
@@ -43,9 +43,9 @@ class SessionCallback @Inject constructor(
         val connectionResult = super.onConnect(session, controller)
         crashReporter.logData("SessionCallback.onConnect() connectionResult:${connectionResult.isAccepted}")
         val availableCommands = connectionResult.availableSessionCommands.buildUpon()
-        availableCommands.add(ZenCommandButtons.liked.sessionCommand!!)
-        availableCommands.add(ZenCommandButtons.unliked.sessionCommand!!)
-        availableCommands.add(ZenCommandButtons.cancel.sessionCommand!!)
+        availableCommands.add(AudioPlayerCommandButtons.liked.sessionCommand!!)
+        availableCommands.add(AudioPlayerCommandButtons.unliked.sessionCommand!!)
+        availableCommands.add(AudioPlayerCommandButtons.cancel.sessionCommand!!)
         return MediaSession.ConnectionResult.accept(
             availableCommands.build(),
             connectionResult.availablePlayerCommands
@@ -59,29 +59,29 @@ class SessionCallback @Inject constructor(
         session.setCustomLayout(
             controller,
             listOf(
-                if (isLiked) ZenCommandButtons.liked else ZenCommandButtons.unliked,
-                ZenCommandButtons.previous,
-                ZenCommandButtons.playPause,
-                ZenCommandButtons.next,
-                ZenCommandButtons.cancel
+                if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked,
+                AudioPlayerCommandButtons.previous,
+                AudioPlayerCommandButtons.playPause,
+                AudioPlayerCommandButtons.next,
+                AudioPlayerCommandButtons.cancel
             )
         )
     }
 
     private val closeAction =  PendingIntent.getBroadcast(
-        context, ZenBroadcastReceiver.CANCEL_ACTION_REQUEST_CODE,
+        context, AudioPlayerBroadcastReceiver.CANCEL_ACTION_REQUEST_CODE,
         Intent(Constants.PACKAGE_NAME).putExtra(
-            ZenBroadcastReceiver.AUDIO_CONTROL,
-            ZenBroadcastReceiver.ZEN_PLAYER_CANCEL
+            AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+            AudioPlayerBroadcastReceiver.AUDIO_PLAYER_CANCEL
         ),
         PendingIntent.FLAG_IMMUTABLE
     )
 
     private val likeUnlikeAction = PendingIntent.getBroadcast(
-        context, ZenBroadcastReceiver.LIKE_ACTION_REQUEST_CODE,
+        context, AudioPlayerBroadcastReceiver.LIKE_ACTION_REQUEST_CODE,
         Intent(Constants.PACKAGE_NAME).putExtra(
-            ZenBroadcastReceiver.AUDIO_CONTROL,
-            ZenBroadcastReceiver.ZEN_PLAYER_LIKE
+            AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+            AudioPlayerBroadcastReceiver.AUDIO_PLAYER_LIKE
         ),
         PendingIntent.FLAG_IMMUTABLE
     )
@@ -94,10 +94,10 @@ class SessionCallback @Inject constructor(
     ): ListenableFuture<SessionResult> {
         val result = SettableFuture.create<SessionResult>()
         when(customCommand.customAction) {
-            ZenCommands.LIKE, ZenCommands.UNLIKE -> {
+            AudioPlayerCommands.LIKE, AudioPlayerCommands.UNLIKE -> {
                 likeUnlikeAction.send()
             }
-            ZenCommands.CLOSE -> {
+            AudioPlayerCommands.CLOSE -> {
                 closeAction.send()
             }
         }

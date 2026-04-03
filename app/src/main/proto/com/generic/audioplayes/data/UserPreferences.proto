@@ -50,7 +50,7 @@ message UserPreferences {
   int32 bass_boost_strength = 14;
   int32 virtualizer_strength = 15;
 
-  // Playback / UI toggles (seeded once for existing installs — see ZenPreferenceProvider)
+  // Playback / UI toggles (seeded once for existing installs — see AudioPlayerPreferenceProvider)
   bool crossfade_enabled = 16;
   bool gapless_playback_enabled = 17;
   bool keep_screen_on = 18;
@@ -63,4 +63,14 @@ message UserPreferences {
   int32 equalizer_prefs_seed_version = 23;
   // Last successful local JSON backup export (epoch ms); 0 = never
   int64 last_backup_export_epoch_ms = 24;
+  // Equalizer UI: 5 or 10 vertical bands (stored curve is resized to hardware band count)
+  int32 equalizer_ui_band_count = 25;
+  // android.media.audiofx.PresetReverb preset id (e.g. PRESET_NONE = 0)
+  int32 reverb_preset = 26;
+  // Library shell background: 0 = default gradient; 1+ = built-in preset (see GraphicWallpaper)
+  int32 graphic_wallpaper_preset = 27;
+  // User image for library shell; empty = use graphic_wallpaper_preset
+  string graphic_wallpaper_custom_uri = 28;
+  // Index in the graphic theme color grid (0..14)
+  int32 graphic_theme_color_slot = 29;
 }

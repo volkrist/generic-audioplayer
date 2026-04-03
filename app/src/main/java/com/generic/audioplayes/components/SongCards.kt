@@ -60,6 +60,8 @@ private fun SongCardBase(
     onBackgroundColor: Color,
     onCurrentlyPlayingBackgroundColor: Color,
     songOptions: List<SongOptions>,
+    /** When set, shows the overflow icon and invokes this instead of [songOptions] dialog (e.g. queue track menu). */
+    onOverflowClick: (() -> Unit)? = null,
     layout: SongRowLayout = SongRowLayout.Compact,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -186,7 +188,23 @@ private fun SongCardBase(
                 ),
             tint = if (currentlyPlaying) onCurrentlyPlayingBackgroundColor else onBackgroundColor,
         )
-        if (songOptions.isNotEmpty()) {
+        if (onOverflowClick != null) {
+            Spacer(spacerModifier)
+            Icon(
+                imageVector = Icons.Outlined.MoreVert,
+                contentDescription = stringResource(R.string.more_menu_button),
+                modifier = iconModifier
+                    .clickable(
+                        onClick = onOverflowClick,
+                        indication = rememberRipple(
+                            bounded = false,
+                            radius = UiTokens.rippleSmall
+                        ),
+                        interactionSource = remember { MutableInteractionSource() }
+                    ),
+                tint = if (currentlyPlaying) onCurrentlyPlayingBackgroundColor else onBackgroundColor,
+            )
+        } else if (songOptions.isNotEmpty()) {
             Spacer(spacerModifier)
             var optionsVisible by remember { mutableStateOf(false) }
             Icon(
@@ -235,7 +253,7 @@ fun SongCardHomeSongsRow(
     onSongClicked: () -> Unit,
     onFavouriteClicked: (Song) -> Unit,
     currentlyPlaying: Boolean = false,
-    songOptions: List<SongOptions>,
+    onOverflowMenuClick: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val artSize = 56.dp
@@ -357,30 +375,20 @@ fun SongCardHomeSongsRow(
             tint = onColor.copy(alpha = 0.85f),
         )
         Spacer(modifier = Modifier.width(4.dp))
-        if (songOptions.isNotEmpty()) {
-            var optionsVisible by remember { mutableStateOf(false) }
-            Icon(
-                imageVector = Icons.Outlined.MoreVert,
-                contentDescription = stringResource(R.string.more_menu_button),
-                modifier = iconMod
-                    .clickable(
-                        onClick = { optionsVisible = true },
-                        indication = rememberRipple(
-                            bounded = false,
-                            radius = UiTokens.rippleSmall
-                        ),
-                        interactionSource = remember { MutableInteractionSource() }
+        Icon(
+            imageVector = Icons.Outlined.MoreVert,
+            contentDescription = stringResource(R.string.more_menu_button),
+            modifier = iconMod
+                .clickable(
+                    onClick = onOverflowMenuClick,
+                    indication = rememberRipple(
+                        bounded = false,
+                        radius = UiTokens.rippleSmall
                     ),
-                tint = onColor.copy(alpha = 0.85f),
-            )
-            if (optionsVisible) {
-                OptionsAlertDialog(
-                    options = songOptions,
-                    title = song.title,
-                    onDismissRequest = { optionsVisible = false }
-                )
-            }
-        }
+                    interactionSource = remember { MutableInteractionSource() }
+                ),
+            tint = onColor.copy(alpha = 0.85f),
+        )
     }
 }
 
@@ -391,6 +399,8 @@ fun SongCardV1(
     onFavouriteClicked: (Song) -> Unit,
     currentlyPlaying: Boolean = false,
     songOptions: List<SongOptions>,
+    /** When set, opens the library track sheet instead of [songOptions] (ignored for overflow). */
+    onOverflowClick: (() -> Unit)? = null,
 ) = SongCardBase(
     song = song,
     onSongClicked = onSongClicked,
@@ -401,6 +411,7 @@ fun SongCardV1(
     onBackgroundColor = Color.White,
     onCurrentlyPlayingBackgroundColor = Color.White,
     songOptions = songOptions,
+    onOverflowClick = onOverflowClick,
     layout = SongRowLayout.HomeLibrary,
 )
 
@@ -411,6 +422,7 @@ fun SongCardV2(
     onFavouriteClicked: (Song) -> Unit,
     currentlyPlaying: Boolean = false,
     songOptions: List<SongOptions> = listOf(),
+    onOverflowClick: (() -> Unit)? = null,
 ) = SongCardBase(
     song = song,
     onSongClicked = onSongClicked,
@@ -420,7 +432,8 @@ fun SongCardV2(
     currentlyPlayingBackgroundColor = MaterialTheme.colorScheme.secondary,
     onBackgroundColor = MaterialTheme.colorScheme.onSecondaryContainer,
     onCurrentlyPlayingBackgroundColor = MaterialTheme.colorScheme.onSecondary,
-    songOptions = songOptions
+    songOptions = songOptions,
+    onOverflowClick = onOverflowClick,
 )
 
 @Composable
@@ -469,6 +482,8 @@ fun MiniSongCard(
     onSongClicked: () -> Unit,
     currentlyPlaying: Boolean = false,
     songOptions: List<SongOptions>,
+    /** When set, invokes this for ⋮ instead of [OptionsAlertDialog] from [songOptions]. */
+    onOverflowClick: (() -> Unit)? = null,
     /** Folders tab on library gradient: translucent row, light text — no solid [ColorScheme.surface] slab. */
     shellListStyle: Boolean = false,
 ) {
@@ -547,7 +562,23 @@ fun MiniSongCard(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (songOptions.isNotEmpty()) {
+        if (onOverflowClick != null) {
+            Spacer(spacerModifier)
+            Icon(
+                imageVector = Icons.Outlined.MoreVert,
+                contentDescription = stringResource(R.string.more_menu_button),
+                modifier = iconModifier
+                    .clickable(
+                        onClick = onOverflowClick,
+                        indication = rememberRipple(
+                            bounded = false,
+                            radius = UiTokens.rippleSmall
+                        ),
+                        interactionSource = remember { MutableInteractionSource() }
+                    ),
+                tint = menuTint,
+            )
+        } else if (songOptions.isNotEmpty()) {
             Spacer(spacerModifier)
             var optionsVisible by remember { mutableStateOf(false) }
             Icon(

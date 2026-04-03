@@ -139,6 +139,7 @@ dependencies {
     implementation(Libraries.androidxWorkManager)
 
     implementation(Libraries.androidxComposeMaterial)
+    implementation(Libraries.androidxMaterialIconsExtended)
     implementation(Libraries.material3)
     implementation(Libraries.material3WindowSizeClass)
 

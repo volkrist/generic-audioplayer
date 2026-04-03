@@ -31,7 +31,21 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BlurOn
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.MailOutline
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.material.icons.outlined.Verified
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -40,6 +54,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -52,6 +67,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -77,196 +93,246 @@ import com.generic.audioplayes.nowplaying.rememberDragDropState
 import com.generic.audioplayes.ui.theme.ThemePreference
 import com.generic.audioplayes.ui.theme.getSeedColor
 import timber.log.Timber
+import java.text.DateFormat
+import java.util.Date
 
 @Composable
 fun SettingsList(
     paddingValues: PaddingValues,
-    isAppUpdateAvailable: Boolean,
-    onAppUpdateClicked: () -> Unit,
-    themePreference: ThemePreference,
-    onThemePreferenceChanged: (ThemePreference) -> Unit,
-    scanStatus: ScanStatus,
-    onScanClicked: () -> Unit,
-    onRestoreClicked: () -> Unit,
-    disabledCrashlytics: Boolean,
-    onAutoReportCrashClicked: (Boolean) -> Unit,
-    onWhatsNewClicked: () -> Unit,
-    onRestoreFoldersClicked: () -> Unit,
-    tabsSelection: List<Pair<Screens,Boolean>>,
-    onTabsSelectChange: (Screens, Boolean) -> Unit,
-    onTabsOrderChanged: (fromIdx: Int, toIdx: Int) -> Unit,
-    onTabsOrderConfirmed: () -> Unit,
+    lastBackupEpochMs: Long,
     crossfadeEnabled: Boolean,
     onCrossfadeChanged: (Boolean) -> Unit,
-    gaplessEnabled: Boolean,
+    gaplessPlaybackEnabled: Boolean,
     onGaplessChanged: (Boolean) -> Unit,
     keepScreenOn: Boolean,
     onKeepScreenOnChanged: (Boolean) -> Unit,
+    onHiddenMusicClicked: () -> Unit,
+    onBackupRestoreClicked: () -> Unit,
     showOnLockScreen: Boolean,
     onShowOnLockScreenChanged: (Boolean) -> Unit,
     pauseOnHeadsetDisconnect: Boolean,
     onPauseOnHeadsetChanged: (Boolean) -> Unit,
-    onEqualizerClicked: () -> Unit,
-    onSleepTimerClicked: () -> Unit,
-    onGraphicThemeClicked: () -> Unit,
-    onHiddenMusicClicked: () -> Unit,
-    onBackupRestoreClicked: () -> Unit,
+    onLanguageClicked: () -> Unit,
     onFaqClicked: () -> Unit,
     onFeedbackClicked: () -> Unit,
     onRateUsClicked: () -> Unit,
+    onPremiumClicked: () -> Unit,
     onPrivacyPolicyClicked: () -> Unit,
     onTermsClicked: () -> Unit,
-    onLanguageClicked: () -> Unit,
-    onPremiumClicked: () -> Unit,
     appVersionDisplay: String,
 ) {
+    val settingsGradient = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFF0B1028),
+            Color(0xFF12102A),
+            Color(0xFF1A0F2E),
+            Color(0xFF2D0D45),
+            Color(0xFF32104A),
+        ),
+    )
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 10.dp),
+            .background(settingsGradient)
+            .padding(horizontal = 14.dp),
         contentPadding = paddingValues,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        if (isAppUpdateAvailable) {
-            item {
-                UpdateAvailable(onClick = onAppUpdateClicked)
-            }
-        }
         item {
-            GroupTitle(title = stringResource(R.string.settings_section_features))
-        }
-        item {
-            FeaturesToolsSection(
-                onEqualizerClicked = onEqualizerClicked,
-                onSleepTimerClicked = onSleepTimerClicked,
-                onGraphicThemeClicked = onGraphicThemeClicked,
-            )
-        }
-        item {
-            GroupTitle(title = stringResource(R.string.music_library))
-        }
-        item {
-            MusicLibrarySettings(
-                scanStatus = scanStatus,
-                onScanClicked = onScanClicked,
-                onRestoreClicked = onRestoreClicked,
-                onRestoreFoldersClicked = onRestoreFoldersClicked,
-                onBackupRestoreClicked = onBackupRestoreClicked,
-                onHiddenMusicClicked = onHiddenMusicClicked,
-            )
-        }
-        item {
-            GroupTitle(title = stringResource(R.string.settings_section_playback))
-        }
-        item {
-            PlaybackTogglesSection(
+            ReferenceStyleMainSettingsBlock(
+                lastBackupEpochMs = lastBackupEpochMs,
                 crossfadeEnabled = crossfadeEnabled,
                 onCrossfadeChanged = onCrossfadeChanged,
-                gaplessEnabled = gaplessEnabled,
+                gaplessPlaybackEnabled = gaplessPlaybackEnabled,
                 onGaplessChanged = onGaplessChanged,
                 keepScreenOn = keepScreenOn,
                 onKeepScreenOnChanged = onKeepScreenOnChanged,
+                onHiddenMusicClicked = onHiddenMusicClicked,
+                onBackupRestoreClicked = onBackupRestoreClicked,
                 showOnLockScreen = showOnLockScreen,
                 onShowOnLockScreenChanged = onShowOnLockScreenChanged,
                 pauseOnHeadsetDisconnect = pauseOnHeadsetDisconnect,
                 onPauseOnHeadsetChanged = onPauseOnHeadsetChanged,
+                onLanguageClicked = onLanguageClicked,
             )
         }
         item {
-            GroupTitle(title = stringResource(R.string.look_and_feel))
-        }
-        item {
-            LookAndFeelSettings(
-                themePreference = themePreference,
-                onPreferenceChanged = onThemePreferenceChanged,
-                tabsSelection = tabsSelection,
-                onTabsSelectChange = onTabsSelectChange,
-                onTabsOrderChanged = onTabsOrderChanged,
-                onTabsOrderConfirmed = onTabsOrderConfirmed,
-            )
-        }
-        item {
-            GroupTitle(title = stringResource(R.string.settings_section_help))
-        }
-        item {
-            HelpAboutSection(
+            ReferenceHelpSection(
                 onFaqClicked = onFaqClicked,
                 onFeedbackClicked = onFeedbackClicked,
                 onRateUsClicked = onRateUsClicked,
+                onPremiumClicked = onPremiumClicked,
                 onPrivacyPolicyClicked = onPrivacyPolicyClicked,
                 onTermsClicked = onTermsClicked,
-                onLanguageClicked = onLanguageClicked,
                 appVersionDisplay = appVersionDisplay,
-            )
-        }
-        item {
-            GroupTitle(title = stringResource(R.string.report_bug))
-        }
-        item {
-            ReportBug(
-                disabledCrashlytics = disabledCrashlytics,
-                onAutoReportCrashClicked = onAutoReportCrashClicked,
-            )
-        }
-        item {
-            PremiumAndAdsSection(onPremiumClicked = onPremiumClicked)
-        }
-        item {
-            MadeBy(
-                onWhatsNewClicked = onWhatsNewClicked
             )
         }
     }
 }
 
 @Composable
-private fun PlaybackTogglesSection(
+private fun ReferenceStyleMainSettingsBlock(
+    lastBackupEpochMs: Long,
     crossfadeEnabled: Boolean,
     onCrossfadeChanged: (Boolean) -> Unit,
-    gaplessEnabled: Boolean,
+    gaplessPlaybackEnabled: Boolean,
     onGaplessChanged: (Boolean) -> Unit,
     keepScreenOn: Boolean,
     onKeepScreenOnChanged: (Boolean) -> Unit,
+    onHiddenMusicClicked: () -> Unit,
+    onBackupRestoreClicked: () -> Unit,
     showOnLockScreen: Boolean,
     onShowOnLockScreenChanged: (Boolean) -> Unit,
     pauseOnHeadsetDisconnect: Boolean,
     onPauseOnHeadsetChanged: (Boolean) -> Unit,
+    onLanguageClicked: () -> Unit,
 ) {
-    Column(modifier = Modifier.group()) {
+    val context = LocalContext.current
+    val backupSubtitle = remember(lastBackupEpochMs) {
+        val label = if (lastBackupEpochMs > 0L) {
+            DateFormat.getDateTimeInstance().format(Date(lastBackupEpochMs))
+        } else {
+            context.getString(R.string.backup_never_exported)
+        }
+        context.getString(R.string.backup_last_export, label)
+    }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Setting(
+            title = stringResource(R.string.settings_hidden_music),
+            icon = Icons.Outlined.VisibilityOff,
+            description = stringResource(R.string.settings_hidden_music_desc),
+            onClick = onHiddenMusicClicked,
+            minimalStyle = true,
+        )
+        Setting(
+            title = stringResource(R.string.settings_backup_restore_title),
+            icon = R.drawable.baseline_settings_backup_restore_40,
+            description = backupSubtitle,
+            onClick = onBackupRestoreClicked,
+            minimalStyle = true,
+        )
         Setting(
             title = stringResource(R.string.settings_crossfade),
-            icon = R.drawable.baseline_colorize_40,
+            icon = Icons.Outlined.BlurOn,
             description = stringResource(R.string.settings_crossfade_desc),
             isChecked = crossfadeEnabled,
             onCheckedChanged = onCrossfadeChanged,
+            minimalStyle = true,
         )
         Setting(
             title = stringResource(R.string.settings_gapless),
-            icon = R.drawable.ic_baseline_library_music_40,
+            icon = Icons.Outlined.PlayCircle,
             description = stringResource(R.string.settings_gapless_desc),
-            isChecked = gaplessEnabled,
+            isChecked = gaplessPlaybackEnabled,
             onCheckedChanged = onGaplessChanged,
+            minimalStyle = true,
         )
         Setting(
             title = stringResource(R.string.settings_keep_screen_on),
-            icon = R.drawable.baseline_light_mode_40,
+            icon = Icons.Outlined.WbSunny,
             description = stringResource(R.string.settings_keep_screen_on_desc),
             isChecked = keepScreenOn,
             onCheckedChanged = onKeepScreenOnChanged,
+            minimalStyle = true,
         )
         Setting(
             title = stringResource(R.string.settings_show_lock_screen),
-            icon = R.drawable.baseline_dark_mode_40,
+            icon = Icons.Outlined.Lock,
             description = stringResource(R.string.settings_show_lock_screen_desc),
             isChecked = showOnLockScreen,
             onCheckedChanged = onShowOnLockScreenChanged,
+            minimalStyle = true,
         )
         Setting(
             title = stringResource(R.string.settings_pause_headset),
-            icon = R.drawable.baseline_send_40,
+            icon = Icons.Outlined.PauseCircle,
             description = stringResource(R.string.settings_pause_headset_desc),
             isChecked = pauseOnHeadsetDisconnect,
             onCheckedChanged = onPauseOnHeadsetChanged,
+            minimalStyle = true,
+            emphasisSwitch = true,
+        )
+        Setting(
+            title = stringResource(R.string.settings_language),
+            icon = Icons.Outlined.Language,
+            description = stringResource(R.string.settings_language_desc),
+            onClick = onLanguageClicked,
+            minimalStyle = true,
+        )
+    }
+}
+
+@Composable
+private fun HelpSectionTitle(
+    title: String,
+) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        color = Color(0xFFFFD54F),
+        modifier = Modifier
+            .padding(start = 4.dp, top = 16.dp, bottom = 6.dp),
+    )
+}
+
+@Composable
+private fun ReferenceHelpSection(
+    onFaqClicked: () -> Unit,
+    onFeedbackClicked: () -> Unit,
+    onRateUsClicked: () -> Unit,
+    onPremiumClicked: () -> Unit,
+    onPrivacyPolicyClicked: () -> Unit,
+    onTermsClicked: () -> Unit,
+    appVersionDisplay: String,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        HelpSectionTitle(title = stringResource(R.string.settings_section_help))
+        Setting(
+            title = stringResource(R.string.settings_faq),
+            icon = Icons.Outlined.HelpOutline,
+            description = stringResource(R.string.settings_faq_desc),
+            onClick = onFaqClicked,
+            minimalStyle = true,
+        )
+        Setting(
+            title = stringResource(R.string.settings_feedback),
+            icon = Icons.Outlined.MailOutline,
+            description = stringResource(R.string.settings_feedback_desc),
+            onClick = onFeedbackClicked,
+            minimalStyle = true,
+        )
+        Setting(
+            title = stringResource(R.string.settings_rate_us),
+            icon = Icons.Outlined.ThumbUp,
+            description = stringResource(R.string.settings_rate_us_desc),
+            onClick = onRateUsClicked,
+            minimalStyle = true,
+        )
+        Setting(
+            title = stringResource(R.string.settings_premium),
+            icon = Icons.Outlined.Verified,
+            description = null,
+            onClick = onPremiumClicked,
+            minimalStyle = true,
+            trailingDot = true,
+        )
+        Setting(
+            title = stringResource(R.string.settings_privacy_policy),
+            icon = Icons.Outlined.Security,
+            onClick = onPrivacyPolicyClicked,
+            minimalStyle = true,
+        )
+        Setting(
+            title = stringResource(R.string.settings_terms_of_use),
+            icon = Icons.Outlined.Description,
+            onClick = onTermsClicked,
+            minimalStyle = true,
+        )
+        Setting(
+            title = stringResource(R.string.app_version),
+            icon = Icons.Outlined.Info,
+            description = appVersionDisplay,
+            minimalStyle = true,
         )
     }
 }
@@ -277,111 +343,42 @@ private fun FeaturesToolsSection(
     onSleepTimerClicked: () -> Unit,
     onGraphicThemeClicked: () -> Unit,
 ) {
-    Column(modifier = Modifier.group()) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Setting(
             title = stringResource(R.string.drawer_equalizer),
             icon = R.drawable.baseline_colorize_40,
             description = null,
             onClick = onEqualizerClicked,
+            minimalStyle = true,
         )
         Setting(
             title = stringResource(R.string.sleep_timer),
             icon = R.drawable.baseline_send_40,
             description = stringResource(R.string.sleep_timer_status_hint),
             onClick = onSleepTimerClicked,
+            minimalStyle = true,
         )
         Setting(
             title = stringResource(R.string.drawer_graphic_theme),
             icon = R.drawable.baseline_palette_40,
             description = stringResource(R.string.theme_appearance_section),
             onClick = onGraphicThemeClicked,
+            minimalStyle = true,
         )
     }
 }
 
 @Composable
-private fun HelpAboutSection(
-    onFaqClicked: () -> Unit,
-    onFeedbackClicked: () -> Unit,
-    onRateUsClicked: () -> Unit,
-    onPrivacyPolicyClicked: () -> Unit,
-    onTermsClicked: () -> Unit,
-    onLanguageClicked: () -> Unit,
-    appVersionDisplay: String,
-) {
-    Column(modifier = Modifier.group()) {
-        Setting(
-            title = stringResource(R.string.settings_faq),
-            icon = Icons.Outlined.Search,
-            description = null,
-            onClick = onFaqClicked,
-        )
-        Setting(
-            title = stringResource(R.string.settings_feedback),
-            icon = R.drawable.baseline_send_40,
-            description = null,
-            onClick = onFeedbackClicked,
-        )
-        Setting(
-            title = stringResource(R.string.settings_rate_us),
-            icon = R.drawable.baseline_bug_report_40,
-            description = null,
-            onClick = onRateUsClicked,
-        )
-        Setting(
-            title = stringResource(R.string.settings_privacy_policy),
-            icon = R.drawable.baseline_settings_backup_restore_40,
-            description = null,
-            onClick = onPrivacyPolicyClicked,
-        )
-        Setting(
-            title = stringResource(R.string.settings_terms_of_use),
-            icon = R.drawable.baseline_settings_backup_restore_40,
-            description = null,
-            onClick = onTermsClicked,
-        )
-        Setting(
-            title = stringResource(R.string.settings_language),
-            icon = R.drawable.baseline_palette_40,
-            description = stringResource(R.string.settings_language_desc),
-            onClick = onLanguageClicked,
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.app_version),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = appVersionDisplay,
-                style = MaterialTheme.typography.titleMedium,
-            )
-        }
-    }
-}
-
-@Composable
-private fun PremiumAndAdsSection(
+private fun AdsOnlySection(
     onPremiumClicked: () -> Unit,
 ) {
-    Column(modifier = Modifier.group()) {
-        Setting(
-            title = stringResource(R.string.settings_premium),
-            icon = R.drawable.baseline_palette_40,
-            description = stringResource(R.string.settings_premium_desc),
-            onClick = onPremiumClicked,
-        )
+    Column(modifier = Modifier.fillMaxWidth()) {
         Setting(
             title = stringResource(R.string.settings_ads_monetization),
             icon = R.drawable.ic_baseline_library_music_40,
             description = stringResource(R.string.settings_ads_monetization_desc),
             onClick = onPremiumClicked,
+            minimalStyle = true,
         )
     }
 }
@@ -392,7 +389,9 @@ private fun UpdateAvailable(
 ) {
     Row(
         modifier = Modifier
-            .group()
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp))
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -417,13 +416,13 @@ private fun UpdateAvailable(
 @Composable
 private fun GroupTitle(
     title: String,
-){
+) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
         modifier = Modifier
-            .padding(start = 8.dp, top = 8.dp)
+            .padding(start = 4.dp, top = 14.dp, bottom = 4.dp),
     )
 }
 
@@ -460,7 +459,7 @@ private fun LookAndFeelSettings(
     var showRearrangeTabsDialog by remember{ mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.group()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Setting(
@@ -471,6 +470,7 @@ private fun LookAndFeelSettings(
                 onCheckedChanged = {
                     onPreferenceChanged(themePreference.copy(useMaterialYou = it))
                 },
+                minimalStyle = true,
             )
         }
         AccentSetting(
@@ -487,13 +487,15 @@ private fun LookAndFeelSettings(
             title = stringResource(R.string.theme_mode),
             icon = icon,
             onClick = { showSelectorDialog = true },
-            description = stringResource(R.string.choose_a_theme_mode)
+            description = stringResource(R.string.choose_a_theme_mode),
+            minimalStyle = true,
         )
         Setting(
             title = stringResource(R.string.tabs_arrangement),
             icon = R.drawable.ic_baseline_library_music_40,
             description = stringResource(R.string.select_and_reorder_the_tabs_shown),
-            onClick = { showRearrangeTabsDialog = true }
+            onClick = { showRearrangeTabsDialog = true },
+            minimalStyle = true,
         )
     }
     if (showAccentSelector){
@@ -838,77 +840,66 @@ private fun SelectableMovableScreen(
 }
 
 @Composable
-private fun MusicLibrarySettings(
+private fun RescanAndBlacklistSection(
     scanStatus: ScanStatus,
     onScanClicked: () -> Unit,
     onRestoreClicked: () -> Unit,
     onRestoreFoldersClicked: () -> Unit,
-    onBackupRestoreClicked: () -> Unit,
-    onHiddenMusicClicked: () -> Unit,
 ) {
     var progress by remember { mutableStateOf(0f) }
-    LaunchedEffect(key1 = scanStatus){
+    LaunchedEffect(key1 = scanStatus) {
         if (scanStatus is ScanStatus.ScanComplete) {
             progress = 1f
-        } else if (scanStatus is ScanStatus.ScanProgress){
-            progress = if (scanStatus.total == 0){
+        } else if (scanStatus is ScanStatus.ScanProgress) {
+            progress = if (scanStatus.total == 0) {
                 1f
             } else {
-                scanStatus.parsed.toFloat()/scanStatus.total.toFloat()
+                scanStatus.parsed.toFloat() / scanStatus.total.toFloat()
             }
         }
     }
     Column(
         modifier = Modifier
-            .group()
+            .fillMaxWidth()
             .animateContentSize(),
     ) {
-        Setting(
-            title = stringResource(R.string.settings_backup_restore_title),
-            icon = R.drawable.baseline_settings_backup_restore_40,
-            description = stringResource(R.string.settings_backup_restore_desc),
-            onClick = onBackupRestoreClicked,
-        )
         Setting(
             title = stringResource(R.string.rescan_for_music),
             icon = Icons.Outlined.Search,
             description = stringResource(R.string.search_for_all_the_songs_on_this_device_and_update_the_library),
             onClick = {
-                if (scanStatus is ScanStatus.ScanNotRunning){
+                if (scanStatus is ScanStatus.ScanNotRunning) {
                     onScanClicked()
                 }
             },
+            minimalStyle = true,
         )
-        if (scanStatus is ScanStatus.ScanProgress){
+        if (scanStatus is ScanStatus.ScanProgress) {
             LinearProgressIndicator(
                 modifier = Modifier.fillMaxWidth(),
-                progress = progress
+                progress = progress,
             )
-        } else if (scanStatus is ScanStatus.ScanComplete){
+        } else if (scanStatus is ScanStatus.ScanComplete) {
             Text(
                 text = stringResource(R.string.done),
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
         Setting(
             title = stringResource(R.string.restore_blacklisted_songs),
             icon = R.drawable.baseline_settings_backup_restore_40,
             description = stringResource(R.string.add_songs_back_to_the_library),
-            onClick = onRestoreClicked
+            onClick = onRestoreClicked,
+            minimalStyle = true,
         )
         Setting(
             title = stringResource(R.string.restore_blacklisted_folders),
             icon = R.drawable.baseline_settings_backup_restore_40,
             description = stringResource(R.string.add_folders_back_to_the_library),
-            onClick = onRestoreFoldersClicked
-        )
-        Setting(
-            title = stringResource(R.string.settings_hidden_music),
-            icon = R.drawable.ic_baseline_library_music_40,
-            description = stringResource(R.string.settings_hidden_music_desc),
-            onClick = onHiddenMusicClicked
+            onClick = onRestoreFoldersClicked,
+            minimalStyle = true,
         )
     }
 }
@@ -929,7 +920,7 @@ private fun ReportBug(
 ){
     val context = LocalContext.current
     Column(
-        modifier = Modifier.group()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Setting(
             title = stringResource(R.string.auto_crash_reporting),
@@ -937,6 +928,7 @@ private fun ReportBug(
             description = stringResource(R.string.enable_this_to_automatically_send_crash_reports_to_the_developer),
             isChecked = !disabledCrashlytics,
             onCheckedChanged = onAutoReportCrashClicked,
+            minimalStyle = true,
         )
         Setting(
             title = stringResource(R.string.report_any_bugs_crashes),
@@ -945,8 +937,8 @@ private fun ReportBug(
             onClick = {
                 val intent = Intent(Intent.ACTION_SENDTO)
                 intent.apply {
-                    putExtra(Intent.EXTRA_EMAIL, arrayOf("music.zen@outlook.com"))
-                    putExtra(Intent.EXTRA_SUBJECT, "Generic AudioPlayes | Bug Report")
+                    putExtra(Intent.EXTRA_EMAIL, arrayOf("audioplayer.app@outlook.com"))
+                    putExtra(Intent.EXTRA_SUBJECT, "AudioPlayer | Bug Report")
                     putExtra(
                         Intent.EXTRA_TEXT,
                         getSystemDetail() + "\n\n[${context.getString(R.string.describe_the_bug_or_crash_here)}]\n"
@@ -958,7 +950,8 @@ private fun ReportBug(
                 } catch (e: Exception) {
                     Timber.e(e)
                 }
-            }
+            },
+            minimalStyle = true,
         )
     }
 }
@@ -1087,49 +1080,84 @@ private fun Setting(
     onClick: (() -> Unit)? = null,
     isChecked: Boolean? = null,
     onCheckedChanged: ((Boolean) -> Unit)? = null,
-){
+    minimalStyle: Boolean = false,
+    trailingDot: Boolean = false,
+    emphasisSwitch: Boolean = false,
+) {
+    val accentSwitchColors = SwitchDefaults.colors(
+        checkedThumbColor = Color(0xFFFFB74D),
+        checkedTrackColor = Color(0xFFFF9800).copy(alpha = 0.45f),
+    )
     Row(
         modifier = modifier
             .fillMaxWidth()
             .then(
                 if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
             )
-            .padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = 6.dp, vertical = if (minimalStyle) 12.dp else 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = stringResource(R.string.setting_icon, title),
             modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .padding(6.dp),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                .size(if (minimalStyle) 28.dp else 40.dp)
+                .then(
+                    if (minimalStyle) {
+                        Modifier
+                    } else {
+                        Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .padding(6.dp)
+                    }
+                ),
+            tint = if (minimalStyle) {
+                Color.White.copy(alpha = 0.92f)
+            } else {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            },
         )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-        ){
+        ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
+                color = if (minimalStyle) Color.White else MaterialTheme.colorScheme.onSurface,
             )
             description?.let {
                 Text(
-                    text = description,
+                    text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    color = if (minimalStyle) {
+                        Color(0xFFB8B8C8)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                    },
                 )
             }
         }
-        isChecked?.let {
-            Switch(
-                checked = isChecked,
-                onCheckedChange = onCheckedChanged,
-            )
+        when {
+            isChecked != null && onCheckedChanged != null -> {
+                Switch(
+                    checked = isChecked,
+                    onCheckedChange = onCheckedChanged,
+                    colors = if (emphasisSwitch) accentSwitchColors else SwitchDefaults.colors(),
+                )
+            }
+            trailingDot -> {
+                Box(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE53935)),
+                )
+            }
         }
     }
 }
@@ -1144,49 +1172,84 @@ private fun Setting(
     onClick: (() -> Unit)? = null,
     isChecked: Boolean? = null,
     onCheckedChanged: ((Boolean) -> Unit)? = null,
-){
+    minimalStyle: Boolean = false,
+    trailingDot: Boolean = false,
+    emphasisSwitch: Boolean = false,
+) {
+    val accentSwitchColors = SwitchDefaults.colors(
+        checkedThumbColor = Color(0xFFFFB74D),
+        checkedTrackColor = Color(0xFFFF9800).copy(alpha = 0.45f),
+    )
     Row(
         modifier = modifier
             .fillMaxWidth()
             .then(
                 if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
             )
-            .padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = 6.dp, vertical = if (minimalStyle) 12.dp else 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             painter = painterResource(id = icon),
             contentDescription = stringResource(R.string.setting_icon, title),
             modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .padding(6.dp),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                .size(if (minimalStyle) 28.dp else 40.dp)
+                .then(
+                    if (minimalStyle) {
+                        Modifier
+                    } else {
+                        Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .padding(6.dp)
+                    }
+                ),
+            tint = if (minimalStyle) {
+                Color.White.copy(alpha = 0.92f)
+            } else {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            },
         )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-        ){
+        ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
+                color = if (minimalStyle) Color.White else MaterialTheme.colorScheme.onSurface,
             )
             description?.let {
                 Text(
-                    text = description,
+                    text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    color = if (minimalStyle) {
+                        Color(0xFFB8B8C8)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                    },
                 )
             }
         }
-        isChecked?.let {
-            Switch(
-                checked = isChecked,
-                onCheckedChange = onCheckedChanged,
-            )
+        when {
+            isChecked != null && onCheckedChanged != null -> {
+                Switch(
+                    checked = isChecked,
+                    onCheckedChange = onCheckedChanged,
+                    colors = if (emphasisSwitch) accentSwitchColors else SwitchDefaults.colors(),
+                )
+            }
+            trailingDot -> {
+                Box(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE53935)),
+                )
+            }
         }
     }
 }

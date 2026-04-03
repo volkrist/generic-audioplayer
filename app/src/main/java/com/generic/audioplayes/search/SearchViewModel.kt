@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.generic.audioplayes.Constants
 import com.generic.audioplayes.R
-import com.generic.audioplayes.data.ZenCrashReporter
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.data.search.SearchRepository
 import com.generic.audioplayes.data.services.PlayerService
@@ -33,7 +33,7 @@ class SearchViewModel @Inject constructor(
     private val messageStore: MessageStore,
     private val playerService: PlayerService,
     private val searchRepository: SearchRepository,
-    private val crashReporter: ZenCrashReporter,
+    private val crashReporter: AudioPlayerCrashReporter,
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")

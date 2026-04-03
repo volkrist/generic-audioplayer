@@ -11,17 +11,17 @@
         <action
             android:id="@+id/action_homeFragment_to_collectionFragment"
             app:destination="@id/collectionFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_homeFragment_to_settingsFragment"
             app:destination="@id/settingsFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_homeFragment_to_selectPlaylistFragment"
             app:destination="@id/selectPlaylistFragment"
@@ -39,52 +39,59 @@
         <action
             android:id="@+id/action_homeFragment_to_placeholderFragment"
             app:destination="@id/placeholderFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_homeFragment_to_sleepTimerFragment"
             app:destination="@id/sleepTimerFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_homeFragment_to_volumeBoosterFragment"
             app:destination="@id/volumeBoosterFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_homeFragment_to_equalizerFragment"
             app:destination="@id/equalizerFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_homeFragment_to_dictaphoneFragment"
             app:destination="@id/dictaphoneFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_homeFragment_to_themeFragment"
             app:destination="@id/themeFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_homeFragment_to_widgetsFragment"
+            app:destination="@id/widgetsFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_homeFragment_to_playlistEditorFragment"
             app:destination="@id/playlistEditorFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
     </fragment>
     <fragment
         android:id="@+id/collectionFragment"
@@ -97,6 +104,83 @@
             app:exitAnim="@anim/no_change"
             app:popEnterAnim="@anim/no_change"
             app:popExitAnim="@anim/exit_to_bottom"/>
+        <action
+            android:id="@+id/action_collectionFragment_to_collectionFragment"
+            app:destination="@id/collectionFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_settingsFragment"
+            app:destination="@id/settingsFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_themeFragment"
+            app:destination="@id/themeFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_widgetsFragment"
+            app:destination="@id/widgetsFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_sleepTimerFragment"
+            app:destination="@id/sleepTimerFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_volumeBoosterFragment"
+            app:destination="@id/volumeBoosterFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_equalizerFragment"
+            app:destination="@id/equalizerFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_dictaphoneFragment"
+            app:destination="@id/dictaphoneFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_placeholderFragment"
+            app:destination="@id/placeholderFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_searchFragment"
+            app:destination="@id/searchFragment"
+            app:enterAnim="@anim/fade_in_enter"
+            app:exitAnim="@anim/fade_out_exit"
+            app:popEnterAnim="@anim/fade_in_enter"
+            app:popExitAnim="@anim/fade_out_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_playlistEditorFragment"
+            app:destination="@id/playlistEditorFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <argument
             android:name="collectionType"
             app:argType="com.generic.audioplayes.collection.CollectionType"
@@ -117,17 +201,17 @@
         <action
             android:id="@+id/action_settingsFragment_to_backupRestoreFragment"
             app:destination="@id/backupRestoreFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_settingsFragment_to_whatsNewFragment"
             app:destination="@id/whatsNewFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_settingsFragment_to_restoreFolderFragment"
             app:destination="@id/restoreFolderFragment"
@@ -138,31 +222,31 @@
         <action
             android:id="@+id/action_settingsFragment_to_equalizerFragment"
             app:destination="@id/equalizerFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_settingsFragment_to_sleepTimerFragment"
             app:destination="@id/sleepTimerFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_settingsFragment_to_themeFragment"
             app:destination="@id/themeFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
         <action
             android:id="@+id/action_settingsFragment_to_placeholderFragment"
             app:destination="@id/placeholderFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
     </fragment>
     <fragment
         android:id="@+id/splashFragment"
@@ -206,17 +290,17 @@
         <action
             android:id="@+id/action_searchFragment_to_collectionFragment"
             app:destination="@id/collectionFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit"/>
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit"/>
         <action
             android:id="@+id/action_searchFragment_to_playlistEditorFragment"
             app:destination="@id/playlistEditorFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
     </fragment>
     <fragment
         android:id="@+id/backupRestoreFragment"
@@ -242,7 +326,7 @@
             android:name="screenTitle"
             app:argType="string" />
     </fragment>
-    <fragment
+    <dialog
         android:id="@+id/sleepTimerFragment"
         android:name="com.generic.audioplayes.sleeptimer.SleepTimerFragment"
         android:label="SleepTimerFragment" />
@@ -263,6 +347,10 @@
         android:name="com.generic.audioplayes.theme.ThemeFragment"
         android:label="ThemeFragment" />
     <fragment
+        android:id="@+id/widgetsFragment"
+        android:name="com.generic.audioplayes.widgets.WidgetsFragment"
+        android:label="WidgetsFragment" />
+    <fragment
         android:id="@+id/playlistEditorFragment"
         android:name="com.generic.audioplayes.playlisteditor.PlaylistEditorFragment"
         android:label="PlaylistEditorFragment" >
@@ -272,10 +360,24 @@
         <action
             android:id="@+id/action_playlistEditorFragment_to_addSongsToPlaylistFragment"
             app:destination="@id/addSongsToPlaylistFragment"
-            app:enterAnim="@anim/zen_open_enter"
-            app:exitAnim="@anim/zen_open_exit"
-            app:popEnterAnim="@anim/zen_close_enter"
-            app:popExitAnim="@anim/zen_close_exit" />
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_playlistEditorFragment_to_selectPlaylistFragment"
+            app:destination="@id/selectPlaylistFragment"
+            app:enterAnim="@anim/enter_from_bottom"
+            app:exitAnim="@anim/no_change"
+            app:popEnterAnim="@anim/no_change"
+            app:popExitAnim="@anim/exit_to_bottom" />
+        <action
+            android:id="@+id/action_playlistEditorFragment_to_collectionFragment"
+            app:destination="@id/collectionFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
     </fragment>
     <fragment
         android:id="@+id/addSongsToPlaylistFragment"

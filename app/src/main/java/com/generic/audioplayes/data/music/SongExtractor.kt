@@ -9,7 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
-import com.generic.audioplayes.data.ZenCrashReporter
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
 import com.generic.audioplayes.data.daos.AlbumArtistDao
 import com.generic.audioplayes.data.daos.AlbumDao
 import com.generic.audioplayes.data.daos.ArtistDao
@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class SongExtractor(
     private val scope: CoroutineScope,
     private val context: Context,
-    private val crashReporter: ZenCrashReporter,
+    private val crashReporter: AudioPlayerCrashReporter,
     private val songDao: SongDao,
     private val albumDao: AlbumDao,
     private val artistDao: ArtistDao,
@@ -229,6 +229,70 @@ class SongExtractor(
         return songs
     }
 
+    /**
+     * All indexed audio files under [folderPath] (recursive). Path rules match [countAudioTracksUnderFolderPath].
+     */
+    suspend fun extractAllSongsUnderFolderRecursive(folderPath: String): List<Song> {
+        if (!checkReadStoragePermission()) return emptyList()
+        val root = try {
+            File(folderPath).canonicalFile.absolutePath.trimEnd('/')
+        } catch (_: Exception) {
+            folderPath.trimEnd('/')
+        }
+        val rootWithSlash = "$root/"
+        val selection = MediaStore.Audio.Media.DATA + " LIKE ?"
+        val selectionArgs = arrayOf("$root%")
+        val cursor = context.contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            selectionArgs,
+            MediaStore.Audio.Media.DATE_ADDED,
+            null,
+        ) ?: return emptyList()
+        val dataIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
+        val titleIndex = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE)
+        val albumIndex = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM)
+        val sizeIndex = cursor.getColumnIndex(MediaStore.Audio.Media.SIZE)
+        val dateAddedIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATE_ADDED)
+        val dateModifiedIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATE_MODIFIED)
+        val songIdIndex = cursor.getColumnIndex(MediaStore.Audio.Media._ID)
+        val dSongs = ArrayList<Deferred<Song?>>()
+        cursor.moveToFirst()
+        do {
+            try {
+                val songPath = cursor.getString(dataIndex)
+                val songFile = File(songPath)
+                if (!songFile.exists()) throw FileNotFoundException()
+                val canon = songFile.canonicalPath
+                if (!canon.startsWith(rootWithSlash) && canon != root) throw Exception()
+                val size = cursor.getString(sizeIndex)
+                val dateAddedSec = cursor.getLong(dateAddedIndex).coerceAtLeast(0L)
+                val modifiedDate = cursor.getString(dateModifiedIndex)
+                val dateModifiedSec = cursor.getLong(dateModifiedIndex).coerceAtLeast(0L)
+                val songId = cursor.getLong(songIdIndex)
+                val title = cursor.getString(titleIndex).trim()
+                val album = cursor.getString(albumIndex).trim()
+                dSongs.add(scope.async {
+                    getSong(
+                        path = songPath,
+                        size = size,
+                        dateAddedSec = dateAddedSec,
+                        modifiedDate = modifiedDate,
+                        dateModifiedSec = dateModifiedSec,
+                        songId = songId,
+                        title = title,
+                        album = album,
+                    )
+                })
+            } catch (_: Exception) {
+            }
+        } while (cursor.moveToNext())
+        val songs = dSongs.awaitAll().filterNotNull()
+        cursor.close()
+        return songs
+    }
+
     fun extractMini(folderPath: String? = null): List<MiniSong> {
         if (!checkReadStoragePermission()) return emptyList()
         val projectionForMini = arrayOf(
@@ -369,8 +433,30 @@ class SongExtractor(
         )
         albumDao.insertAllAlbums(albums)
         insertJobs.joinAll()
-        songDao.insertOrReplaceSongs(songs)
+        songDao.insertOrReplaceSongs(mergePersistedUserFields(songs))
         cleanupOrphanMetadataTables()
+    }
+
+    /**
+     * [insertOrReplaceSongs] replaces full rows; MediaStore scans always set [Song.favourite] to false.
+     * Preserve user-edited fields from the DB so favourites and play stats survive library sync.
+     */
+    private suspend fun mergePersistedUserFields(songs: List<Song>): List<Song> {
+        if (songs.isEmpty()) return songs
+        val existingByLocation = LinkedHashMap<String, Song>(songs.size)
+        songs.map { it.location }.chunked(450).forEach { chunk ->
+            songDao.getSongsFromLocations(chunk).forEach { existing ->
+                existingByLocation[existing.location] = existing
+            }
+        }
+        return songs.map { fresh ->
+            val old = existingByLocation[fresh.location] ?: return@map fresh
+            fresh.copy(
+                favourite = old.favourite,
+                playCount = old.playCount,
+                lastPlayed = old.lastPlayed,
+            )
+        }
     }
 
     fun scanForMusic() {

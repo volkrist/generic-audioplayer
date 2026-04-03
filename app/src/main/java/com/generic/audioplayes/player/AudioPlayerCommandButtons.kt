@@ -6,12 +6,12 @@ import androidx.media3.session.CommandButton
 import androidx.media3.session.SessionCommand
 import com.generic.audioplayes.R
 
-object ZenCommandButtons {
+object AudioPlayerCommandButtons {
 
     val liked by lazy {
         CommandButton.Builder()
             .apply {
-                setSessionCommand(SessionCommand(ZenCommands.UNLIKE, Bundle()))
+                setSessionCommand(SessionCommand(AudioPlayerCommands.UNLIKE, Bundle()))
                 setDisplayName("Unlike")
                 setIconResId(R.drawable.ic_baseline_favorite_24)
             }.build()
@@ -20,7 +20,7 @@ object ZenCommandButtons {
     val unliked by lazy {
         CommandButton.Builder()
             .apply {
-                setSessionCommand(SessionCommand(ZenCommands.LIKE, Bundle()))
+                setSessionCommand(SessionCommand(AudioPlayerCommands.LIKE, Bundle()))
                 setDisplayName("Like")
                 setIconResId(R.drawable.ic_baseline_favorite_border_24)
             }.build()
@@ -57,7 +57,7 @@ object ZenCommandButtons {
     val cancel by lazy {
         CommandButton.Builder()
             .apply {
-                setSessionCommand(SessionCommand(ZenCommands.CLOSE, Bundle()))
+                setSessionCommand(SessionCommand(AudioPlayerCommands.CLOSE, Bundle()))
                 setDisplayName("Close")
                 setIconResId(R.drawable.ic_baseline_close_40)
             }.build()

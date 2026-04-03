@@ -17,12 +17,12 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.work.await
-import com.generic.audioplayes.data.ZenCrashReporter
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.music.SongExtractor
 import com.generic.audioplayes.data.services.QueueService
 import com.generic.audioplayes.databinding.ActivityMainBinding
-import com.generic.audioplayes.player.ZenPlayer
+import com.generic.audioplayes.player.AudioPlayerService
 import com.generic.audioplayes.widgets.PlayerWidgetManager
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateOptions
@@ -50,13 +50,13 @@ class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var appUpdateManager: AppUpdateManager
 
-    @Inject lateinit var crashReporter: ZenCrashReporter
+    @Inject lateinit var crashReporter: AudioPlayerCrashReporter
 
     @Inject lateinit var queueService: QueueService
 
     @Inject lateinit var playerWidgetManager: PlayerWidgetManager
 
-    @Inject lateinit var preferenceProvider: ZenPreferenceProvider
+    @Inject lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
     @Inject lateinit var exoPlayer: ExoPlayer
 
@@ -105,11 +105,11 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                if (!ZenPlayer.isRunning.get()) return@launch
+                if (!AudioPlayerService.isRunning.get()) return@launch
                 val song = queueService.currentSong.value ?: return@launch
                 val controller = MediaController.Builder(
                     this@MainActivity,
-                    SessionToken(this@MainActivity, ComponentName(this@MainActivity, ZenPlayer::class.java)),
+                    SessionToken(this@MainActivity, ComponentName(this@MainActivity, AudioPlayerService::class.java)),
                 ).buildAsync().await()
                 withContext(Dispatchers.Main) {
                     playerWidgetManager.syncWidgetState(song, controller.isPlaying)

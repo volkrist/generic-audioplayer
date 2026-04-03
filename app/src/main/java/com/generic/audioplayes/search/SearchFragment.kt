@@ -32,13 +32,13 @@ import com.generic.audioplayes.R
 import com.generic.audioplayes.collection.CollectionType
 import com.generic.audioplayes.components.FullScreenSadMessage
 import com.generic.audioplayes.components.Snackbar
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.music.Album
 import com.generic.audioplayes.data.music.Artist
 import com.generic.audioplayes.data.music.Playlist
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.home.HomeViewModel
-import com.generic.audioplayes.ui.theme.ZenTheme
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -51,7 +51,7 @@ class SearchFragment : Fragment() {
     private val homeViewModel: HomeViewModel by activityViewModels()
 
     @Inject
-    lateinit var preferenceProvider: ZenPreferenceProvider
+    lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,7 +63,7 @@ class SearchFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                ZenTheme(themePreference) {
+                AudioPlayerTheme(themePreference) {
                     val query by viewModel.query.collectAsStateWithLifecycle()
                     val searchResult by viewModel.searchResult.collectAsStateWithLifecycle()
                     val snackbarHostState = remember { SnackbarHostState() }

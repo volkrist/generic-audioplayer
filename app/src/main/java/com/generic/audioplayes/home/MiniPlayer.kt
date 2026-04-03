@@ -62,6 +62,8 @@ fun MiniPlayer(
     onQueueClick: () -> Unit,
     song: Song?,
     modifier: Modifier = Modifier,
+    /** Tap artwork + title to open full player (play/queue keep their own actions). */
+    onExpandPlayer: () -> Unit = {},
 ) {
     if (song == null) return
     val labelPrimary = Color.White
@@ -100,6 +102,12 @@ fun MiniPlayer(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .clickable(
+                            onClick = onExpandPlayer,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = rememberRipple(color = Color.White.copy(alpha = 0.12f)),
+                        ),
                 ) {
                     Box(modifier = Modifier.size(miniPlayerArtSize)) {
                         AsyncImage(

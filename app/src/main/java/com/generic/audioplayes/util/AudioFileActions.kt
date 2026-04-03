@@ -41,6 +41,28 @@ object AudioFileActions {
     }
 
     /**
+     * Same as [deleteAudioFileFromDevice], then if MediaStore delete fails (and the failure is not
+     * [MediaDeleteResult.Recoverable]), tries [File.delete] for direct paths (some OEMs / older APIs).
+     */
+    fun deleteAudioFileFromDeviceWithFallback(context: Context, filePath: String): MediaDeleteResult {
+        return when (val r = deleteAudioFileFromDevice(context, filePath)) {
+            MediaDeleteResult.Success -> r
+            is MediaDeleteResult.Recoverable -> r
+            MediaDeleteResult.Failed -> deleteFileDirectlyIfPossible(filePath)
+        }
+    }
+
+    private fun deleteFileDirectlyIfPossible(filePath: String): MediaDeleteResult {
+        return try {
+            val f = File(filePath)
+            if (f.exists() && f.isFile && f.delete()) MediaDeleteResult.Success else MediaDeleteResult.Failed
+        } catch (e: Exception) {
+            Timber.e(e, "deleteFileDirectlyIfPossible")
+            MediaDeleteResult.Failed
+        }
+    }
+
+    /**
      * Deletes by an already-resolved content [uri] (same [uri] must be used after recoverable confirmation).
      */
     fun deleteAudioFileByUri(context: Context, uri: Uri): MediaDeleteResult {
@@ -60,14 +82,15 @@ object AudioFileActions {
     }
 
     private fun resolveAudioContentUri(context: Context, filePath: String): Uri? {
-        val file = File(filePath)
         // API 33+: canonical content Uri from a file Uri (preferred when DATA column is absent).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            try {
-                val canonical = MediaStore.getMediaUri(context, Uri.fromFile(file))
-                if (canonical != null) return canonical
-            } catch (e: Exception) {
-                Timber.e(e, "resolveAudioContentUri getMediaUri(Uri)")
+            for (candidate in pathCandidatesForMediaLookup(filePath)) {
+                try {
+                    val canonical = MediaStore.getMediaUri(context, Uri.fromFile(File(candidate)))
+                    if (canonical != null) return canonical
+                } catch (e: Exception) {
+                    Timber.e(e, "resolveAudioContentUri getMediaUri(Uri)")
+                }
             }
         }
         return audioContentUri(context, filePath)
@@ -77,19 +100,36 @@ object AudioFileActions {
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val projection = arrayOf(MediaStore.Audio.Media._ID)
         val dataColumn = MediaStore.Audio.Media.DATA
-        context.contentResolver.query(
-            collection,
-            projection,
-            "$dataColumn = ?",
-            arrayOf(filePath),
-            null,
-        )?.use { c ->
-            if (c.moveToFirst()) {
-                val id = c.getLong(0)
-                return ContentUris.withAppendedId(collection, id)
+        for (candidate in pathCandidatesForMediaLookup(filePath)) {
+            context.contentResolver.query(
+                collection,
+                projection,
+                "$dataColumn = ?",
+                arrayOf(candidate),
+                null,
+            )?.use { c ->
+                if (c.moveToFirst()) {
+                    val id = c.getLong(0)
+                    return ContentUris.withAppendedId(collection, id)
+                }
             }
         }
         return null
+    }
+
+    /** Paths that may match MediaStore.DATA when the app stores a different string form. */
+    private fun pathCandidatesForMediaLookup(filePath: String): List<String> {
+        return buildList {
+            add(filePath)
+            try {
+                add(File(filePath).canonicalPath)
+            } catch (_: Exception) {
+            }
+            try {
+                add(File(filePath).absolutePath)
+            } catch (_: Exception) {
+            }
+        }.distinct()
     }
 
     fun setAsRingtone(context: Context, filePath: String): Boolean {

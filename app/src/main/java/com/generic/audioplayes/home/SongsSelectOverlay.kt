@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -53,7 +54,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.generic.audioplayes.R
 import com.generic.audioplayes.data.music.Song
-import com.generic.audioplayes.ui.theme.HomeLibraryTokens
+import com.generic.audioplayes.ui.theme.LibraryShellBackdrop
+import com.generic.audioplayes.ui.theme.ThemePreference
 import com.generic.audioplayes.ui.theme.UiTokens
 
 private val overlayBg = Color(0xFF0A0A0C)
@@ -62,6 +64,7 @@ private val accentOrange = Color(0xFFFF9800)
 
 @Composable
 fun SongsSelectOverlay(
+    themePreference: ThemePreference,
     songs: List<Song>,
     onDismiss: () -> Unit,
     onPlaySelected: (List<Song>) -> Unit,
@@ -117,10 +120,13 @@ fun SongsSelectOverlay(
         modifier = Modifier.fillMaxSize(),
         color = overlayBg,
     ) {
+        Box(Modifier.fillMaxSize()) {
+            LibraryShellBackdrop(
+                themePreference = themePreference,
+                modifier = Modifier.fillMaxSize(),
+            )
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(HomeLibraryTokens.libraryShellGradient),
+            modifier = Modifier.fillMaxSize(),
         ) {
             Row(
                 modifier = Modifier
@@ -358,6 +364,7 @@ fun SongsSelectOverlay(
                 }
             }
         }
+    }
     }
 
     if (deleteConfirm) {

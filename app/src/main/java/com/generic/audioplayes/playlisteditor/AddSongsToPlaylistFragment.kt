@@ -11,8 +11,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
-import com.generic.audioplayes.data.ZenPreferenceProvider
-import com.generic.audioplayes.ui.theme.ZenTheme
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -23,7 +23,7 @@ class AddSongsToPlaylistFragment : Fragment() {
     private val viewModel: AddSongsToPlaylistViewModel by viewModels()
 
     @Inject
-    lateinit var preferenceProvider: ZenPreferenceProvider
+    lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -36,7 +36,7 @@ class AddSongsToPlaylistFragment : Fragment() {
             setContent {
                 val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                ZenTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference, systemUiController) {
                     AddSongsToPlaylistScreen(
                         viewModel = viewModel,
                         onBack = { navController.popBackStack() },

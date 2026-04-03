@@ -3,7 +3,7 @@ package com.generic.audioplayes.data
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import javax.inject.Inject
 
-class ZenCrashReporter @Inject constructor(
+class AudioPlayerCrashReporter @Inject constructor(
     private val firebase: FirebaseCrashlytics?,
 ) {
 

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.ripple.rememberRipple
@@ -142,7 +143,7 @@ fun HomeTopBar(
             Spacer(modifier = Modifier.weight(1f))
 
             Icon(
-                painter = painterResource(R.drawable.baseline_palette_40),
+                imageVector = Icons.Outlined.Palette,
                 contentDescription = stringResource(R.string.drawer_graphic_theme),
                 modifier = Modifier
                     .size(44.dp)
@@ -152,7 +153,7 @@ fun HomeTopBar(
                         indication = rememberRipple(bounded = false, radius = UiTokens.rippleMedium),
                         onClick = onThemeIconClicked,
                     ),
-                tint = Color.Unspecified,
+                tint = topIconTint,
             )
 
             Icon(

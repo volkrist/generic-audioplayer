@@ -17,7 +17,7 @@ fun NotificationPermissionPage(
     permissionState = permissionState,
     lottieRawRes = R.raw.notification_permission,
     header = stringResource(R.string.notification_access),
-    description = stringResource(R.string.zen_needs_access_to_post_notifications_regarding_the_media_playing),
+    description = stringResource(R.string.audio_player_needs_access_to_post_notifications_regarding_the_media_playing),
     grantedMessage = stringResource(R.string.notification_access_granted),
     notGrantedMessage = stringResource(R.string.grant_access_to_notification)
 )
@@ -30,7 +30,7 @@ fun ReadAudioPermissionPage(
     permissionState = permissionState,
     lottieRawRes = R.raw.storage_permission,
     header = stringResource(R.string.audio_files_access),
-    description = stringResource(R.string.zen_needs_access_to_read_audio_files_present_on_the_device),
+    description = stringResource(R.string.audio_player_needs_access_to_read_audio_files_present_on_the_device),
     grantedMessage = stringResource(R.string.access_granted),
     notGrantedMessage = stringResource(R.string.grant_access_to_read_audio)
 )
@@ -43,7 +43,7 @@ fun ReadStoragePermissionPage(
     permissionState = permissionState,
     lottieRawRes = R.raw.storage_permission,
     header = stringResource(R.string.storage_access),
-    description = stringResource(R.string.zen_needs_storage_access_to_read_audio_files_present_on_the_device),
+    description = stringResource(R.string.audio_player_needs_storage_access_to_read_audio_files_present_on_the_device),
     grantedMessage = stringResource(R.string.access_granted),
     notGrantedMessage = stringResource(R.string.grant_access_to_read_storage)
 )

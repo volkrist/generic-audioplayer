@@ -27,8 +27,8 @@ import com.generic.audioplayes.R
 import com.generic.audioplayes.components.BlockingProgressIndicator
 import com.generic.audioplayes.components.CancelConfirmTopBar
 import com.generic.audioplayes.components.Snackbar
-import com.generic.audioplayes.data.ZenPreferenceProvider
-import com.generic.audioplayes.ui.theme.ZenTheme
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.generic.audioplayes.util.Resource
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -41,7 +41,7 @@ class RestoreFragment: Fragment() {
     private lateinit var navController: NavController
 
     @Inject
-    lateinit var preferenceProvider: ZenPreferenceProvider
+    lateinit var preferenceProvider: AudioPlayerPreferenceProvider
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -53,7 +53,7 @@ class RestoreFragment: Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val theme by preferenceProvider.theme.collectAsStateWithLifecycle()
-                ZenTheme(theme) {
+                AudioPlayerTheme(theme) {
                     val songs by viewModel.blackListedSongs.collectAsStateWithLifecycle()
                     val selectList = viewModel.restoreList
 

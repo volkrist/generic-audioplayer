@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
@@ -33,6 +34,7 @@ fun MusicSlider(
     currentSongPlaying: Boolean?,
     song: Song, // to update slider when song is changed in paused state
     duration: Long,
+    timeLabelColor: Color = Color.Unspecified,
 ) {
     var currentValue by remember { mutableStateOf(playerHelper.currentPosition.toLong()) }
 
@@ -59,6 +61,8 @@ fun MusicSlider(
         currentValue = playerHelper.currentPosition.toLong()
     }
     val primaryColor = MaterialTheme.colorScheme.primary
+    val resolvedLabelColor =
+        if (timeLabelColor == Color.Unspecified) MaterialTheme.colorScheme.onSurface else timeLabelColor
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.Center
@@ -116,12 +120,12 @@ fun MusicSlider(
             Text(
                 text = currentValue.toMS(),
                 fontSize = UiTokens.musicSliderTimeLabelSp,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = resolvedLabelColor,
             )
             Text(
                 text = duration.toMS(),
                 fontSize = UiTokens.musicSliderTimeLabelSp,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = resolvedLabelColor,
             )
         }
     }

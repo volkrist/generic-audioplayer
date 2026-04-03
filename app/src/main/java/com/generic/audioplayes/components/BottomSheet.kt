@@ -9,6 +9,7 @@ import androidx.compose.material.rememberSwipeableState
 import androidx.compose.material.swipeable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +51,7 @@ fun BottomSheet(
                 }
             }
         }
+        val peekAlpha by peekContentAlpha
         Box(
             modifier = Modifier
                 .graphicsLayer {
@@ -66,13 +68,16 @@ fun BottomSheet(
             /**
              * Order of composable matters.
              * Reversed order would result in clickables in peekContent not working.
-             * Note that the composable will overlap. Check state before reacting to a click.
+             * When peek alpha is ~0, do not compose peek: invisible peek still hit-tests at the top
+             * (mini bar is laid out at TopStart), stealing taps meant for the full player (e.g. overflow ⋮).
              */
-            Box(Modifier.graphicsLayer { alpha = 1f-peekContentAlpha.value }){
+            Box(Modifier.graphicsLayer { alpha = 1f - peekAlpha }) {
                 content()
             }
-            Box(Modifier.graphicsLayer { alpha = peekContentAlpha.value }) {
-                peekContent()
+            if (peekAlpha > 0.01f) {
+                Box(Modifier.graphicsLayer { alpha = peekAlpha }) {
+                    peekContent()
+                }
             }
         }
     }

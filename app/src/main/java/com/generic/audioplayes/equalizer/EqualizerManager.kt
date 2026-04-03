@@ -2,6 +2,7 @@ package com.generic.audioplayes.equalizer
 
 import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
+import android.media.audiofx.PresetReverb
 import android.media.audiofx.Virtualizer
 import android.os.Handler
 import android.os.Looper
@@ -9,8 +10,8 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.generic.audioplayes.data.EqualizerSettings
-import com.generic.audioplayes.data.ZenCrashReporter
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,8 +27,8 @@ import javax.inject.Singleton
 @Singleton
 class EqualizerManager @Inject constructor(
     private val exoPlayer: ExoPlayer,
-    private val prefs: ZenPreferenceProvider,
-    private val crashReporter: ZenCrashReporter,
+    private val prefs: AudioPlayerPreferenceProvider,
+    private val crashReporter: AudioPlayerCrashReporter,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -35,6 +36,7 @@ class EqualizerManager @Inject constructor(
     private var equalizer: Equalizer? = null
     private var bassBoost: BassBoost? = null
     private var virtualizer: Virtualizer? = null
+    private var presetReverb: PresetReverb? = null
 
     private val _uiState = MutableStateFlow(EqualizerUiState.initial())
     val uiState: StateFlow<EqualizerUiState> = _uiState.asStateFlow()
@@ -83,6 +85,15 @@ class EqualizerManager @Inject constructor(
                 crashReporter.logException(e)
             }
             virtualizer = virt
+            var reverb: PresetReverb? = null
+            try {
+                val r = PresetReverb(0, sessionId)
+                r.enabled = true
+                reverb = r
+            } catch (e: Exception) {
+                crashReporter.logException(e)
+            }
+            presetReverb = reverb
             applyStoredSettings(prefs.equalizerSettings.value)
         } catch (e: Exception) {
             crashReporter.logException(e)
@@ -91,6 +102,8 @@ class EqualizerManager @Inject constructor(
     }
 
     private fun releaseEffects() {
+        presetReverb?.release()
+        presetReverb = null
         virtualizer?.release()
         virtualizer = null
         bassBoost?.release()
@@ -103,16 +116,26 @@ class EqualizerManager @Inject constructor(
         val eq = equalizer
         val bass = bassBoost
         val virt = virtualizer
+        val reverb = presetReverb
         val bypass = !settings.enabled
         try {
             if (bypass) {
                 eq?.enabled = false
                 bass?.enabled = false
                 virt?.enabled = false
+                reverb?.enabled = false
             } else {
                 eq?.enabled = true
                 bass?.enabled = true
                 virt?.enabled = virt?.strengthSupported == true
+                if (reverb != null) {
+                    reverb.enabled = true
+                    try {
+                        reverb.preset = settings.reverbPreset.coerceIn(0, 6).toShort()
+                    } catch (e: Exception) {
+                        crashReporter.logException(e)
+                    }
+                }
             }
             if (!bypass && eq != null) {
                 val n = eq.numberOfBands.toInt()
@@ -145,37 +168,42 @@ class EqualizerManager @Inject constructor(
 
     private fun publishUiState(settings: EqualizerSettings) {
         val eq = equalizer
+        val displayBands = settings.uiBandCount.coerceIn(5, 10)
+        val levels = EqualizerPresetHelper.computeLevels(settings, displayBands).toList()
+        val freqs = EqualizerPresetHelper.displayCenterFreqHz(displayBands)
+        val minL: Int
+        val maxL: Int
         if (eq != null) {
-            val n = eq.numberOfBands.toInt()
             val range = eq.bandLevelRange
-            val minL = range[0].toInt()
-            val maxL = range[1].toInt()
-            val levels = (0 until n).map { eq.getBandLevel(it.toShort()).toInt() }
-            val freqs = (0 until n).map { eq.getCenterFreq(it.toShort()) / 1000f }
-            _uiState.value = EqualizerUiState(
-                equalizerEnabled = settings.enabled,
-                bandCount = n,
-                centerFreqHz = freqs,
-                levelsMb = levels,
-                levelMinMb = minL,
-                levelMaxMb = maxL,
-                bassStrength = settings.bassStrength,
-                virtualizerStrength = settings.virtualizerStrength,
-                virtualizerSupported = virtualizer != null,
-                effectsAttached = true,
-            )
+            minL = range[0].toInt()
+            maxL = range[1].toInt()
         } else {
-            publishDisconnected(settings)
+            minL = -1500
+            maxL = 1500
         }
+        _uiState.value = EqualizerUiState(
+            equalizerEnabled = settings.enabled,
+            uiBandCount = displayBands,
+            centerFreqHz = freqs,
+            levelsMb = levels,
+            levelMinMb = minL,
+            levelMaxMb = maxL,
+            bassStrength = settings.bassStrength,
+            virtualizerStrength = settings.virtualizerStrength,
+            virtualizerSupported = virtualizer != null,
+            effectsAttached = eq != null,
+            reverbPreset = settings.reverbPreset,
+            reverbSupported = presetReverb != null || eq == null,
+        )
     }
 
     private fun publishDisconnected(settings: EqualizerSettings = prefs.equalizerSettings.value) {
-        val n = 5
-        val levels = EqualizerPresetHelper.computeLevels(settings, n).toList()
+        val displayBands = settings.uiBandCount.coerceIn(5, 10)
+        val levels = EqualizerPresetHelper.computeLevels(settings, displayBands).toList()
         _uiState.value = EqualizerUiState(
             equalizerEnabled = settings.enabled,
-            bandCount = n,
-            centerFreqHz = EqualizerPresetHelper.defaultCenterFreqHz(n),
+            uiBandCount = displayBands,
+            centerFreqHz = EqualizerPresetHelper.displayCenterFreqHz(displayBands),
             levelsMb = levels,
             levelMinMb = -1500,
             levelMaxMb = 1500,
@@ -183,6 +211,8 @@ class EqualizerManager @Inject constructor(
             virtualizerStrength = settings.virtualizerStrength,
             virtualizerSupported = false,
             effectsAttached = false,
+            reverbPreset = settings.reverbPreset,
+            reverbSupported = true,
         )
     }
 }

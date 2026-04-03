@@ -1,9 +1,16 @@
 package com.generic.audioplayes.collection
 
+import android.app.Activity
+import android.app.PendingIntent
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,24 +24,34 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import com.generic.audioplayes.Constants
 import com.generic.audioplayes.R
 import com.generic.audioplayes.components.FullScreenSadMessage
 import com.generic.audioplayes.components.Snackbar
 import com.generic.audioplayes.components.SortOptionChooser
 import com.generic.audioplayes.components.SortOptions
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.music.Song
-import com.generic.audioplayes.ui.theme.ZenTheme
+import com.generic.audioplayes.home.HomeNavHelper
+import com.generic.audioplayes.home.HomeViewModel
+import com.generic.audioplayes.nowplaying.HomeLibrarySongActionsBottomSheet
+import com.generic.audioplayes.nowplaying.PlayerHelper
+import com.generic.audioplayes.player.AudioPlayerBroadcastReceiver
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
+import com.generic.audioplayes.util.AudioFileActions
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -43,11 +60,15 @@ import javax.inject.Inject
 class CollectionFragment : Fragment() {
 
     private val viewModel: CollectionViewModel by viewModels()
+    private val homeViewModel: HomeViewModel by activityViewModels()
 
     private lateinit var navController: NavController
 
     @Inject
-    lateinit var preferenceProvider: ZenPreferenceProvider
+    lateinit var preferenceProvider: AudioPlayerPreferenceProvider
+
+    @Inject
+    lateinit var exoPlayer: ExoPlayer
 
     private val args: CollectionFragmentArgs by navArgs()
 
@@ -74,10 +95,65 @@ class CollectionFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                ZenTheme(themePreference) {
+                AudioPlayerTheme(themePreference) {
+                    val playerHelper = remember(exoPlayer) { PlayerHelper(exoPlayer) }
+                    val navHelper = remember(navController) {
+                        HomeNavHelper(navController, lifecycle)
+                    }
+                    val pendingPreviousIntent = remember {
+                        PendingIntent.getBroadcast(
+                            requireContext(),
+                            AudioPlayerBroadcastReceiver.PREVIOUS_ACTION_REQUEST_CODE,
+                            Intent(Constants.PACKAGE_NAME).putExtra(
+                                AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+                                AudioPlayerBroadcastReceiver.AUDIO_PLAYER_PREVIOUS,
+                            ),
+                            PendingIntent.FLAG_IMMUTABLE,
+                        )
+                    }
+                    val pendingNextIntent = remember {
+                        PendingIntent.getBroadcast(
+                            requireContext(),
+                            AudioPlayerBroadcastReceiver.NEXT_ACTION_REQUEST_CODE,
+                            Intent(Constants.PACKAGE_NAME).putExtra(
+                                AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+                                AudioPlayerBroadcastReceiver.AUDIO_PLAYER_NEXT,
+                            ),
+                            PendingIntent.FLAG_IMMUTABLE,
+                        )
+                    }
+                    CollectionPlaybackShell(
+                        homeViewModel = homeViewModel,
+                        preferenceProvider = preferenceProvider,
+                        playerHelper = playerHelper,
+                        navHelper = navHelper,
+                        pendingPreviousIntent = pendingPreviousIntent,
+                        pendingNextIntent = pendingNextIntent,
+                    ) { scaffoldBottomPadding ->
+                    val context = LocalContext.current
                     val collectionUi by viewModel.collectionUi.collectAsStateWithLifecycle()
                     val songsListState = rememberLazyListState()
                     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
+                    var trackSheetSong by remember { mutableStateOf<Song?>(null) }
+                    val isPlaylistCollection =
+                        args.collectionType?.type == CollectionType.PlaylistType
+
+                    val deleteIntentSenderLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.StartIntentSenderForResult(),
+                    ) { result ->
+                        if (result.resultCode == Activity.RESULT_OK) {
+                            homeViewModel.onDeleteConfirmedByUser()
+                        } else {
+                            homeViewModel.onDeleteConfirmationCancelled()
+                        }
+                    }
+                    LaunchedEffect(Unit) {
+                        homeViewModel.deleteConfirmationSender.collect { pendingIntent ->
+                            deleteIntentSenderLauncher.launch(
+                                IntentSenderRequest.Builder(pendingIntent).build(),
+                            )
+                        }
+                    }
                     val topBarContainerAlpha by remember {
                         derivedStateOf {
                             if (songsListState.firstVisibleItemIndex == 0
@@ -95,6 +171,7 @@ class CollectionFragment : Fragment() {
                     }
 
                     Scaffold(
+                        modifier = Modifier.padding(bottom = scaffoldBottomPadding),
                         topBar = {
                             CollectionTopBar(
                                 topBarTitle = collectionUi?.topBarTitle ?: "",
@@ -161,18 +238,92 @@ class CollectionFragment : Fragment() {
                                         },
                                         onSongFavouriteClicked = viewModel::changeFavouriteValue,
                                         currentSong = currentSong,
-                                        onAddToQueueClicked = viewModel::addToQueue,
                                         onPlayAllClicked = {
                                             viewModel.setQueue(collectionUi?.songs,0)
                                         },
                                         onShuffleClicked = {
                                             viewModel.shufflePlay(collectionUi?.songs)
                                         },
-                                        onAddToPlaylistsClicked = this@CollectionFragment::addToPlaylistClicked,
-                                        isPlaylistCollection = args.collectionType?.type == CollectionType.PlaylistType,
-                                        onRemoveFromPlaylistClicked = viewModel::removeFromPlaylist
+                                        onTrackOverflowClick = { trackSheetSong = it },
                                     )
                                 }
+                            }
+                            trackSheetSong?.let { sheetSong ->
+                                HomeLibrarySongActionsBottomSheet(
+                                    song = sheetSong,
+                                    visible = true,
+                                    onDismiss = { trackSheetSong = null },
+                                    onPlayNext = { homeViewModel.playLibrarySongNext(sheetSong) },
+                                    onAddToQueue = {
+                                        viewModel.addToQueue(sheetSong)
+                                    },
+                                    onAddToPlaylist = {
+                                        addToPlaylistClicked(sheetSong)
+                                    },
+                                    onOpenAlbum = {
+                                        if (sheetSong.album.isNotBlank() && sheetSong.album != "Unknown") {
+                                            navController.navigate(
+                                                CollectionFragmentDirections
+                                                    .actionCollectionFragmentToCollectionFragment(
+                                                        CollectionType(
+                                                            CollectionType.AlbumType,
+                                                            sheetSong.album,
+                                                        ),
+                                                    ),
+                                            )
+                                        }
+                                    },
+                                    onPlayerActionEditTags = { song ->
+                                        if (!AudioFileActions.tryOpenAudioTagEditor(
+                                                context,
+                                                song.location,
+                                            )
+                                        ) {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.player_action_no_editor_app),
+                                                Toast.LENGTH_LONG,
+                                            ).show()
+                                        }
+                                    },
+                                    onPlayerActionHideSong = homeViewModel::onSongBlacklist,
+                                    onPlayerActionDeleteSong = homeViewModel::deleteSongFromDevice,
+                                    onPlayerActionRingtone = { song ->
+                                        if (AudioFileActions.setAsRingtone(context, song.location)) {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.player_ringtone_ok),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.player_ringtone_failed),
+                                                Toast.LENGTH_LONG,
+                                            ).show()
+                                        }
+                                    },
+                                    onPlayerActionChangeCover = { song ->
+                                        if (!AudioFileActions.tryOpenAudioForCoverChange(
+                                                context,
+                                                song.location,
+                                            )
+                                        ) {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.player_action_no_editor_app),
+                                                Toast.LENGTH_LONG,
+                                            ).show()
+                                        }
+                                    },
+                                    onRemoveFromPlaylist = if (isPlaylistCollection) {
+                                        {
+                                            viewModel.removeFromPlaylist(sheetSong)
+                                        }
+                                    } else {
+                                        null
+                                    },
+                                )
                             }
                             if (showSortOptions){
                                 SortOptionChooser(
@@ -197,6 +348,7 @@ class CollectionFragment : Fragment() {
                             )
                         }
                     )
+                    }
                 }
             }
         }

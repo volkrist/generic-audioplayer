@@ -11,7 +11,7 @@ import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaStyleNotificationHelper
 import com.generic.audioplayes.R
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.services.QueueService
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,7 +30,7 @@ import javax.inject.Inject
 class PlayerNotificationManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val queueService: QueueService,
-    private val preferenceProvider: ZenPreferenceProvider,
+    private val preferenceProvider: AudioPlayerPreferenceProvider,
 ) : MediaNotification.Provider {
 
     init {
@@ -85,7 +85,7 @@ class PlayerNotificationManager @Inject constructor(
             val action = when (index) {
                 0 -> actionFactory.createCustomActionFromCustomCommandButton(
                     mediaSession,
-                    if (isLiked) ZenCommandButtons.liked else ZenCommandButtons.unliked,
+                    if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked,
                 )
                 1, 3 -> actionFactory.createMediaAction(
                     mediaSession,

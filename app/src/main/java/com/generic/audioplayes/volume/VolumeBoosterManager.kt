@@ -6,8 +6,8 @@ import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import com.generic.audioplayes.data.ZenCrashReporter
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,8 +25,8 @@ import javax.inject.Singleton
 @Singleton
 class VolumeBoosterManager @Inject constructor(
     private val exoPlayer: ExoPlayer,
-    private val prefs: ZenPreferenceProvider,
-    private val crashReporter: ZenCrashReporter,
+    private val prefs: AudioPlayerPreferenceProvider,
+    private val crashReporter: AudioPlayerCrashReporter,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

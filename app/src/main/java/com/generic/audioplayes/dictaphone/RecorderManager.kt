@@ -5,7 +5,7 @@ import android.media.MediaRecorder
 import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
-import com.generic.audioplayes.data.ZenCrashReporter
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +22,7 @@ import javax.inject.Singleton
 @Singleton
 class RecorderManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val crashReporter: ZenCrashReporter,
+    private val crashReporter: AudioPlayerCrashReporter,
 ) {
 
     private var mediaRecorder: MediaRecorder? = null

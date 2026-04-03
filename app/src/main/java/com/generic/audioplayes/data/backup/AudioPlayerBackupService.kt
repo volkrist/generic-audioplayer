@@ -5,7 +5,7 @@ import com.generic.audioplayes.data.AppDatabase
 import com.generic.audioplayes.data.UserPreferences
 import com.generic.audioplayes.data.copy
 import com.generic.audioplayes.data.UserPreferences.PlaybackParams
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.music.PlaylistExceptId
 import com.generic.audioplayes.data.services.PlaylistService
 import kotlinx.coroutines.Dispatchers
@@ -28,11 +28,11 @@ data class BackupImportResult(
 )
 
 @Singleton
-class ZenBackupService @Inject constructor(
+class AudioPlayerBackupService @Inject constructor(
     private val userPreferences: DataStore<UserPreferences>,
     private val db: AppDatabase,
     private val playlistService: PlaylistService,
-    private val zenPreferenceProvider: ZenPreferenceProvider,
+    private val preferenceProvider: AudioPlayerPreferenceProvider,
 ) {
 
     suspend fun exportToJsonString(): String = withContext(Dispatchers.IO) {
@@ -64,7 +64,7 @@ class ZenBackupService @Inject constructor(
     }
 
     suspend fun markExportSuccess() {
-        zenPreferenceProvider.setLastBackupExportEpochMs(System.currentTimeMillis())
+        preferenceProvider.setLastBackupExportEpochMs(System.currentTimeMillis())
     }
 
     /**
@@ -186,7 +186,7 @@ class ZenBackupService @Inject constructor(
                 if (pref.has("useMaterialYouTheme")) {
                     useMaterialYouTheme = pref.optBoolean("useMaterialYouTheme")
                 }
-                // Playback params (same bounds as [ZenPreferenceProvider.updatePlaybackParams])
+                // Playback params (same bounds as [AudioPlayerPreferenceProvider.updatePlaybackParams])
                 val speed = pref.optInt("playbackSpeed", playbackParams.playbackSpeed)
                 val pitch = pref.optInt("playbackPitch", playbackParams.playbackPitch)
                 playbackParams = PlaybackParams.getDefaultInstance().copy {
@@ -251,6 +251,23 @@ class ZenBackupService @Inject constructor(
                 if (pref.has("virtualizerStrength")) {
                     virtualizerStrength = pref.optInt("virtualizerStrength").coerceIn(0, 1000)
                 }
+                if (pref.has("equalizerUiBandCount")) {
+                    equalizerUiBandCount = pref.optInt("equalizerUiBandCount").let { n ->
+                        if (n == 5 || n == 10) n else 5
+                    }
+                }
+                if (pref.has("reverbPreset")) {
+                    reverbPreset = pref.optInt("reverbPreset").coerceIn(0, 6)
+                }
+                if (pref.has("graphicWallpaperPreset")) {
+                    graphicWallpaperPreset = pref.optInt("graphicWallpaperPreset").coerceIn(0, 64)
+                }
+                if (pref.has("graphicWallpaperCustomUri")) {
+                    graphicWallpaperCustomUri = pref.optString("graphicWallpaperCustomUri", "")
+                }
+                if (pref.has("graphicThemeColorSlot")) {
+                    graphicThemeColorSlot = pref.optInt("graphicThemeColorSlot").coerceIn(0, 14)
+                }
                 // Intentionally not restoring: sleep_timer_*, crashlytics, onboarding, queue, seed versions
             }
         }
@@ -288,5 +305,10 @@ class ZenBackupService @Inject constructor(
         put("bassBoostStrength", prefs.bassBoostStrength)
         put("virtualizerStrength", prefs.virtualizerStrength)
         put("equalizerEnabled", prefs.equalizerEnabled)
+        put("equalizerUiBandCount", prefs.equalizerUiBandCount)
+        put("reverbPreset", prefs.reverbPreset)
+        put("graphicWallpaperPreset", prefs.graphicWallpaperPreset)
+        put("graphicWallpaperCustomUri", prefs.graphicWallpaperCustomUri)
+        put("graphicThemeColorSlot", prefs.graphicThemeColorSlot)
     }
 }

@@ -12,6 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Zen"
+rootProject.name = "AudioPlayer"
 include (":app")
 include(":m3utils")

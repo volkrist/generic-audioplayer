@@ -28,11 +28,12 @@ import androidx.compose.animation.with
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -42,7 +43,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.rememberSwipeableState
-import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,14 +50,11 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -91,16 +88,19 @@ import com.generic.audioplayes.Screens
 import com.generic.audioplayes.components.BottomSheet
 import com.generic.audioplayes.components.Snackbar
 import com.generic.audioplayes.components.getSortOptions
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.data.music.SongExtractor
-import com.generic.audioplayes.data.services.SleepTimerService
+import com.generic.audioplayes.nowplaying.HomeLibrarySongActionsBottomSheet
 import com.generic.audioplayes.nowplaying.NowPlayingScreen
+import com.generic.audioplayes.nowplaying.PlayerActionsSheetModal
 import com.generic.audioplayes.nowplaying.PlayerHelper
-import com.generic.audioplayes.nowplaying.Queue
-import com.generic.audioplayes.player.ZenBroadcastReceiver
+import com.generic.audioplayes.nowplaying.QueueBottomSheetModal
+import com.generic.audioplayes.player.AudioPlayerBroadcastReceiver
 import com.generic.audioplayes.ui.theme.HomeLibraryTokens
+import com.generic.audioplayes.ui.theme.LibraryShellBackdrop
 import com.generic.audioplayes.ui.theme.UiTokens
-import com.generic.audioplayes.ui.theme.ZenTheme
+import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.generic.audioplayes.util.AudioFileActions
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -111,6 +111,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** Single overlay for full-player sheets so queue and track actions can never both be active. */
+private enum class FullPlayerOverlay {
+    None,
+    Queue,
+    Actions,
+}
+
 @AndroidEntryPoint
 class HomeFragment : Fragment() {
 
@@ -119,8 +126,7 @@ class HomeFragment : Fragment() {
     private val viewModel: HomeViewModel by activityViewModels()
 
     @Inject lateinit var exoPlayer: ExoPlayer
-    @Inject lateinit var preferenceProvider: ZenPreferenceProvider
-    @Inject lateinit var sleepTimerService: SleepTimerService
+    @Inject lateinit var preferenceProvider: AudioPlayerPreferenceProvider
     @Inject lateinit var songExtractor: SongExtractor
 
     @OptIn(
@@ -134,18 +140,18 @@ class HomeFragment : Fragment() {
     ): View {
         navController = findNavController()
         val pendingPreviousIntent = PendingIntent.getBroadcast(
-            context, ZenBroadcastReceiver.PREVIOUS_ACTION_REQUEST_CODE,
+            context, AudioPlayerBroadcastReceiver.PREVIOUS_ACTION_REQUEST_CODE,
             Intent(Constants.PACKAGE_NAME).putExtra(
-                ZenBroadcastReceiver.AUDIO_CONTROL,
-                ZenBroadcastReceiver.ZEN_PLAYER_PREVIOUS
+                AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+                AudioPlayerBroadcastReceiver.AUDIO_PLAYER_PREVIOUS
             ),
             PendingIntent.FLAG_IMMUTABLE
         )
         val pendingNextIntent = PendingIntent.getBroadcast(
-            context, ZenBroadcastReceiver.NEXT_ACTION_REQUEST_CODE,
+            context, AudioPlayerBroadcastReceiver.NEXT_ACTION_REQUEST_CODE,
             Intent(Constants.PACKAGE_NAME).putExtra(
-                ZenBroadcastReceiver.AUDIO_CONTROL,
-                ZenBroadcastReceiver.ZEN_PLAYER_NEXT
+                AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+                AudioPlayerBroadcastReceiver.AUDIO_PLAYER_NEXT
             ),
             PendingIntent.FLAG_IMMUTABLE
         )
@@ -157,7 +163,7 @@ class HomeFragment : Fragment() {
             setContent {
                 val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                ZenTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference, systemUiController) {
                     LaunchedEffect(Unit) {
                         systemUiController.setStatusBarColor(Color.Transparent, darkIcons = false)
                     }
@@ -190,6 +196,7 @@ class HomeFragment : Fragment() {
                     val allPersonsListState = rememberLazyListState()
 
                     val playlistsWithSongCount by viewModel.playlistsWithSongCount.collectAsStateWithLifecycle()
+                    val smartPlaylistCounts by viewModel.smartPlaylistCounts.collectAsStateWithLifecycle()
                     val allPlaylistsListState = rememberLazyListState()
 
                     val genresWithSongCount by viewModel.genresWithSongCount.collectAsStateWithLifecycle()
@@ -199,9 +206,6 @@ class HomeFragment : Fragment() {
                     val folderTrackCount = remember(songExtractor) {
                         { path: String -> songExtractor.countAudioTracksUnderFolderPath(path) }
                     }
-
-                    val isSleepTimerRunning by sleepTimerService.isRunning.collectAsStateWithLifecycle()
-                    val sleepTimerLeft by sleepTimerService.timeLeft.collectAsStateWithLifecycle()
 
                     val dataRetrieved by remember {
                         derivedStateOf {
@@ -214,6 +218,9 @@ class HomeFragment : Fragment() {
                     var showSongsSortSheet by remember { mutableStateOf(false) }
                     var showFoldersSortSheet by remember { mutableStateOf(false) }
                     var showSongsSelect by remember { mutableStateOf(false) }
+                    var addToPlaylistSongLocations by remember { mutableStateOf<List<String>?>(null) }
+                    var folderLibraryTrackSheetSong by remember { mutableStateOf<Song?>(null) }
+                    var fullPlayerOverlay by remember { mutableStateOf(FullPlayerOverlay.None) }
                     val songsSortOptions = remember {
                         Screens.Songs.getSortOptions()
                     }
@@ -244,6 +251,9 @@ class HomeFragment : Fragment() {
                     }
 
                     LaunchedEffect(currentSong) {
+                        if (currentSong == null) {
+                            fullPlayerOverlay = FullPlayerOverlay.None
+                        }
                         if (currentSong != null) return@LaunchedEffect
                         if (swipeableState.currentValue != 1) return@LaunchedEffect
                         swipeableState.animateTo(0)
@@ -330,18 +340,7 @@ class HomeFragment : Fragment() {
                     val keepScreenOn by preferenceProvider.keepScreenOn.collectAsStateWithLifecycle()
                     val volumeBoosterPercent by preferenceProvider.volumeBoosterPercent.collectAsStateWithLifecycle()
                     val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
-                    val playerScaffoldState = rememberBottomSheetScaffoldState(
-                        bottomSheetState = rememberStandardBottomSheetState(skipHiddenState = false)
-                    )
-
                     val isExplorerAtRoot by viewModel.isExplorerAtRoot.collectAsStateWithLifecycle()
-
-                    val isQueueBottomSheetExpanded by remember(playerScaffoldState.bottomSheetState) {
-                        derivedStateOf {
-                            playerScaffoldState.bottomSheetState.currentValue
-                                .equals(SheetValue.Expanded)
-                        }
-                    }
 
                     BackHandler(
                         enabled = drawerState.currentValue == DrawerValue.Open ||
@@ -351,18 +350,20 @@ class HomeFragment : Fragment() {
                             if (drawerState.currentValue == DrawerValue.Open) {
                                 scope.launch { drawerState.close() }
                             } else if (swipeableState.currentValue == 1) {
-                                scope.launch {
-                                    if (isQueueBottomSheetExpanded) {
-                                        playerScaffoldState.bottomSheetState.hide()
-                                    } else {
-                                        swipeableState.animateTo(0)
-                                    }
+                                when (fullPlayerOverlay) {
+                                    FullPlayerOverlay.Actions,
+                                    FullPlayerOverlay.Queue,
+                                    -> fullPlayerOverlay = FullPlayerOverlay.None
+                                    FullPlayerOverlay.None -> scope.launch { swipeableState.animateTo(0) }
                                 }
                             } else {
                                 viewModel.moveToParent()
                             }
                         }
                     )
+                    BackHandler(enabled = addToPlaylistSongLocations != null) {
+                        addToPlaylistSongLocations = null
+                    }
 
                     val songScreenSongClicked = remember {
                         { index: Int -> viewModel.setQueue(songs, index) }
@@ -372,9 +373,17 @@ class HomeFragment : Fragment() {
                     val miniPlayerPlayPauseClicked = remember { {
                         if (swipeableState.currentValue == 0) { viewModel.onMiniPlayerPlayPause() }
                     } }
-                    val expandQueueBottomSheet: () -> Unit = remember(playerScaffoldState, scope) {
+                    val expandQueueBottomSheet: () -> Unit = remember {
+                        { fullPlayerOverlay = FullPlayerOverlay.Queue }
+                    }
+                    val expandFullPlayer: () -> Unit = remember(scope, swipeableState) {
                         {
-                            scope.launch { playerScaffoldState.bottomSheetState.expand() }
+                            scope.launch { swipeableState.animateTo(1) }
+                        }
+                    }
+                    val collapseFullPlayer: () -> Unit = remember(scope, swipeableState) {
+                        {
+                            scope.launch { swipeableState.animateTo(0) }
                         }
                     }
                     val updateScreen = remember<(Screens) -> Unit> { {
@@ -418,19 +427,19 @@ class HomeFragment : Fragment() {
                                     DrawerMenuDestination.Equalizer -> navHelper.navigateToEqualizer()
                                     DrawerMenuDestination.Dictaphone -> navHelper.navigateToDictaphone()
                                     DrawerMenuDestination.GraphicTheme -> navHelper.navigateToTheme()
-                                    DrawerMenuDestination.Widgets -> navHelper.navigateToPlaceholder(
-                                        context.getString(item.titleRes),
-                                    )
+                                    DrawerMenuDestination.Widgets -> navHelper.navigateToWidgets()
                                 }
                             }
                         },
                     ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(HomeLibraryTokens.libraryShellGradient),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.BottomCenter
                     ) {
+                        LibraryShellBackdrop(
+                            themePreference = themePreference,
+                            modifier = Modifier.fillMaxSize(),
+                        )
                         Scaffold(
                             modifier = Modifier
                                 .padding(bottom = homeScreenBottomPadding),
@@ -500,7 +509,53 @@ class HomeFragment : Fragment() {
                                                         onPlayAllClicked = songScreenPlayAllClicked,
                                                         onShuffleClicked = songScreenShuffleClicked,
                                                         onAddToPlaylistsClicked = navHelper::navigateToChoosePlaylist,
-                                                        onBlacklistClicked = viewModel::onSongBlacklist
+                                                        onPlayLibrarySongNext = viewModel::playLibrarySongNext,
+                                                        onOpenAlbum = { song ->
+                                                            navHelper.navigateToAlbumByName(song.album)
+                                                        },
+                                                        onPlayerActionEditTags = { song ->
+                                                            if (!AudioFileActions.tryOpenAudioTagEditor(
+                                                                    context,
+                                                                    song.location,
+                                                                )
+                                                            ) {
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    context.getString(R.string.player_action_no_editor_app),
+                                                                    Toast.LENGTH_LONG,
+                                                                ).show()
+                                                            }
+                                                        },
+                                                        onPlayerActionHideSong = viewModel::onSongBlacklist,
+                                                        onPlayerActionDeleteSong = viewModel::deleteSongFromDevice,
+                                                        onPlayerActionRingtone = { song ->
+                                                            if (AudioFileActions.setAsRingtone(context, song.location)) {
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    context.getString(R.string.player_ringtone_ok),
+                                                                    Toast.LENGTH_SHORT,
+                                                                ).show()
+                                                            } else {
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    context.getString(R.string.player_ringtone_failed),
+                                                                    Toast.LENGTH_LONG,
+                                                                ).show()
+                                                            }
+                                                        },
+                                                        onPlayerActionChangeCover = { song ->
+                                                            if (!AudioFileActions.tryOpenAudioForCoverChange(
+                                                                    context,
+                                                                    song.location,
+                                                                )
+                                                            ) {
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    context.getString(R.string.player_action_no_editor_app),
+                                                                    Toast.LENGTH_LONG,
+                                                                ).show()
+                                                            }
+                                                        },
                                                     )
                                                 }
                                                 Screens.Albums -> {
@@ -532,31 +587,12 @@ class HomeFragment : Fragment() {
                                                             when (action) {
                                                                 HomeSmartPlaylistAction.Favourites ->
                                                                     navHelper.navigateToViewDetails()
-                                                                HomeSmartPlaylistAction.RecentlyAdded -> {
-                                                                    val list = songs
-                                                                        ?.sortedByDescending { it.dateModifiedSec }
-                                                                        .orEmpty()
-                                                                    if (list.isNotEmpty()) {
-                                                                        viewModel.setQueue(list, 0)
-                                                                    }
-                                                                }
-                                                                HomeSmartPlaylistAction.RecentlyPlayed -> {
-                                                                    val list = songs
-                                                                        ?.filter { it.lastPlayed != null && it.lastPlayed!! > 0L }
-                                                                        ?.sortedByDescending { it.lastPlayed }
-                                                                        .orEmpty()
-                                                                    if (list.isNotEmpty()) {
-                                                                        viewModel.setQueue(list, 0)
-                                                                    }
-                                                                }
-                                                                HomeSmartPlaylistAction.TopTracks -> {
-                                                                    val list = songs
-                                                                        ?.sortedByDescending { it.playCount }
-                                                                        .orEmpty()
-                                                                    if (list.isNotEmpty()) {
-                                                                        viewModel.setQueue(list, 0)
-                                                                    }
-                                                                }
+                                                                HomeSmartPlaylistAction.RecentlyAdded ->
+                                                                    navHelper.navigateToRecentlyAddedCollection()
+                                                                HomeSmartPlaylistAction.RecentlyPlayed ->
+                                                                    navHelper.navigateToRecentlyPlayedCollection()
+                                                                HomeSmartPlaylistAction.TopTracks ->
+                                                                    navHelper.navigateToTopTracksCollection()
                                                             }
                                                         },
                                                     )
@@ -569,16 +605,94 @@ class HomeFragment : Fragment() {
                                                     )
                                                 }
                                                 Screens.Folders -> {
-                                                    Files(
-                                                        contents = files,
-                                                        onDirectoryClicked = viewModel::onFileClicked,
-                                                        onSongClicked = viewModel::onFileClicked,
-                                                        currentSong = currentSong,
-                                                        onAddToPlaylistClicked = navHelper::navigateToChoosePlaylist,
-                                                        onAddToQueueClicked = viewModel::addToQueue,
-                                                        onFolderAddToBlacklistRequest = viewModel::onFolderBlacklist,
-                                                        folderTrackCount = folderTrackCount,
-                                                    )
+                                                    val ctx = LocalContext.current
+                                                    Box(modifier = Modifier.fillMaxSize()) {
+                                                        Files(
+                                                            contents = files,
+                                                            onDirectoryClicked = viewModel::onFileClicked,
+                                                            onSongClicked = viewModel::onFileClicked,
+                                                            currentSong = currentSong,
+                                                            onAddToPlaylistClicked = navHelper::navigateToChoosePlaylist,
+                                                            onAddToQueueClicked = viewModel::addToQueue,
+                                                            onFolderPlay = viewModel::playAllInFolder,
+                                                            onFolderPlayNext = viewModel::playFolderNext,
+                                                            onFolderAddToQueue = viewModel::addFolderToQueue,
+                                                            onFolderAddToPlaylist = { dir ->
+                                                                scope.launch {
+                                                                    val songs = viewModel.getSongsInFolderRecursive(dir)
+                                                                    if (songs.isNotEmpty()) {
+                                                                        navHelper.navigateToChoosePlaylist(songs)
+                                                                    }
+                                                                }
+                                                            },
+                                                            onFolderHide = viewModel::onFolderBlacklist,
+                                                            onFolderDelete = viewModel::deleteFolderFromDevice,
+                                                            folderTrackCount = folderTrackCount,
+                                                            onTrackOverflowClick = { mini ->
+                                                                songExtractor.resolveSong(mini.location)?.let { resolved ->
+                                                                    folderLibraryTrackSheetSong = resolved
+                                                                }
+                                                            },
+                                                        )
+                                                        folderLibraryTrackSheetSong?.let { sheetSong ->
+                                                            HomeLibrarySongActionsBottomSheet(
+                                                                song = sheetSong,
+                                                                visible = true,
+                                                                onDismiss = { folderLibraryTrackSheetSong = null },
+                                                                onPlayNext = { viewModel.playLibrarySongNext(sheetSong) },
+                                                                onAddToQueue = { viewModel.addToQueue(sheetSong) },
+                                                                onAddToPlaylist = {
+                                                                    navHelper.navigateToChoosePlaylist(sheetSong)
+                                                                },
+                                                                onOpenAlbum = {
+                                                                    navHelper.navigateToAlbumByName(sheetSong.album)
+                                                                },
+                                                                onPlayerActionEditTags = { song ->
+                                                                    if (!AudioFileActions.tryOpenAudioTagEditor(
+                                                                            ctx,
+                                                                            song.location,
+                                                                        )
+                                                                    ) {
+                                                                        Toast.makeText(
+                                                                            ctx,
+                                                                            ctx.getString(R.string.player_action_no_editor_app),
+                                                                            Toast.LENGTH_LONG,
+                                                                        ).show()
+                                                                    }
+                                                                },
+                                                                onPlayerActionHideSong = viewModel::onSongBlacklist,
+                                                                onPlayerActionDeleteSong = viewModel::deleteSongFromDevice,
+                                                                onPlayerActionRingtone = { song ->
+                                                                    if (AudioFileActions.setAsRingtone(ctx, song.location)) {
+                                                                        Toast.makeText(
+                                                                            ctx,
+                                                                            ctx.getString(R.string.player_ringtone_ok),
+                                                                            Toast.LENGTH_SHORT,
+                                                                        ).show()
+                                                                    } else {
+                                                                        Toast.makeText(
+                                                                            ctx,
+                                                                            ctx.getString(R.string.player_ringtone_failed),
+                                                                            Toast.LENGTH_LONG,
+                                                                        ).show()
+                                                                    }
+                                                                },
+                                                                onPlayerActionChangeCover = { song ->
+                                                                    if (!AudioFileActions.tryOpenAudioForCoverChange(
+                                                                            ctx,
+                                                                            song.location,
+                                                                        )
+                                                                    ) {
+                                                                        Toast.makeText(
+                                                                            ctx,
+                                                                            ctx.getString(R.string.player_action_no_editor_app),
+                                                                            Toast.LENGTH_LONG,
+                                                                        ).show()
+                                                                    }
+                                                                },
+                                                            )
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -638,6 +752,7 @@ class HomeFragment : Fragment() {
                                                     song = currentSong,
                                                     showPlayButton = songPlaying == false,
                                                     modifier = Modifier.fillMaxWidth(),
+                                                    onExpandPlayer = expandFullPlayer,
                                                 )
                                                 var progress by remember { mutableStateOf(0f) }
                                                 DisposableEffect(currentSong) {
@@ -687,116 +802,97 @@ class HomeFragment : Fragment() {
                                 }
                             },
                             content = {
-                                currentSong?.let {
-                                    BottomSheetScaffold(
-                                        scaffoldState = playerScaffoldState,
-                                        content = { paddingValues ->
-                                            NowPlayingScreen(
-                                                paddingValues = paddingValues,
-                                                song = it,
-                                                onPausePlayPressed = viewModel::onMiniPlayerPlayPause,
-                                                onPreviousPressed = pendingPreviousIntent::send,
-                                                onNextPressed = pendingNextIntent::send,
-                                                songPlaying = songPlaying,
-                                                playerHelper = playerHelper,
-                                                currentSongPlaying = songPlaying,
-                                                onFavouriteClicked = viewModel::changeFavouriteValue,
-                                                onQueueClicked = expandQueueBottomSheet,
-                                                repeatMode = repeatMode,
-                                                toggleRepeatMode = viewModel::toggleRepeatMode,
-                                                playbackParams = playbackParams,
-                                                updatePlaybackParams = preferenceProvider::updatePlaybackParams,
-                                                isTimerRunning = isSleepTimerRunning,
-                                                timeLeft = sleepTimerLeft,
-                                                onTimerBegin = sleepTimerService::begin,
-                                                onTimerCancel = sleepTimerService::cancel,
-                                                onSaveQueueClicked = { navHelper.navigateToChoosePlaylist(queue) },
-                                                onShuffleClicked = { viewModel.shufflePlay(queue.toList()) },
-                                                onEqualizerClicked = navHelper::navigateToEqualizer,
-                                                onVolumeBoosterClicked = navHelper::navigateToVolumeBooster,
-                                                onOpenAlbum = { navHelper.navigateToAlbumByName(it.album) },
-                                                onOpenArtist = { navHelper.navigateToArtistByName(it.artist) },
-                                                onOpenFolder = {
-                                                    java.io.File(it.location).parentFile?.let { dir ->
-                                                        viewModel.navigateToFolderInExplorer(dir.absolutePath)
-                                                    }
-                                                },
-                                                onAddCurrentSongToPlaylist = {
-                                                    navHelper.navigateToChoosePlaylist(it)
-                                                },
-                                                keepScreenOn = keepScreenOn,
-                                                onKeepScreenOnChange = preferenceProvider::updateKeepScreenOn,
-                                                volumeBoosterPercent = volumeBoosterPercent,
-                                                onVolumeBoosterPercentChange = preferenceProvider::updateVolumeBoosterPercent,
-                                                onSettingsClicked = navHelper::navigateToSettings,
-                                                onPlayerActionEditTags = { song ->
-                                                    if (!AudioFileActions.tryOpenAudioTagEditor(
-                                                            context,
-                                                            song.location,
-                                                        )
-                                                    ) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            context.getString(R.string.player_action_no_editor_app),
-                                                            Toast.LENGTH_LONG,
-                                                        ).show()
-                                                    }
-                                                },
-                                                onPlayerActionHideSong = { song ->
-                                                    viewModel.onSongBlacklist(song)
-                                                },
-                                                onPlayerActionDeleteSong = { song ->
-                                                    viewModel.deleteSongFromDevice(song)
-                                                },
-                                                onPlayerActionRingtone = { song ->
-                                                    if (AudioFileActions.setAsRingtone(context, song.location)) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            context.getString(R.string.player_ringtone_ok),
-                                                            Toast.LENGTH_SHORT,
-                                                        ).show()
-                                                    } else {
-                                                        Toast.makeText(
-                                                            context,
-                                                            context.getString(R.string.player_ringtone_failed),
-                                                            Toast.LENGTH_LONG,
-                                                        ).show()
-                                                    }
-                                                },
-                                                onPlayerActionChangeCover = { song ->
-                                                    if (!AudioFileActions.tryOpenAudioForCoverChange(
-                                                            context,
-                                                            song.location,
-                                                        )
-                                                    ) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            context.getString(R.string.player_action_no_editor_app),
-                                                            Toast.LENGTH_LONG,
-                                                        ).show()
-                                                    }
-                                                },
-                                            )
-                                        },
-                                        sheetContent = {
-                                            Queue(
-                                                queue = queue,
-                                                onFavouriteClicked = viewModel::changeFavouriteValue,
-                                                currentSong = it,
-                                                expanded = isQueueBottomSheetExpanded,
-                                                playerHelper = playerHelper,
-                                                onDrag = viewModel::onSongDrag
-                                            )
-                                        },
-                                        sheetShape = RoundedCornerShape(
-                                            topStart = UiTokens.sheetCornerTopLarge,
-                                            topEnd = UiTokens.sheetCornerTopLarge,
-                                            bottomStart = UiTokens.elevationNone,
-                                            bottomEnd = UiTokens.elevationNone,
-                                        ),
-                                        sheetPeekHeight = UiTokens.elevationNone,
-                                        sheetContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    )
+                                currentSong?.let { playingSong ->
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        NowPlayingScreen(
+                                            paddingValues = PaddingValues(0.dp),
+                                            song = playingSong,
+                                            onPlayerOverflowMenuClick = {
+                                                fullPlayerOverlay = FullPlayerOverlay.Actions
+                                            },
+                                            onThemeClicked = navHelper::navigateToTheme,
+                                            onCollapseFullPlayer = collapseFullPlayer,
+                                            onPausePlayPressed = viewModel::onMiniPlayerPlayPause,
+                                            onPreviousPressed = pendingPreviousIntent::send,
+                                            onNextPressed = pendingNextIntent::send,
+                                            songPlaying = songPlaying,
+                                            playerHelper = playerHelper,
+                                            currentSongPlaying = songPlaying,
+                                            onFavouriteClicked = viewModel::changeFavouriteValue,
+                                            onQueueClicked = expandQueueBottomSheet,
+                                            repeatMode = repeatMode,
+                                            toggleRepeatMode = viewModel::toggleRepeatMode,
+                                            playbackParams = playbackParams,
+                                            updatePlaybackParams = preferenceProvider::updatePlaybackParams,
+                                            onSleepTimerClicked = navHelper::navigateToSleepTimer,
+                                            onSaveQueueClicked = { navHelper.navigateToChoosePlaylist(queue) },
+                                            onShuffleClicked = { viewModel.shufflePlay(queue.toList()) },
+                                            onEqualizerClicked = navHelper::navigateToEqualizer,
+                                            onVolumeBoosterClicked = navHelper::navigateToVolumeBooster,
+                                            onOpenAlbum = { navHelper.navigateToAlbumByName(playingSong.album) },
+                                            onOpenArtist = { navHelper.navigateToArtistByName(playingSong.artist) },
+                                            onOpenFolder = {
+                                                java.io.File(playingSong.location).parentFile?.let { dir ->
+                                                    viewModel.navigateToFolderInExplorer(dir.absolutePath)
+                                                }
+                                            },
+                                            onAddCurrentSongToPlaylist = {
+                                                addToPlaylistSongLocations = listOf(playingSong.location)
+                                            },
+                                            keepScreenOn = keepScreenOn,
+                                            onKeepScreenOnChange = preferenceProvider::updateKeepScreenOn,
+                                            volumeBoosterPercent = volumeBoosterPercent,
+                                            onVolumeBoosterPercentChange = preferenceProvider::updateVolumeBoosterPercent,
+                                            onSettingsClicked = navHelper::navigateToSettings,
+                                            onPlayerActionEditTags = { song ->
+                                                if (!AudioFileActions.tryOpenAudioTagEditor(
+                                                        context,
+                                                        song.location,
+                                                    )
+                                                ) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.player_action_no_editor_app),
+                                                        Toast.LENGTH_LONG,
+                                                    ).show()
+                                                }
+                                            },
+                                            onPlayerActionHideSong = { song ->
+                                                viewModel.onSongBlacklist(song)
+                                            },
+                                            onPlayerActionDeleteSong = { song ->
+                                                viewModel.deleteSongFromDevice(song)
+                                            },
+                                            onPlayerActionRingtone = { song ->
+                                                if (AudioFileActions.setAsRingtone(context, song.location)) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.player_ringtone_ok),
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                } else {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.player_ringtone_failed),
+                                                        Toast.LENGTH_LONG,
+                                                    ).show()
+                                                }
+                                            },
+                                            onPlayerActionChangeCover = { song ->
+                                                if (!AudioFileActions.tryOpenAudioForCoverChange(
+                                                        context,
+                                                        song.location,
+                                                    )
+                                                ) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.player_action_no_editor_app),
+                                                        Toast.LENGTH_LONG,
+                                                    ).show()
+                                                }
+                                            },
+                                        )
+                                    }
                                 }
                             },
                             swipeableState = swipeableState,
@@ -823,6 +919,7 @@ class HomeFragment : Fragment() {
                         )
                         if (showSongsSelect) {
                             SongsSelectOverlay(
+                                themePreference = themePreference,
                                 songs = songs ?: emptyList(),
                                 onDismiss = { showSongsSelect = false },
                                 onPlaySelected = { list ->
@@ -837,6 +934,146 @@ class HomeFragment : Fragment() {
                                 },
                                 onDeleteSelected = { list ->
                                     list.forEach { viewModel.deleteSongFromDevice(it) }
+                                },
+                            )
+                        }
+                        addToPlaylistSongLocations?.let { locations ->
+                            AddToPlaylistFromPlayerSheet(
+                                playlists = playlistsWithSongCount,
+                                favouritesCount = smartPlaylistCounts.favourites,
+                                onDismiss = { addToPlaylistSongLocations = null },
+                                onAddToPlaylist = { playlistId ->
+                                    viewModel.addSongsToPlaylistFromPlayer(locations, playlistId)
+                                },
+                                onCreatePlaylist = { name ->
+                                    viewModel.createPlaylistAndAddSongsFromPlayer(name, locations)
+                                    addToPlaylistSongLocations = null
+                                },
+                                onFavouritesClick = {
+                                    viewModel.addSongsToFavouritesFromPlayer(locations)
+                                },
+                            )
+                        }
+                        currentSong?.let { playingSong ->
+                            QueueBottomSheetModal(
+                                visible = fullPlayerOverlay == FullPlayerOverlay.Queue,
+                                onDismiss = { fullPlayerOverlay = FullPlayerOverlay.None },
+                                queue = queue,
+                                onFavouriteClicked = viewModel::changeFavouriteValue,
+                                currentSong = playingSong,
+                                playerHelper = playerHelper,
+                                onDrag = viewModel::onSongDrag,
+                                onQueueSongPlayNext = viewModel::moveQueueSongToPlayNext,
+                                onQueueSongAddToPlaylist = navHelper::navigateToChoosePlaylist,
+                                onQueueSongRemoveFromQueue = viewModel::removeSongFromQueue,
+                                onQueueSongOpenAlbum = { s ->
+                                    navHelper.navigateToAlbumByName(s.album)
+                                },
+                                onQueueSongEditTags = { song ->
+                                    if (!AudioFileActions.tryOpenAudioTagEditor(
+                                            context,
+                                            song.location,
+                                        )
+                                    ) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.player_action_no_editor_app),
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                    }
+                                },
+                                onQueueSongHide = viewModel::onSongBlacklist,
+                                onQueueSongDelete = viewModel::deleteSongFromDevice,
+                                onQueueSongRingtone = { song ->
+                                    if (AudioFileActions.setAsRingtone(context, song.location)) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.player_ringtone_ok),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.player_ringtone_failed),
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                    }
+                                },
+                                onQueueSongChangeCover = { song ->
+                                    if (!AudioFileActions.tryOpenAudioForCoverChange(
+                                            context,
+                                            song.location,
+                                        )
+                                    ) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.player_action_no_editor_app),
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                    }
+                                },
+                            )
+                            PlayerActionsSheetModal(
+                                visible = fullPlayerOverlay == FullPlayerOverlay.Actions,
+                                onDismiss = { fullPlayerOverlay = FullPlayerOverlay.None },
+                                song = playingSong,
+                                playbackParams = playbackParams,
+                                updatePlaybackParams = preferenceProvider::updatePlaybackParams,
+                                volumeBoosterPercent = volumeBoosterPercent,
+                                onVolumeBoosterPercentChange = preferenceProvider::updateVolumeBoosterPercent,
+                                keepScreenOn = keepScreenOn,
+                                onKeepScreenOnChange = preferenceProvider::updateKeepScreenOn,
+                                onSettingsClicked = {
+                                    fullPlayerOverlay = FullPlayerOverlay.None
+                                    navHelper.navigateToSettings()
+                                },
+                                onOpenAlbum = { navHelper.navigateToAlbumByName(playingSong.album) },
+                                onPlayerActionEditTags = { song ->
+                                    if (!AudioFileActions.tryOpenAudioTagEditor(
+                                            context,
+                                            song.location,
+                                        )
+                                    ) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.player_action_no_editor_app),
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                    }
+                                },
+                                onPlayerActionHideSong = { song ->
+                                    viewModel.onSongBlacklist(song)
+                                },
+                                onPlayerActionDeleteSong = { song ->
+                                    viewModel.deleteSongFromDevice(song)
+                                },
+                                onPlayerActionRingtone = { song ->
+                                    if (AudioFileActions.setAsRingtone(context, song.location)) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.player_ringtone_ok),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.player_ringtone_failed),
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                    }
+                                },
+                                onPlayerActionChangeCover = { song ->
+                                    if (!AudioFileActions.tryOpenAudioForCoverChange(
+                                            context,
+                                            song.location,
+                                        )
+                                    ) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.player_action_no_editor_app),
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                    }
                                 },
                             )
                         }

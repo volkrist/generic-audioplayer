@@ -48,6 +48,11 @@ class UserPreferencesSerializer @Inject constructor() : Serializer<UserPreferenc
             pauseOnHeadsetDisconnect = true
             playbackPrefsSeedVersion = 1
             lastBackupExportEpochMs = 0L
+            equalizerUiBandCount = 5
+            reverbPreset = 0
+            graphicWallpaperPreset = 0
+            graphicWallpaperCustomUri = ""
+            graphicThemeColorSlot = 0
         }
 
     override suspend fun readFrom(input: InputStream): UserPreferences =

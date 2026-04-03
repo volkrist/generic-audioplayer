@@ -25,8 +25,8 @@ import com.generic.audioplayes.data.QueueState
 import com.generic.audioplayes.data.QueueStateSerializer
 import com.generic.audioplayes.data.UserPreferences
 import com.generic.audioplayes.data.UserPreferencesSerializer
-import com.generic.audioplayes.data.ZenCrashReporter
-import com.generic.audioplayes.data.ZenPreferenceProvider
+import com.generic.audioplayes.data.AudioPlayerCrashReporter
+import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.music.SongExtractor
 import com.generic.audioplayes.data.services.AnalyticsService
 import com.generic.audioplayes.data.services.AnalyticsServiceImpl
@@ -48,7 +48,7 @@ import com.generic.audioplayes.data.services.SongService
 import com.generic.audioplayes.data.services.SongServiceImpl
 import com.generic.audioplayes.data.services.ThumbnailService
 import com.generic.audioplayes.data.services.ThumbnailServiceImpl
-import com.generic.audioplayes.player.ZenBroadcastReceiver
+import com.generic.audioplayes.player.AudioPlayerBroadcastReceiver
 import com.generic.audioplayes.util.MessageStore
 import com.generic.audioplayes.util.MessageStoreImpl
 import com.google.android.play.core.appupdate.AppUpdateManager
@@ -137,12 +137,12 @@ object AppModule {
 
     @Singleton
     @Provides
-    fun providesZenPreferencesDatastore(
+    fun providesAudioPlayerPreferencesDatastore(
         userPreferences: DataStore<UserPreferences>,
         coroutineScope: CoroutineScope,
-        crashReporter: ZenCrashReporter,
-    ): ZenPreferenceProvider {
-        return ZenPreferenceProvider(
+        crashReporter: AudioPlayerCrashReporter,
+    ): AudioPlayerPreferenceProvider {
+        return AudioPlayerPreferenceProvider(
             userPreferences = userPreferences,
             coroutineScope = coroutineScope,
             crashReporter = crashReporter,
@@ -151,20 +151,20 @@ object AppModule {
 
     @Singleton
     @Provides
-    fun providesZenCrashReporter(): ZenCrashReporter {
+    fun providesAudioPlayerCrashReporter(): AudioPlayerCrashReporter {
         val crashlytics = if (BuildConfig.DEBUG) {
             null
         } else {
             FirebaseCrashlytics.getInstance()
         }
-        return ZenCrashReporter(firebase = crashlytics)
+        return AudioPlayerCrashReporter(firebase = crashlytics)
     }
 
     @Singleton
     @Provides
     fun providesSongExtractor(
         @ApplicationContext context: Context,
-        crashReporter: ZenCrashReporter,
+        crashReporter: AudioPlayerCrashReporter,
         db: AppDatabase,
     ): SongExtractor {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -241,8 +241,8 @@ object AppModule {
     fun providesPlayerService(
         @ApplicationContext context: Context,
         queueService: QueueService,
-        preferenceProvider: ZenPreferenceProvider,
-        crashReporter: ZenCrashReporter,
+        preferenceProvider: AudioPlayerPreferenceProvider,
+        crashReporter: AudioPlayerCrashReporter,
     ): PlayerService {
         return PlayerServiceImpl(
             context = context,
@@ -312,10 +312,10 @@ object AppModule {
         return SleepTimerServiceImpl(
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
             closeIntent = PendingIntent.getBroadcast(
-                context, ZenBroadcastReceiver.CANCEL_ACTION_REQUEST_CODE,
+                context, AudioPlayerBroadcastReceiver.CANCEL_ACTION_REQUEST_CODE,
                 Intent(Constants.PACKAGE_NAME).putExtra(
-                    ZenBroadcastReceiver.AUDIO_CONTROL,
-                    ZenBroadcastReceiver.ZEN_PLAYER_CANCEL
+                    AudioPlayerBroadcastReceiver.AUDIO_CONTROL,
+                    AudioPlayerBroadcastReceiver.AUDIO_PLAYER_CANCEL
                 ),
                 PendingIntent.FLAG_IMMUTABLE
             ),
