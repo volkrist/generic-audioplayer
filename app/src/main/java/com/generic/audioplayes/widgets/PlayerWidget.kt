@@ -10,10 +10,10 @@ import androidx.core.net.toUri
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.ImageProvider as UriImageProvider
@@ -22,19 +22,18 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
+import androidx.glance.unit.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
-import androidx.glance.layout.wrapContentWidth
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -42,6 +41,8 @@ import com.generic.audioplayes.Constants
 import com.generic.audioplayes.MainActivity
 import com.generic.audioplayes.R
 import com.generic.audioplayes.player.AudioPlayerBroadcastReceiver
+
+private val MediumAlbumArtSize = 56.dp
 
 /**
  * Medium / resizable widget: artwork, title, artist, transport controls. Tap artwork or text to open the app.
@@ -78,9 +79,7 @@ object PlayerWidget : GlanceAppWidget() {
             PendingIntent.FLAG_IMMUTABLE,
         )
         provideContent {
-            GlanceTheme {
-                MediumWidgetContent()
-            }
+            MediumWidgetContent()
         }
     }
 
@@ -96,70 +95,149 @@ object PlayerWidget : GlanceAppWidget() {
         val title = currentState(titleKey) ?: ""
         val artist = currentState(artistKey) ?: ""
         val isPlaying = currentState(isPlayingKey) ?: false
+        val style = parseWidgetStyle()
+        val layoutFamily = style.layoutFamily()
+        val titleStyle = TextStyle(
+            color = ColorProvider(style.glanceOnWidgetTitleColor()),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        val artistStyle = TextStyle(
+            color = ColorProvider(style.glanceOnWidgetSubtitleColor()),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+        )
 
-        Row(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .then(widgetBackground())
-                .padding(12.dp),
-        ) {
-            Box(
-                modifier = GlanceModifier
-                    .wrapContentWidth()
-                    .fillMaxHeight()
-                    .then(albumCorner())
-                    .clickable(openApp),
-            ) {
-                Image(
-                    provider = UriImageProvider(imageUri.toUri()),
-                    contentDescription = null,
-                    modifier = GlanceModifier.fillMaxHeight(),
-                    contentScale = ContentScale.Fit,
-                )
-            }
-            Spacer(GlanceModifier.width(12.dp))
-            Column(modifier = GlanceModifier.fillMaxSize()) {
-                Box(modifier = GlanceModifier.fillMaxWidth().clickable(openApp)) {
-                    Column {
-                        Text(
-                            text = title,
-                            style = TextStyle(
-                                color = GlanceTheme.colors.onSecondaryContainer,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
-                            maxLines = 1,
-                        )
-                        Text(
-                            text = artist,
-                            style = TextStyle(
-                                color = GlanceTheme.colors.onSecondaryContainer,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                            ),
-                            maxLines = 1,
-                        )
-                    }
-                }
-                Spacer(GlanceModifier.height(8.dp))
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Vertical.CenterVertically,
+        val baseModifier = GlanceModifier
+            .fillMaxSize()
+            .then(widgetBackground(style))
+            .padding(12.dp)
+
+        when (layoutFamily) {
+            WidgetLayoutFamily.LITE_CENTER,
+            WidgetLayoutFamily.STANDARD_CENTER,
+            WidgetLayoutFamily.STYLISH_CENTER,
+            -> {
+                Column(
+                    modifier = baseModifier,
                     horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
                 ) {
-                    TransportControls(isPlaying = isPlaying)
+                    Row(
+                        modifier = GlanceModifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Vertical.CenterVertically,
+                        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+                    ) {
+                        MediumAlbumArt(
+                            imageUri = imageUri,
+                            style = style,
+                            openApp = openApp,
+                        )
+                        Spacer(GlanceModifier.width(12.dp))
+                        Column(horizontalAlignment = Alignment.Horizontal.Start) {
+                            Text(
+                                text = title,
+                                style = titleStyle,
+                                maxLines = 1,
+                                modifier = GlanceModifier.clickable(openApp),
+                            )
+                            Text(
+                                text = artist,
+                                style = artistStyle,
+                                maxLines = 1,
+                                modifier = GlanceModifier.clickable(openApp),
+                            )
+                        }
+                    }
+                    Spacer(GlanceModifier.height(8.dp))
+                    Row(
+                        modifier = GlanceModifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Vertical.CenterVertically,
+                        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+                    ) {
+                        TransportControls(isPlaying = isPlaying, style = style)
+                    }
+                }
+            }
+            else -> {
+                Row(modifier = baseModifier) {
+                    MediumAlbumArt(
+                        imageUri = imageUri,
+                        style = style,
+                        openApp = openApp,
+                    )
+                    Spacer(GlanceModifier.width(12.dp))
+                    Column(modifier = GlanceModifier.fillMaxSize()) {
+                        Box(modifier = GlanceModifier.fillMaxWidth().clickable(openApp)) {
+                            Column {
+                                Text(
+                                    text = title,
+                                    style = titleStyle,
+                                    maxLines = 1,
+                                )
+                                Text(
+                                    text = artist,
+                                    style = artistStyle,
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                        Spacer(GlanceModifier.height(8.dp))
+                        Row(
+                            modifier = GlanceModifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Vertical.CenterVertically,
+                            horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+                        ) {
+                            TransportControls(isPlaying = isPlaying, style = style)
+                        }
+                    }
                 }
             }
         }
     }
 
     @androidx.compose.runtime.Composable
-    private fun TransportControls(isPlaying: Boolean) {
+    private fun MediumAlbumArt(
+        imageUri: String,
+        style: WidgetStyle,
+        openApp: Action,
+    ) {
+        Box(
+            modifier = GlanceModifier
+                .width(MediumAlbumArtSize)
+                .height(MediumAlbumArtSize)
+                .then(mediumAlbumShape(style))
+                .clickable(openApp),
+        ) {
+            Image(
+                provider = albumArtProvider(imageUri),
+                contentDescription = null,
+                modifier = GlanceModifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        }
+    }
+
+    private fun albumArtProvider(imageUri: String): ImageProvider =
+        if (imageUri.isNotBlank()) UriImageProvider(imageUri.toUri())
+        else ImageProvider(R.drawable.ic_outline_music_note_40)
+
+    @androidx.compose.runtime.Composable
+    private fun mediumAlbumShape(style: WidgetStyle): GlanceModifier {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return GlanceModifier
+        return when (style.layoutFamily()) {
+            WidgetLayoutFamily.VINYL_ROW -> GlanceModifier.cornerRadius(MediumAlbumArtSize / 2)
+            else -> GlanceModifier.cornerRadius(16.dp)
+        }
+    }
+
+    @androidx.compose.runtime.Composable
+    private fun TransportControls(isPlaying: Boolean, style: WidgetStyle) {
+        val tint = ColorProvider(style.glanceOnWidgetIconTint())
         val mod = GlanceModifier.width(40.dp).height(40.dp)
         Image(
             provider = ImageProvider(R.drawable.ic_baseline_skip_previous_40),
             contentDescription = null,
-            colorFilter = ColorFilter.tint(GlanceTheme.colors.onSecondaryContainer),
+            colorFilter = ColorFilter.tint(tint),
             modifier = mod.clickable { pendingPreviousIntent.send() },
         )
         Spacer(GlanceModifier.width(6.dp))
@@ -168,35 +246,36 @@ object PlayerWidget : GlanceAppWidget() {
                 if (isPlaying) R.drawable.ic_baseline_pause_40 else R.drawable.ic_baseline_play_arrow_40,
             ),
             contentDescription = null,
-            colorFilter = ColorFilter.tint(GlanceTheme.colors.onSecondaryContainer),
+            colorFilter = ColorFilter.tint(tint),
             modifier = mod.clickable { pendingPausePlayIntent.send() },
         )
         Spacer(GlanceModifier.width(6.dp))
         Image(
             provider = ImageProvider(R.drawable.ic_baseline_skip_next_40),
             contentDescription = null,
-            colorFilter = ColorFilter.tint(GlanceTheme.colors.onSecondaryContainer),
+            colorFilter = ColorFilter.tint(tint),
             modifier = mod.clickable { pendingNextIntent.send() },
         )
     }
 
     @androidx.compose.runtime.Composable
-    private fun widgetBackground(): GlanceModifier {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            GlanceModifier
-                .cornerRadius(28.dp)
-                .background(GlanceTheme.colors.secondaryContainer)
-        } else {
-            GlanceModifier.background(ImageProvider(R.drawable.music_widget_background))
+    private fun parseWidgetStyle(): WidgetStyle {
+        val raw = currentState(widgetStyleKey) ?: ""
+        return try {
+            WidgetStyle.valueOf(raw)
+        } catch (_: Exception) {
+            WidgetStyle.CLASSIC
         }
     }
 
     @androidx.compose.runtime.Composable
-    private fun albumCorner(): GlanceModifier {
+    private fun widgetBackground(style: WidgetStyle): GlanceModifier {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            GlanceModifier.cornerRadius(16.dp)
-        } else {
             GlanceModifier
+                .cornerRadius(28.dp)
+                .background(ColorProvider(style.glanceBackgroundColor()))
+        } else {
+            GlanceModifier.background(ImageProvider(R.drawable.music_widget_background))
         }
     }
 }

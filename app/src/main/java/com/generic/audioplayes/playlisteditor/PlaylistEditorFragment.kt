@@ -144,17 +144,10 @@ class PlaylistEditorFragment : Fragment() {
                             }
                         },
                         onPlayerActionEditTags = { song ->
-                            if (!AudioFileActions.tryOpenAudioTagEditor(
-                                    context,
-                                    song.location,
-                                )
-                            ) {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.player_action_no_editor_app),
-                                    Toast.LENGTH_LONG,
-                                ).show()
-                            }
+                            navController.navigate(
+                                PlaylistEditorFragmentDirections
+                                    .actionPlaylistEditorFragmentToTagEditorFragment(song.location),
+                            )
                         },
                         onPlayerActionHideSong = homeViewModel::onSongBlacklist,
                         onPlayerActionDeleteSong = homeViewModel::deleteSongFromDevice,
@@ -174,17 +167,10 @@ class PlaylistEditorFragment : Fragment() {
                             }
                         },
                         onPlayerActionChangeCover = { song ->
-                            if (!AudioFileActions.tryOpenAudioForCoverChange(
-                                    context,
-                                    song.location,
-                                )
-                            ) {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.player_action_no_editor_app),
-                                    Toast.LENGTH_LONG,
-                                ).show()
-                            }
+                            navController.navigate(
+                                PlaylistEditorFragmentDirections
+                                    .actionPlaylistEditorFragmentToTagEditorFragment(song.location),
+                            )
                         },
                         onRemoveFromPlaylist = { song ->
                             viewModel.removeSong(song.location)

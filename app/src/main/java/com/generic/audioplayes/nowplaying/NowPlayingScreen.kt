@@ -39,7 +39,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -110,7 +113,10 @@ import coil.compose.AsyncImage
 import com.generic.audioplayes.R
 import com.generic.audioplayes.data.UserPreferences.PlaybackParams
 import com.generic.audioplayes.data.music.Song
-import com.generic.audioplayes.round
+import com.generic.audioplayes.PLAYBACK_MULTIPLIER_MAX
+import com.generic.audioplayes.PLAYBACK_MULTIPLIER_MIN
+import com.generic.audioplayes.percentToPlaybackMultiplier
+import com.generic.audioplayes.snapPlaybackParamPercent
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
@@ -169,7 +175,11 @@ fun NowPlayingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.systemBars)
+            .windowInsetsPadding(
+                WindowInsets.statusBars
+                    .union(WindowInsets.displayCutout)
+                    .union(WindowInsets.navigationBars),
+            )
             .padding(paddingValues),
     ) {
         NowPlayingFullPlayerBackground()
@@ -1002,8 +1012,12 @@ fun PlaybackSpeedAndPitchController(
         tint = MaterialTheme.colorScheme.onSurface
     )
     if (showDialog) {
-        var newSpeed by remember { mutableStateOf((speed.toFloat() / 100).round(2)) }
-        var newPitch by remember { mutableStateOf((pitch.toFloat() / 100).round(2)) }
+        var newSpeed by remember {
+            mutableStateOf(percentToPlaybackMultiplier(speed))
+        }
+        var newPitch by remember {
+            mutableStateOf(percentToPlaybackMultiplier(pitch))
+        }
         AlertDialog(
             onDismissRequest = { showDialog = false },
             confirmButton = {
@@ -1011,8 +1025,8 @@ fun PlaybackSpeedAndPitchController(
                     onClick = {
                         showDialog = false
                         updatePlaybackParams(
-                            newSpeed.times(100).toInt(),
-                            newPitch.times(100).toInt()
+                            snapPlaybackParamPercent(newSpeed),
+                            snapPlaybackParamPercent(newPitch),
                         )
                     },
                     content = {
@@ -1035,7 +1049,10 @@ fun PlaybackSpeedAndPitchController(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = stringResource(R.string.speed_x, newSpeed),
+                            text = stringResource(
+                                R.string.speed_x,
+                                String.format(Locale.US, "%.2f", newSpeed),
+                            ),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.alignByBaseline()
                         )
@@ -1049,16 +1066,21 @@ fun PlaybackSpeedAndPitchController(
                     }
                     Slider(
                         value = newSpeed,
-                        onValueChange = { newSpeed = it.round(2) },
-                        valueRange = 0.01f..2.0f,
-                        steps = 20,
+                        onValueChange = { raw ->
+                            newSpeed = (kotlin.math.round(raw * 100.0) / 100.0).toFloat()
+                                .coerceIn(PLAYBACK_MULTIPLIER_MIN, PLAYBACK_MULTIPLIER_MAX)
+                        },
+                        valueRange = PLAYBACK_MULTIPLIER_MIN..PLAYBACK_MULTIPLIER_MAX,
                     )
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            text = stringResource(R.string.pitch_x, newPitch),
+                            text = stringResource(
+                                R.string.pitch_x,
+                                String.format(Locale.US, "%.2f", newPitch),
+                            ),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.alignByBaseline()
                         )
@@ -1072,9 +1094,11 @@ fun PlaybackSpeedAndPitchController(
                     }
                     Slider(
                         value = newPitch,
-                        onValueChange = { newPitch = it.round(2) },
-                        valueRange = 0.01f..2.0f,
-                        steps = 20,
+                        onValueChange = { raw ->
+                            newPitch = (kotlin.math.round(raw * 100.0) / 100.0).toFloat()
+                                .coerceIn(PLAYBACK_MULTIPLIER_MIN, PLAYBACK_MULTIPLIER_MAX)
+                        },
+                        valueRange = PLAYBACK_MULTIPLIER_MIN..PLAYBACK_MULTIPLIER_MAX,
                     )
                 }
             }

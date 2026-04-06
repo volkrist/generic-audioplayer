@@ -73,4 +73,20 @@ message UserPreferences {
   string graphic_wallpaper_custom_uri = 28;
   // Index in the graphic theme color grid (0..14)
   int32 graphic_theme_color_slot = 29;
+
+  /** Home-screen player widget / mini-player / media notification visual style (see WidgetStyle.kt). */
+  enum WidgetStyle {
+    WIDGET_STYLE_CLASSIC = 0;
+    WIDGET_STYLE_LITE = 1;
+    WIDGET_STYLE_VINYL = 2;
+    WIDGET_STYLE_SIMPLE = 3;
+    WIDGET_STYLE_ROUND = 4;
+    WIDGET_STYLE_MINI = 5;
+    WIDGET_STYLE_STANDARD = 6;
+    WIDGET_STYLE_CARD = 7;
+    WIDGET_STYLE_PRACTICAL = 8;
+    WIDGET_STYLE_STYLISH = 9;
+    WIDGET_STYLE_ICON = 10;
+  }
+  WidgetStyle chosen_widget_style = 30;
 }

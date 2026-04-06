@@ -268,6 +268,12 @@ class AudioPlayerBackupService @Inject constructor(
                 if (pref.has("graphicThemeColorSlot")) {
                     graphicThemeColorSlot = pref.optInt("graphicThemeColorSlot").coerceIn(0, 14)
                 }
+                if (pref.has("chosenWidgetStyle")) {
+                    parseEnum(
+                        pref.optString("chosenWidgetStyle"),
+                        UserPreferences.WidgetStyle.values(),
+                    )?.let { chosenWidgetStyle = it }
+                }
                 // Intentionally not restoring: sleep_timer_*, crashlytics, onboarding, queue, seed versions
             }
         }
@@ -310,5 +316,6 @@ class AudioPlayerBackupService @Inject constructor(
         put("graphicWallpaperPreset", prefs.graphicWallpaperPreset)
         put("graphicWallpaperCustomUri", prefs.graphicWallpaperCustomUri)
         put("graphicThemeColorSlot", prefs.graphicThemeColorSlot)
+        put("chosenWidgetStyle", prefs.chosenWidgetStyle.name)
     }
 }

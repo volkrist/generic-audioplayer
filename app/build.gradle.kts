@@ -119,6 +119,7 @@ dependencies {
     implementation(Libraries.androidxCore)
 
     implementation(Libraries.androidxLifecycle)
+    implementation(Libraries.androidxLifecycleProcess)
     implementation(Libraries.androidxLifecycleRuntimeCompose)
 
     implementation(Libraries.androidxActivityCompose)
@@ -184,6 +185,7 @@ dependencies {
     implementation(Libraries.lottie)
 
     implementation(Libraries.crashActivity)
+    implementation(Libraries.jaudiotagger)
 
     testImplementation(Libraries.mockk)
     testImplementation(Libraries.coroutinesTest)

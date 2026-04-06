@@ -137,7 +137,7 @@ class SearchFragment : Fragment() {
     }
 
     private fun handleSongClick(song: Song) {
-        viewModel.setQueue(listOf(song))
+        viewModel.playSongFromSearchResults(song)
     }
 
     private fun handleAlbumClick(album: Album) {

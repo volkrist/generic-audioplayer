@@ -19,6 +19,7 @@ import com.generic.audioplayes.data.daos.ComposerDao
 import com.generic.audioplayes.data.daos.GenreDao
 import com.generic.audioplayes.data.daos.LyricistDao
 import com.generic.audioplayes.data.daos.SongDao
+import com.generic.audioplayes.util.sortedByFolderPlaybackOrder
 import com.generic.audioplayes.formatToDate
 import com.generic.audioplayes.toMBfromB
 import com.generic.audioplayes.toMS
@@ -226,7 +227,7 @@ class SongExtractor(
         } while (cursor.moveToNext())
         val songs = dSongs.awaitAll().filterNotNull()
         cursor.close()
-        return songs
+        return songs.sortedByFolderPlaybackOrder()
     }
 
     /**
@@ -290,7 +291,7 @@ class SongExtractor(
         } while (cursor.moveToNext())
         val songs = dSongs.awaitAll().filterNotNull()
         cursor.close()
-        return songs
+        return songs.sortedByFolderPlaybackOrder()
     }
 
     fun extractMini(folderPath: String? = null): List<MiniSong> {
@@ -348,7 +349,7 @@ class SongExtractor(
             }
         } while (cursor.moveToNext())
         cursor.close()
-        return songs
+        return songs.sortedByFolderPlaybackOrder()
     }
 
     /**

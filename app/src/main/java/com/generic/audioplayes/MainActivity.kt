@@ -112,7 +112,11 @@ class MainActivity : AppCompatActivity() {
                     SessionToken(this@MainActivity, ComponentName(this@MainActivity, AudioPlayerService::class.java)),
                 ).buildAsync().await()
                 withContext(Dispatchers.Main) {
-                    playerWidgetManager.syncWidgetState(song, controller.isPlaying)
+                    playerWidgetManager.syncWidgetState(
+                        song,
+                        controller.isPlaying,
+                        preferenceProvider.widgetStyle.value,
+                    )
                 }
             } catch (e: Exception) {
                 crashReporter.logException(e)

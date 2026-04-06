@@ -92,6 +92,13 @@
             app:exitAnim="@anim/ap_open_exit"
             app:popEnterAnim="@anim/ap_close_enter"
             app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_homeFragment_to_tagEditorFragment"
+            app:destination="@id/tagEditorFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
     </fragment>
     <fragment
         android:id="@+id/collectionFragment"
@@ -177,6 +184,13 @@
         <action
             android:id="@+id/action_collectionFragment_to_playlistEditorFragment"
             app:destination="@id/playlistEditorFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_collectionFragment_to_tagEditorFragment"
+            app:destination="@id/tagEditorFragment"
             app:enterAnim="@anim/ap_open_enter"
             app:exitAnim="@anim/ap_open_exit"
             app:popEnterAnim="@anim/ap_close_enter"
@@ -301,6 +315,13 @@
             app:exitAnim="@anim/ap_open_exit"
             app:popEnterAnim="@anim/ap_close_enter"
             app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_searchFragment_to_tagEditorFragment"
+            app:destination="@id/tagEditorFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
     </fragment>
     <fragment
         android:id="@+id/backupRestoreFragment"
@@ -378,6 +399,13 @@
             app:exitAnim="@anim/ap_open_exit"
             app:popEnterAnim="@anim/ap_close_enter"
             app:popExitAnim="@anim/ap_close_exit" />
+        <action
+            android:id="@+id/action_playlistEditorFragment_to_tagEditorFragment"
+            app:destination="@id/tagEditorFragment"
+            app:enterAnim="@anim/ap_open_enter"
+            app:exitAnim="@anim/ap_open_exit"
+            app:popEnterAnim="@anim/ap_close_enter"
+            app:popExitAnim="@anim/ap_close_exit" />
     </fragment>
     <fragment
         android:id="@+id/addSongsToPlaylistFragment"
@@ -386,5 +414,13 @@
         <argument
             android:name="playlistId"
             app:argType="long" />
+    </fragment>
+    <fragment
+        android:id="@+id/tagEditorFragment"
+        android:name="com.generic.audioplayes.tags.TagEditorFragment"
+        android:label="TagEditorFragment" >
+        <argument
+            android:name="songPath"
+            app:argType="string" />
     </fragment>
 </navigation>

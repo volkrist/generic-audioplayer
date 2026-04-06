@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -37,12 +39,15 @@ fun MusicSlider(
     timeLabelColor: Color = Color.Unspecified,
 ) {
     var currentValue by remember { mutableStateOf(playerHelper.currentPosition.toLong()) }
+    /** While true, do not sync from player — allows smooth thumb drag without fighting the UI. */
+    var isDragging by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         val listener = object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 super.onMediaItemTransition(mediaItem, reason)
                 currentValue = 0L
+                isDragging = false
             }
         }
         playerHelper.addListener(listener)
@@ -50,16 +55,19 @@ fun MusicSlider(
             playerHelper.removeListener(listener)
         }
     }
-    if (currentSongPlaying == true) {
-        LaunchedEffect(Unit) {
+
+    LaunchedEffect(currentSongPlaying, song.location, isDragging) {
+        if (isDragging) return@LaunchedEffect
+        if (currentSongPlaying == true) {
             while (true) {
                 currentValue = playerHelper.currentPosition.toLong()
                 delay(33)
             }
+        } else {
+            currentValue = playerHelper.currentPosition.toLong()
         }
-    } else {
-        currentValue = playerHelper.currentPosition.toLong()
     }
+
     val primaryColor = MaterialTheme.colorScheme.primary
     val resolvedLabelColor =
         if (timeLabelColor == Color.Unspecified) MaterialTheme.colorScheme.onSurface else timeLabelColor
@@ -83,11 +91,12 @@ fun MusicSlider(
                             }
 
                             override fun onStartTrackingTouch(seekBar: SeekBar?) {
-
+                                isDragging = true
                             }
 
                             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                                 playerHelper.seekTo(currentValue)
+                                isDragging = false
                             }
                         }
                     )
@@ -108,10 +117,15 @@ fun MusicSlider(
                 }
             },
             update = { seekBar ->
-                seekBar.max = duration.toInt()
-                seekBar.progress = currentValue.toInt()
+                val maxDur = duration.toInt().coerceAtLeast(1)
+                seekBar.max = maxDur
+                if (!isDragging) {
+                    seekBar.progress = currentValue.toInt().coerceIn(0, seekBar.max)
+                }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
         )
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,

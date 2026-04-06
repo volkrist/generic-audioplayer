@@ -7,6 +7,9 @@ import com.generic.audioplayes.data.UserPreferences.EqualizerPreset
 import com.generic.audioplayes.data.UserPreferences.PlaybackParams
 import com.generic.audioplayes.equalizer.EqualizerPresetHelper
 import com.generic.audioplayes.ui.theme.ThemePreference
+import com.generic.audioplayes.widgets.WidgetStyle
+import com.generic.audioplayes.widgets.toProto
+import com.generic.audioplayes.widgets.toUiWidgetStyle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -291,6 +294,25 @@ class AudioPlayerPreferenceProvider @Inject constructor(
         .map { it.showOnLockScreen }
         .stateIn(coroutineScope, SharingStarted.Eagerly, true)
 
+    /** In-app mini player, media notification palette, and home widget visual style. */
+    val widgetStyle: StateFlow<WidgetStyle> = userPreferences.data
+        .map { it.chosenWidgetStyle.toUiWidgetStyle() }
+        .stateIn(
+            scope = coroutineScope,
+            started = SharingStarted.Eagerly,
+            initialValue = WidgetStyle.CLASSIC,
+        )
+
+    fun updateWidgetStyle(style: WidgetStyle) {
+        coroutineScope.launch {
+            userPreferences.updateData {
+                it.copy {
+                    chosenWidgetStyle = style.toProto()
+                }
+            }
+        }
+    }
+
     val pauseOnHeadsetDisconnect: StateFlow<Boolean> = userPreferences.data
         .map { it.pauseOnHeadsetDisconnect }
         .stateIn(coroutineScope, SharingStarted.Eagerly, true)
@@ -468,6 +490,7 @@ class AudioPlayerPreferenceProvider @Inject constructor(
             launch { genreSortOrder.collect {  } }
             launch { folderSortOrder.collect {  } }
             launch { sortOrder.collect {  } }
+            launch { widgetStyle.collect { } }
         }
         coroutineScope.launch {
             delay(1.minutes)

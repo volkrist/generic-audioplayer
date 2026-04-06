@@ -173,6 +173,15 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
                 withContext(Dispatchers.Main) { exoPlayer.repeatMode = it.toExoPlayerRepeatMode() }
             }
         }
+        scope.launch {
+            preferencesProvider.widgetStyle.collect {
+                withContext(Dispatchers.Main) {
+                    queueService.getSongAtIndex(exoPlayer.currentMediaItemIndex)?.let { song ->
+                        updateNotification(song.favourite)
+                    }
+                }
+            }
+        }
 
         setMediaNotificationProvider(playerNotificationManager)
     }
@@ -190,7 +199,7 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
                 queueService.setCurrentSong(exoPlayer.currentMediaItemIndex)
                 queueService.getSongAtIndex(exoPlayer.currentMediaItemIndex)?.let { song ->
                     updateNotification(song.favourite)
-                    playerWidgetManager.notifySongChanged(song)
+                    playerWidgetManager.notifySongChanged(song, preferencesProvider.widgetStyle.value)
                 }
             } catch (e: Exception) {
                 Timber.e(e)
@@ -280,6 +289,13 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
         isRunning.set(false)
         mainHandler.removeCallbacks(debouncedSaveRunnable)
         mainHandler.removeCallbacks(periodicSaveRunnable)
+        // Pause before snapshot so wasPlaying=false and position matches where playback stopped
+        // (sleep timer / notification close should resume from this point, not "still playing").
+        try {
+            exoPlayer.pause()
+        } catch (e: Exception) {
+            crashReporter.logException(e)
+        }
         val snapshot = readQueuePersistSnapshotOnMain()
         if (snapshot != null) {
             runBlocking(Dispatchers.IO) {
@@ -319,12 +335,13 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
     }
 
     private fun updateNotification(isLiked: Boolean) {
+        // Order: transport first so compact notification (first 3 slots) is prev | play/pause | next.
         mediaSession.setCustomLayout(
             listOf(
-                if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked,
                 AudioPlayerCommandButtons.previous,
                 AudioPlayerCommandButtons.playPause,
                 AudioPlayerCommandButtons.next,
+                if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked,
                 AudioPlayerCommandButtons.cancel
             )
         )
@@ -481,6 +498,10 @@ fun Song.toMediaItem(): MediaItem {
                 setArtworkUri(this@toMediaItem.artUri?.toUri())
                 setTitle(this@toMediaItem.title)
                 setArtist(this@toMediaItem.artist)
+                val album = this@toMediaItem.album.trim()
+                if (album.isNotEmpty() && album != "Unknown") {
+                    setAlbumTitle(album)
+                }
                 setIsBrowsable(false)
                 setIsPlayable(true)
             }.build()

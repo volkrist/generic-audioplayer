@@ -65,6 +65,27 @@ class MusicFileExplorer(
         listeners.forEach { it.onDirectoryChanged(currentPath, DirectoryContents(directories,songs)) }
     }
 
+    /** If [oldPath] was renamed to [newPath], keep browsing consistent when inside that tree. */
+    fun adjustCurrentPathAfterFolderRename(oldPath: String, newPath: String) {
+        if (currentPath == oldPath) {
+            currentPath = newPath
+            return
+        }
+        val sep = File.separator
+        if (currentPath.startsWith(oldPath + sep)) {
+            currentPath = newPath + currentPath.substring(oldPath.length)
+        }
+    }
+
+    fun refreshCurrentDirectory() {
+        val directory = File(currentPath)
+        if (!directory.exists() || !directory.isDirectory) return
+        val directories = (directory.listFiles(filterDirectories) ?: arrayOf()).map {
+            Directory(name = it.name, absolutePath = it.absolutePath)
+        }
+        val songs = songExtractor.extractMini(currentPath)
+        listeners.forEach { it.onDirectoryChanged(currentPath, DirectoryContents(directories, songs)) }
+    }
 
     interface DirectoryChangeListener {
         fun onDirectoryChanged(path: String, files: DirectoryContents)

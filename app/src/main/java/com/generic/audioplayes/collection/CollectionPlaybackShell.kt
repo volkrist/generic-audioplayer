@@ -95,6 +95,7 @@ fun CollectionPlaybackShell(
     val playbackParams by preferenceProvider.playbackParams.collectAsStateWithLifecycle()
     val keepScreenOn by preferenceProvider.keepScreenOn.collectAsStateWithLifecycle()
     val volumeBoosterPercent by preferenceProvider.volumeBoosterPercent.collectAsStateWithLifecycle()
+    val widgetStyle by preferenceProvider.widgetStyle.collectAsStateWithLifecycle()
 
     val miniPlayerPeekProgress by remember {
         derivedStateOf {
@@ -210,6 +211,7 @@ fun CollectionPlaybackShell(
                                     onQueueClick = expandQueueBottomSheet,
                                     song = currentSong,
                                     showPlayButton = songPlaying == false,
+                                    widgetStyle = widgetStyle,
                                     modifier = Modifier.fillMaxWidth(),
                                     onExpandPlayer = expandFullPlayer,
                                 )
@@ -303,19 +305,7 @@ fun CollectionPlaybackShell(
                             volumeBoosterPercent = volumeBoosterPercent,
                             onVolumeBoosterPercentChange = preferenceProvider::updateVolumeBoosterPercent,
                             onSettingsClicked = navHelper::navigateToSettings,
-                            onPlayerActionEditTags = { song ->
-                                if (!AudioFileActions.tryOpenAudioTagEditor(
-                                        context,
-                                        song.location,
-                                    )
-                                ) {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.player_action_no_editor_app),
-                                        Toast.LENGTH_LONG,
-                                    ).show()
-                                }
-                            },
+                            onPlayerActionEditTags = navHelper::navigateToTagEditor,
                             onPlayerActionHideSong = homeViewModel::onSongBlacklist,
                             onPlayerActionDeleteSong = homeViewModel::deleteSongFromDevice,
                             onPlayerActionRingtone = { song ->
@@ -366,19 +356,7 @@ fun CollectionPlaybackShell(
                 onQueueSongAddToPlaylist = navHelper::navigateToChoosePlaylist,
                 onQueueSongRemoveFromQueue = homeViewModel::removeSongFromQueue,
                 onQueueSongOpenAlbum = { s -> navHelper.navigateToAlbumByName(s.album) },
-                onQueueSongEditTags = { song ->
-                    if (!AudioFileActions.tryOpenAudioTagEditor(
-                            context,
-                            song.location,
-                        )
-                    ) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.player_action_no_editor_app),
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
-                },
+                onQueueSongEditTags = navHelper::navigateToTagEditor,
                 onQueueSongHide = homeViewModel::onSongBlacklist,
                 onQueueSongDelete = homeViewModel::deleteSongFromDevice,
                 onQueueSongRingtone = { song ->
@@ -396,19 +374,7 @@ fun CollectionPlaybackShell(
                         ).show()
                     }
                 },
-                onQueueSongChangeCover = { song ->
-                    if (!AudioFileActions.tryOpenAudioForCoverChange(
-                            context,
-                            song.location,
-                        )
-                    ) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.player_action_no_editor_app),
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
-                },
+                onQueueSongChangeCover = navHelper::navigateToTagEditor,
             )
             PlayerActionsSheetModal(
                 visible = fullPlayerOverlay == CollectionPlaybackOverlay.Actions,
@@ -455,19 +421,7 @@ fun CollectionPlaybackShell(
                         ).show()
                     }
                 },
-                onPlayerActionChangeCover = { song ->
-                    if (!AudioFileActions.tryOpenAudioForCoverChange(
-                            context,
-                            song.location,
-                        )
-                    ) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.player_action_no_editor_app),
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
-                },
+                onPlayerActionChangeCover = navHelper::navigateToTagEditor,
             )
         }
     }

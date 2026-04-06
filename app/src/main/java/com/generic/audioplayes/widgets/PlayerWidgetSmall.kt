@@ -10,7 +10,6 @@ import androidx.core.net.toUri
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
@@ -22,6 +21,7 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
+import androidx.glance.unit.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -76,9 +76,7 @@ object PlayerWidgetSmall : GlanceAppWidget() {
             PendingIntent.FLAG_IMMUTABLE,
         )
         provideContent {
-            GlanceTheme {
-                SmallWidgetContent()
-            }
+            SmallWidgetContent()
         }
     }
 
@@ -92,12 +90,17 @@ object PlayerWidgetSmall : GlanceAppWidget() {
         )
         val imageUri = currentState(imageUriKey) ?: ""
         val title = currentState(titleKey) ?: ""
+        val artist = currentState(artistKey) ?: ""
         val isPlaying = currentState(isPlayingKey) ?: false
+        val style = parseWidgetStyle()
+        val titleColor = ColorProvider(style.glanceOnWidgetTitleColor())
+        val subtitleColor = ColorProvider(style.glanceOnWidgetSubtitleColor())
+        val iconTint = ColorProvider(style.glanceOnWidgetIconTint())
 
         Row(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .then(smallBackground())
+                .then(smallBackground(style))
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.Vertical.CenterVertically,
         ) {
@@ -105,14 +108,14 @@ object PlayerWidgetSmall : GlanceAppWidget() {
                 modifier = GlanceModifier
                     .width(40.dp)
                     .height(40.dp)
-                    .then(smallAlbumCorner())
+                    .then(smallAlbumCorner(style))
                     .clickable(openApp),
             ) {
                 Image(
-                    provider = if (imageUri.isNotEmpty()) {
+                    provider = if (imageUri.isNotBlank()) {
                         UriImageProvider(imageUri.toUri())
                     } else {
-                        ImageProvider(R.drawable.ic_launcher_foreground)
+                        ImageProvider(R.drawable.ic_outline_music_note_40)
                     },
                     contentDescription = null,
                     modifier = GlanceModifier.fillMaxSize(),
@@ -130,11 +133,28 @@ object PlayerWidgetSmall : GlanceAppWidget() {
                         maxLines = 1,
                         modifier = GlanceModifier.fillMaxWidth().clickable(openApp),
                         style = TextStyle(
-                            color = GlanceTheme.colors.onSecondaryContainer,
+                            color = titleColor,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                         ),
                     )
+                }
+                if (title.isNotEmpty() && artist.isNotEmpty()) {
+                    Spacer(GlanceModifier.height(2.dp))
+                }
+                if (artist.isNotEmpty()) {
+                    Text(
+                        text = artist,
+                        maxLines = 1,
+                        modifier = GlanceModifier.fillMaxWidth().clickable(openApp),
+                        style = TextStyle(
+                            color = subtitleColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Normal,
+                        ),
+                    )
+                }
+                if (title.isNotEmpty() || artist.isNotEmpty()) {
                     Spacer(GlanceModifier.height(4.dp))
                 }
                 Row(
@@ -146,7 +166,7 @@ object PlayerWidgetSmall : GlanceAppWidget() {
                     Image(
                         provider = ImageProvider(R.drawable.ic_baseline_skip_previous_40),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(GlanceTheme.colors.onSecondaryContainer),
+                        colorFilter = ColorFilter.tint(iconTint),
                         modifier = mod.clickable { pendingPreviousIntent.send() },
                     )
                     Spacer(GlanceModifier.width(6.dp))
@@ -155,14 +175,14 @@ object PlayerWidgetSmall : GlanceAppWidget() {
                             if (isPlaying) R.drawable.ic_baseline_pause_40 else R.drawable.ic_baseline_play_arrow_40,
                         ),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(GlanceTheme.colors.onSecondaryContainer),
+                        colorFilter = ColorFilter.tint(iconTint),
                         modifier = mod.clickable { pendingPausePlayIntent.send() },
                     )
                     Spacer(GlanceModifier.width(6.dp))
                     Image(
                         provider = ImageProvider(R.drawable.ic_baseline_skip_next_40),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(GlanceTheme.colors.onSecondaryContainer),
+                        colorFilter = ColorFilter.tint(iconTint),
                         modifier = mod.clickable { pendingNextIntent.send() },
                     )
                 }
@@ -171,22 +191,32 @@ object PlayerWidgetSmall : GlanceAppWidget() {
     }
 
     @androidx.compose.runtime.Composable
-    private fun smallBackground(): GlanceModifier {
+    private fun parseWidgetStyle(): WidgetStyle {
+        val raw = currentState(widgetStyleKey) ?: ""
+        return try {
+            WidgetStyle.valueOf(raw)
+        } catch (_: Exception) {
+            WidgetStyle.CLASSIC
+        }
+    }
+
+    @androidx.compose.runtime.Composable
+    private fun smallBackground(style: WidgetStyle): GlanceModifier {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             GlanceModifier
                 .cornerRadius(24.dp)
-                .background(GlanceTheme.colors.secondaryContainer)
+                .background(ColorProvider(style.glanceBackgroundColor()))
         } else {
             GlanceModifier.background(ImageProvider(R.drawable.music_widget_background))
         }
     }
 
     @androidx.compose.runtime.Composable
-    private fun smallAlbumCorner(): GlanceModifier {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            GlanceModifier.cornerRadius(8.dp)
-        } else {
-            GlanceModifier
+    private fun smallAlbumCorner(style: WidgetStyle): GlanceModifier {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return GlanceModifier
+        return when (style.layoutFamily()) {
+            WidgetLayoutFamily.VINYL_ROW -> GlanceModifier.cornerRadius(20.dp)
+            else -> GlanceModifier.cornerRadius(8.dp)
         }
     }
 }

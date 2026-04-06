@@ -5,6 +5,9 @@ import android.graphics.Bitmap
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.work.HiltWorkerFactory
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -14,12 +17,17 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.generic.audioplayes.BuildConfig
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.data.services.PlayerService
 import com.generic.audioplayes.data.services.SleepTimerService
 import com.generic.audioplayes.equalizer.EqualizerManager
 import com.generic.audioplayes.volume.VolumeBoosterManager
 import com.generic.audioplayes.workers.ThumbnailWorker
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -34,6 +42,10 @@ class AudioPlayerApp: Application(), ImageLoaderFactory, Configuration.Provider 
     @Inject lateinit var volumeBoosterManager: VolumeBoosterManager
 
     @Inject lateinit var preferenceProvider: AudioPlayerPreferenceProvider
+
+    @Inject lateinit var playerService: PlayerService
+
+    private val processLifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
@@ -65,6 +77,19 @@ class AudioPlayerApp: Application(), ImageLoaderFactory, Configuration.Provider 
 
         WorkManager.getInstance(this)
             .enqueue(OneTimeWorkRequestBuilder<ThumbnailWorker>().build())
+
+        // Persist queue + position whenever the app leaves the foreground (not only on sleep timer / service stop).
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStop(owner: LifecycleOwner) {
+                processLifecycleScope.launch {
+                    try {
+                        playerService.persistPlaybackSnapshotToDisk()
+                    } catch (e: Exception) {
+                        Timber.e(e, "persistPlaybackSnapshotToDisk")
+                    }
+                }
+            }
+        })
     }
 
     override fun newImageLoader(): ImageLoader {

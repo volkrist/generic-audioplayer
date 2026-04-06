@@ -60,20 +60,6 @@ fun MiniPlayButton(modifier: Modifier = Modifier, paused: Boolean = false) {
     }
 }
 
-enum class WidgetStyle {
-    CLASSIC,
-    LITE,
-    VINYL,
-    SIMPLE,
-    ROUND,
-    MINI,
-    STANDARD,
-    CARD,
-    PRACTICAL,
-    STYLISH,
-    ICON,
-}
-
 @Composable
 fun WidgetStylePreview(style: WidgetStyle, modifier: Modifier = Modifier) {
     when (style) {

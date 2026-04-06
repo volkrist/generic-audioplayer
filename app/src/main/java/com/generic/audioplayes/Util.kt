@@ -13,6 +13,20 @@ fun Float.round(decimals: Int): Float {
     return round(this * multiplier) / multiplier
 }
 
+/** Stored as percent×100: 100 = 1.0×, 200 = 2.0×, min 25 = 0.25×. */
+const val PLAYBACK_PARAM_MIN_PERCENT = 25
+const val PLAYBACK_PARAM_MAX_PERCENT = 200
+
+val PLAYBACK_MULTIPLIER_MIN: Float = PLAYBACK_PARAM_MIN_PERCENT / 100f
+val PLAYBACK_MULTIPLIER_MAX: Float = PLAYBACK_PARAM_MAX_PERCENT / 100f
+
+/** Snap float multiplier (e.g. 1.23×) to stored percent 1..200. */
+fun snapPlaybackParamPercent(multiplier: Float): Int =
+    round(multiplier * 100.0).toInt().coerceIn(PLAYBACK_PARAM_MIN_PERCENT, PLAYBACK_PARAM_MAX_PERCENT)
+
+fun percentToPlaybackMultiplier(percent: Int): Float =
+    percent.coerceIn(PLAYBACK_PARAM_MIN_PERCENT, PLAYBACK_PARAM_MAX_PERCENT) / 100f
+
 fun Float.toMBfromB(): String{
     val mb = this/(1024*1024)
     return "${mb.round(2)} MB"

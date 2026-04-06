@@ -8,7 +8,6 @@ import java.util.Locale
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,18 +76,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.generic.audioplayes.R
+import com.generic.audioplayes.PLAYBACK_MULTIPLIER_MAX
+import com.generic.audioplayes.PLAYBACK_MULTIPLIER_MIN
+import com.generic.audioplayes.PLAYBACK_PARAM_MAX_PERCENT
+import com.generic.audioplayes.PLAYBACK_PARAM_MIN_PERCENT
 import com.generic.audioplayes.data.UserPreferences.PlaybackParams
 import com.generic.audioplayes.data.music.Song
+import com.generic.audioplayes.snapPlaybackParamPercent
 import com.generic.audioplayes.ui.theme.UiTokens
 import kotlin.math.roundToInt
-
-private val playbackSpeedPresets: List<Pair<String, Int>> = listOf(
-    "0.75×" to 75,
-    "1×" to 100,
-    "1.25×" to 125,
-    "1.5×" to 150,
-    "2×" to 200,
-)
 
 private val volumeBoosterPresets: List<Int> = listOf(125, 150, 175, 200)
 
@@ -204,7 +200,7 @@ private fun PlayerActionsSheetContent(
     val scroll = rememberScrollState()
     val speedDisplay = remember(playbackParams.playbackSpeed) {
         val v = playbackParams.playbackSpeed / 100f
-        String.format(Locale.getDefault(), "%.1f", v).replace('.', ',') + "x"
+        String.format(Locale.getDefault(), "%.2f", v).replace('.', ',') + "x"
     }
     if (showSongInfoDialog) {
         AlertDialog(
@@ -398,21 +394,29 @@ private fun PlayerActionsSheetContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
                 .padding(horizontal = UiTokens.paddingScreen, vertical = UiTokens.paddingItemTight),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(UiTokens.paddingItem),
         ) {
-            playbackSpeedPresets.forEach { (label, speedInt) ->
-                val selected = playbackParams.playbackSpeed == speedInt
-                FilterChip(
-                    selected = selected,
-                    onClick = {
-                        updatePlaybackParams(speedInt, playbackParams.playbackPitch)
-                    },
-                    label = { Text(label, maxLines = 1) },
-                    colors = chipColors,
-                )
-            }
+            Slider(
+                value = playbackParams.playbackSpeed
+                    .coerceIn(PLAYBACK_PARAM_MIN_PERCENT, PLAYBACK_PARAM_MAX_PERCENT) / 100f,
+                onValueChange = { raw ->
+                    val snapped = (kotlin.math.round(raw * 100.0) / 100.0).toFloat()
+                        .coerceIn(PLAYBACK_MULTIPLIER_MIN, PLAYBACK_MULTIPLIER_MAX)
+                    updatePlaybackParams(
+                        snapPlaybackParamPercent(snapped),
+                        playbackParams.playbackPitch,
+                    )
+                },
+                valueRange = PLAYBACK_MULTIPLIER_MIN..PLAYBACK_MULTIPLIER_MAX,
+                modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(
+                    thumbColor = playerSheetVolumeThumbColor,
+                    activeTrackColor = playerSheetVolumeThumbColor,
+                    inactiveTrackColor = playerActionsSheetDivider,
+                ),
+            )
         }
         ListItem(
             headlineContent = {

@@ -12,6 +12,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaStyleNotificationHelper
 import com.generic.audioplayes.R
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.widgets.notificationColorizedBackgroundArgb
 import com.generic.audioplayes.data.services.QueueService
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -20,10 +21,15 @@ import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * Builds a [androidx.media3.session.MediaStyleNotificationHelper.MediaStyle] notification for
- * [MediaSession], used by [androidx.media3.session.MediaSessionService] for the notification shade
- * and lock screen. Playback state and metadata come from the session’s player; actions are wired
- * through [MediaNotification.ActionFactory].
+ * Builds a [MediaStyleNotificationHelper.MediaStyle] notification for [MediaSession], used by
+ * [androidx.media3.session.MediaSessionService] for the shade, lock screen, and (where the OEM allows)
+ * media surfaces on AOD.
+ *
+ * **Platform limits (why this is not the home widget):** the system owns the media notification layout
+ * (Material / OEM themes, compact vs expanded, action row). Apps supply [NotificationCompat] + [MediaStyle]
+ * + metadata + colorized tint + artwork — not arbitrary Compose/Glance. Full “catalog” geometry (gradients,
+ * rounded cards, per-style grids) is impossible here by Android design; we align **palette** with
+ * [com.generic.audioplayes.widgets.notificationColorizedBackgroundArgb] and **rich metadata** (album, art).
  */
 @ServiceScoped
 @UnstableApi
@@ -49,22 +55,36 @@ class PlayerNotificationManager @Inject constructor(
         val metadata = player.currentMediaItem?.mediaMetadata
         val title = metadata?.title?.toString()
         val artist = metadata?.artist?.toString()
+        val albumTitle = metadata?.albumTitle?.toString()?.trim()?.takeIf { it.isNotEmpty() && it != "Unknown" }
 
         val largeIcon = NotificationHelper.loadArtworkBitmap(context, metadata?.artworkUri)
 
+        // Indices 0–2 = previous | play/pause | next (transport always visible in compact shade).
         val mediaStyle = MediaStyleNotificationHelper.MediaStyle(mediaSession)
-            .setShowActionsInCompactView(1, 2, 3)
+            .setShowActionsInCompactView(0, 1, 2)
 
         val playing = player.isPlaying
         val isLiked = queueService.getSongAtIndex(player.currentMediaItemIndex)?.favourite ?: false
 
         Timber.d("PlayerNotificationManager track=$title playing=$playing liked=$isLiked")
 
+        val styleBg = preferenceProvider.widgetStyle.value.notificationColorizedBackgroundArgb()
         val builder = NotificationCompat.Builder(context, NotificationHelper.PLAYER_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_notification)
             .setContentTitle(title)
             .setContentText(artist)
+            .apply {
+                if (albumTitle != null) {
+                    setSubText(albumTitle)
+                }
+            }
             .setLargeIcon(largeIcon)
+            .setColor(styleBg)
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    setColorized(true)
+                }
+            }
             .setStyle(mediaStyle)
             .setContentIntent(NotificationHelper.contentActivityIntent(context))
             .setDeleteIntent(NotificationHelper.stopPlaybackPendingIntent(context))
@@ -81,19 +101,17 @@ class PlayerNotificationManager @Inject constructor(
             .setOngoing(playing)
             .setPriority(NotificationCompat.PRIORITY_MAX)
 
+        // Layout order matches [AudioPlayerService.updateNotification]:
+        // 0 previous, 1 play/pause, 2 next, 3 like/unlike, 4 close.
         for ((index, commandButton) in customLayout.withIndex()) {
             val action = when (index) {
-                0 -> actionFactory.createCustomActionFromCustomCommandButton(
-                    mediaSession,
-                    if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked,
-                )
-                1, 3 -> actionFactory.createMediaAction(
+                0, 2 -> actionFactory.createMediaAction(
                     mediaSession,
                     IconCompat.createWithResource(context, commandButton.iconResId),
                     commandButton.displayName,
                     commandButton.playerCommand,
                 )
-                2 -> actionFactory.createMediaAction(
+                1 -> actionFactory.createMediaAction(
                     mediaSession,
                     IconCompat.createWithResource(
                         context,
@@ -102,6 +120,10 @@ class PlayerNotificationManager @Inject constructor(
                     ),
                     if (playing) "Pause" else "Play",
                     commandButton.playerCommand,
+                )
+                3 -> actionFactory.createCustomActionFromCustomCommandButton(
+                    mediaSession,
+                    if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked,
                 )
                 4 -> actionFactory.createCustomActionFromCustomCommandButton(
                     mediaSession,

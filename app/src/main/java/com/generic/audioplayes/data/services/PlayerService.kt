@@ -3,9 +3,11 @@ package com.generic.audioplayes.data.services
 import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.work.await
+import com.generic.audioplayes.data.QueueStateProvider
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.data.AudioPlayerCrashReporter
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
@@ -30,6 +32,12 @@ interface PlayerService {
 
     /** Stops playback and clears Exo queue; call after [QueueService.clearQueue]. */
     suspend fun stopPlaybackAndClearQueueIfRunning()
+
+    /**
+     * Writes current queue index, position and play/pause to disk (same snapshot as the player service).
+     * Call when the app goes to background or process may be killed so reopen restores here.
+     */
+    suspend fun persistPlaybackSnapshotToDisk()
 }
 
 class PlayerServiceImpl(
@@ -37,6 +45,8 @@ class PlayerServiceImpl(
     private val queueService: QueueService,
     private val preferenceProvider: AudioPlayerPreferenceProvider,
     private val crashReporter: AudioPlayerCrashReporter,
+    private val exoPlayer: ExoPlayer,
+    private val queueStateProvider: QueueStateProvider,
 ) : PlayerService {
 
     private val lastCallTime = AtomicLong(0)
@@ -119,6 +129,24 @@ class PlayerServiceImpl(
                 stop()
                 clearMediaItems()
             }
+        }
+    }
+
+    override suspend fun persistPlaybackSnapshotToDisk() {
+        withContext(Dispatchers.Main) {
+            if (queueService.queue.isEmpty()) return@withContext
+            val lastIndex = queueService.queue.lastIndex
+            val rawIdx = exoPlayer.currentMediaItemIndex
+            val queueIdx = queueService.currentQueueIndex().coerceIn(0, lastIndex)
+            val startIndex = if (rawIdx in 0..lastIndex) rawIdx else queueIdx
+            queueStateProvider.persistStateNow(
+                queue = queueService.queue.map { it.location },
+                queueStartIndex = startIndex,
+                startPosition = exoPlayer.currentPosition.coerceAtLeast(0L),
+                repeatModeOrdinal = queueService.repeatMode.value.ordinal,
+                shuffleMode = 0,
+                wasPlaying = exoPlayer.isPlaying,
+            )
         }
     }
 }

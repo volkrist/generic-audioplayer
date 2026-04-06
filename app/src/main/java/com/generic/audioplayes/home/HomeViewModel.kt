@@ -26,10 +26,12 @@ import com.generic.audioplayes.storage_explorer.Directory
 import com.generic.audioplayes.storage_explorer.DirectoryContents
 import com.generic.audioplayes.storage_explorer.MusicFileExplorer
 import com.generic.audioplayes.player.AudioPlayerService
+import com.generic.audioplayes.player.toMediaItem
 import com.generic.audioplayes.util.AudioFileActions
 import com.generic.audioplayes.util.MediaDeleteResult
 import com.generic.audioplayes.util.MessageStore
 import com.generic.audioplayes.util.NaturalOrder
+import com.generic.audioplayes.util.sortedByFolderPlaybackOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -81,6 +83,10 @@ class HomeViewModel @Inject constructor(
 
     @Volatile
     private var pendingDeleteUri: Uri? = null
+
+    /** When non-null, [onDeleteConfirmedByUser] continues [deleteFolderFromDevice] after a recoverable delete. */
+    @Volatile
+    private var pendingFolderDelete: Directory? = null
 
     val songs = songService.songs
         .combine(prefs.songSortOrder){ songs, sortOrder ->
@@ -278,6 +284,7 @@ class HomeViewModel @Inject constructor(
                     crashReporter.logException(e2)
                 }
             }
+            syncExoPlayerWithPersistedQueueIfServiceStopped()
             libraryRepository.updateLibraryFromMediaStore()
         }
         _currentSongPlaying.update { exoPlayer.isPlaying }
@@ -378,6 +385,10 @@ class HomeViewModel @Inject constructor(
                         pendingDeleteSong = null
                         pendingDeleteUri = null
                         completeDeleteAfterFileRemoved(song)
+                        val folder = pendingFolderDelete
+                        if (folder != null) {
+                            deleteFolderFromDevice(folder, fromContinuation = true)
+                        }
                     }
                     is MediaDeleteResult.Recoverable -> {
                         deleteConfirmationSenderInternal.emit(result.pendingIntent)
@@ -404,6 +415,7 @@ class HomeViewModel @Inject constructor(
     fun onDeleteConfirmationCancelled() {
         pendingDeleteSong = null
         pendingDeleteUri = null
+        pendingFolderDelete = null
     }
 
     private suspend fun completeDeleteAfterFileRemoved(song: Song) {
@@ -504,6 +516,49 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
+     * After cold start / sleep timer, the queue is restored in [QueueService] but the shared [ExoPlayer]
+     * was cleared when the service stopped — load media + seek so the UI shows the saved position.
+     */
+    private suspend fun syncExoPlayerWithPersistedQueueIfServiceStopped() {
+        if (AudioPlayerService.isRunning.get()) return
+        if (queueService.queue.isEmpty()) return
+        val idx = queueService.currentQueueIndex()
+        val pos = queueStateProvider.readStartPositionMs()
+        withContext(Dispatchers.Main) {
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
+            exoPlayer.addMediaItems(queueService.queue.map { it.toMediaItem() })
+            exoPlayer.prepare()
+            exoPlayer.seekTo(idx, pos)
+            exoPlayer.pause()
+        }
+    }
+
+    private fun deleteDirectoryRecursiveBestEffort(dir: File): Boolean {
+        if (!dir.exists()) return true
+        return try {
+            if (dir.isDirectory) {
+                dir.listFiles()?.forEach { child ->
+                    if (child.isDirectory) {
+                        deleteDirectoryRecursiveBestEffort(child)
+                    } else {
+                        child.delete()
+                    }
+                }
+            }
+            dir.delete()
+        } catch (e: Exception) {
+            Timber.e(e, "deleteDirectoryRecursiveBestEffort")
+            try {
+                dir.deleteRecursively()
+            } catch (e2: Exception) {
+                Timber.e(e2)
+                false
+            }
+        }
+    }
+
+    /**
      * Prefer Room paths (same as single-track delete), merge with MediaStore scan for files not yet indexed.
      */
     private suspend fun resolveFolderSongsForDeletion(folder: Directory): List<Song> {
@@ -526,11 +581,13 @@ class HomeViewModel @Inject constructor(
         return merged.values.toList()
     }
 
-    fun deleteFolderFromDevice(folder: Directory) {
+    fun deleteFolderFromDevice(folder: Directory, fromContinuation: Boolean = false) {
+        if (!fromContinuation) pendingFolderDelete = folder
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val dir = File(folder.absolutePath)
                 if (!dir.exists()) {
+                    pendingFolderDelete = null
                     withContext(Dispatchers.Main) {
                         showMessage(messageStore.getString(R.string.folder_delete_failed))
                     }
@@ -538,8 +595,9 @@ class HomeViewModel @Inject constructor(
                 }
                 val songs = resolveFolderSongsForDeletion(folder)
                 if (songs.isEmpty()) {
-                    val ok = dir.deleteRecursively()
+                    val ok = deleteDirectoryRecursiveBestEffort(dir)
                     withContext(Dispatchers.Main) {
+                        pendingFolderDelete = null
                         if (ok) {
                             libraryRepository.updateLibraryFromMediaStore()
                             showMessage(messageStore.getString(R.string.folder_delete_ok))
@@ -567,6 +625,7 @@ class HomeViewModel @Inject constructor(
                         is MediaDeleteResult.Recoverable -> {
                             pendingDeleteSong = song
                             pendingDeleteUri = result.uri
+                            pendingFolderDelete = folder
                             deleteConfirmationSenderInternal.emit(result.pendingIntent)
                             return@launch
                         }
@@ -577,8 +636,10 @@ class HomeViewModel @Inject constructor(
                 try {
                     dir.deleteRecursively()
                 } catch (_: Exception) {
+                    deleteDirectoryRecursiveBestEffort(dir)
                 }
                 withContext(Dispatchers.Main) {
+                    pendingFolderDelete = null
                     if (deleted > 0) {
                         showMessage(messageStore.getString(R.string.folder_delete_ok))
                     } else {
@@ -587,6 +648,7 @@ class HomeViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Timber.e(e)
+                pendingFolderDelete = null
                 withContext(Dispatchers.Main) {
                     showMessage(messageStore.getString(R.string.folder_delete_failed))
                 }
@@ -799,20 +861,17 @@ class HomeViewModel @Inject constructor(
     private val _filesInCurrentDestination = MutableStateFlow(DirectoryContents())
     val filesInCurrentDestination = _filesInCurrentDestination
         .combine(prefs.folderSortOrder){ files, sortOrder ->
-            when(sortOrder){
-                SortOptions.NameASC.ordinal -> {
-                    DirectoryContents(
-                        directories = files.directories.sortedWith(compareBy(NaturalOrder.stringComparator) { it.name }),
-                        songs = files.songs.sortedWith(compareBy(NaturalOrder.stringComparator) { it.title })
-                    )
-                }
-                SortOptions.NameDSC.ordinal -> {
-                    DirectoryContents(
-                        directories = files.directories.sortedWith(compareByDescending(NaturalOrder.stringComparator) { it.name }),
-                        songs = files.songs.sortedWith(compareByDescending(NaturalOrder.stringComparator) { it.title })
-                    )
-                }
-                else -> files
+            val dirAsc = Comparator<Directory> { a, b -> NaturalOrder.compareNatural(a.name, b.name) }
+            val dirDsc = dirAsc.reversed()
+            when (sortOrder) {
+                SortOptions.NameDSC.ordinal -> DirectoryContents(
+                    directories = files.directories.sortedWith(dirDsc),
+                    songs = files.songs.sortedByFolderPlaybackOrder(ascending = false),
+                )
+                else -> DirectoryContents(
+                    directories = files.directories.sortedWith(dirAsc),
+                    songs = files.songs.sortedByFolderPlaybackOrder(ascending = true),
+                )
             }
         }.stateIn(
             scope = viewModelScope,
@@ -837,13 +896,18 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onFileClicked(songIndex: Int){
+    fun onFileClicked(songIndex: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            if(songIndex < 0 || songIndex >= filesInCurrentDestination.value.songs.size) return@launch
-            val song = songExtractor.resolveSong(filesInCurrentDestination.value.songs[songIndex].location)
-            song?.let {
-                setQueue(listOf(song))
+            val minis = filesInCurrentDestination.value.songs
+            if (songIndex < 0 || songIndex >= minis.size) return@launch
+            val clickedLocation = minis[songIndex].location
+            val songs = ArrayList<Song>(minis.size)
+            for (mini in minis) {
+                songExtractor.resolveSong(mini.location)?.let { songs.add(it) }
             }
+            if (songs.isEmpty()) return@launch
+            val startIndex = songs.indexOfFirst { it.location == clickedLocation }.takeIf { it >= 0 } ?: 0
+            setQueue(songs, startIndex)
         }
     }
 
@@ -877,6 +941,60 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             explorer.moveInsideDirectory(absolutePath)
             _isExplorerAtRoot.update { explorer.isRoot }
+        }
+    }
+
+    fun renameFolder(folder: Directory, newName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val trimmed = newName.trim().replace(Regex("[/\\\\]"), "")
+            if (trimmed.isEmpty()) {
+                showMessage(messageStore.getString(R.string.folder_rename_error))
+                return@launch
+            }
+            val f = File(folder.absolutePath)
+            if (!f.isDirectory) {
+                showMessage(messageStore.getString(R.string.folder_rename_error))
+                return@launch
+            }
+            val parent = f.parentFile ?: run {
+                showMessage(messageStore.getString(R.string.folder_rename_error))
+                return@launch
+            }
+            val dest = File(parent, trimmed)
+            if (dest.exists()) {
+                showMessage(messageStore.getString(R.string.folder_rename_error))
+                return@launch
+            }
+            if (!f.renameTo(dest)) {
+                showMessage(messageStore.getString(R.string.folder_rename_error))
+                return@launch
+            }
+            explorer.adjustCurrentPathAfterFolderRename(folder.absolutePath, dest.absolutePath)
+            explorer.refreshCurrentDirectory()
+            _isExplorerAtRoot.update { explorer.isRoot }
+            runCatching {
+                libraryRepository.updateLibraryFromMediaStore()
+            }.onFailure { e ->
+                crashReporter.logException(e as? Exception ?: Exception(e))
+            }
+            showMessage(messageStore.getString(R.string.done))
+        }
+    }
+
+    fun saveFolderNote(folder: Directory, text: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val noteFile = File(folder.absolutePath, ".zen_folder_note.txt")
+            val result = runCatching {
+                if (text.isBlank()) {
+                    if (noteFile.exists()) noteFile.delete()
+                } else {
+                    noteFile.writeText(text.trim())
+                }
+            }
+            result.onFailure { e ->
+                crashReporter.logException(e as? Exception ?: Exception(e))
+                showMessage(messageStore.getString(R.string.folder_rename_error))
+            }
         }
     }
 }

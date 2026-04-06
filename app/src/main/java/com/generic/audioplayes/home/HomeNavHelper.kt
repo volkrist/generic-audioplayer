@@ -203,4 +203,16 @@ class HomeNavHelper(
     fun navigateToChoosePlaylist(song: MiniSong) {
         navigateToChoosePlaylists(listOf(song.location))
     }
+
+    fun navigateToTagEditor(song: Song) {
+        when (navController.currentDestination?.id) {
+            R.id.homeFragment -> navController.navigate(
+                HomeFragmentDirections.actionHomeFragmentToTagEditorFragment(song.location),
+            )
+            R.id.collectionFragment -> navController.navigate(
+                CollectionFragmentDirections.actionCollectionFragmentToTagEditorFragment(song.location),
+            )
+            else -> {}
+        }
+    }
 }

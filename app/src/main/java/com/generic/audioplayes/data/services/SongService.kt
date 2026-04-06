@@ -21,6 +21,7 @@ import com.generic.audioplayes.data.music.LyricistWithSongCount
 import com.generic.audioplayes.data.music.LyricistWithSongs
 import com.generic.audioplayes.data.music.SmartPlaylistCounts
 import com.generic.audioplayes.data.music.Song
+import com.generic.audioplayes.util.sortedByFolderPlaybackOrder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
@@ -165,7 +166,7 @@ class SongServiceImpl(
     }
 
     override suspend fun getSongsUnderFolderPath(folderPath: String): List<Song> {
-        return songDao.getSongsUnderFolderPath(folderPath)
+        return songDao.getSongsUnderFolderPath(folderPath).sortedByFolderPlaybackOrder()
     }
 
     override suspend fun removeSongFromLibraryMetadata(song: Song) {

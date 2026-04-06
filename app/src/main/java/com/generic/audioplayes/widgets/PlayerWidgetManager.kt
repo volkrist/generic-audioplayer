@@ -32,13 +32,21 @@ class PlayerWidgetManager @Inject constructor(
         }
     }
 
-    fun notifySongChanged(song: Song) {
+    fun notifySongChanged(song: Song, style: WidgetStyle) {
         broadcastToAll {
             putExtra(WidgetBroadcast.WIDGET_BROADCAST, WidgetBroadcast.SONG_CHANGED)
             putExtra("imageUri", song.artUri)
             putExtra("title", song.title)
             putExtra("artist", song.artist)
             putExtra("album", song.album)
+            putExtra("widgetStyle", style.name)
+        }
+    }
+
+    fun notifyWidgetStyleChanged(style: WidgetStyle) {
+        broadcastToAll {
+            putExtra(WidgetBroadcast.WIDGET_BROADCAST, WidgetBroadcast.WIDGET_STYLE_CHANGED)
+            putExtra("widgetStyle", style.name)
         }
     }
 
@@ -52,9 +60,9 @@ class PlayerWidgetManager @Inject constructor(
     /**
      * Pushes current [song] and [isPlaying] to all widget instances (e.g. when the app resumes).
      */
-    fun syncWidgetState(song: Song?, isPlaying: Boolean) {
+    fun syncWidgetState(song: Song?, isPlaying: Boolean, style: WidgetStyle) {
         val s = song ?: return
-        notifySongChanged(s)
+        notifySongChanged(s, style)
         notifyIsPlayingChanged(isPlaying)
     }
 }

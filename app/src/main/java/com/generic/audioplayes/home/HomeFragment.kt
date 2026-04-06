@@ -339,6 +339,7 @@ class HomeFragment : Fragment() {
                     val playbackParams by preferenceProvider.playbackParams.collectAsStateWithLifecycle()
                     val keepScreenOn by preferenceProvider.keepScreenOn.collectAsStateWithLifecycle()
                     val volumeBoosterPercent by preferenceProvider.volumeBoosterPercent.collectAsStateWithLifecycle()
+                    val widgetStyle by preferenceProvider.widgetStyle.collectAsStateWithLifecycle()
                     val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
                     val isExplorerAtRoot by viewModel.isExplorerAtRoot.collectAsStateWithLifecycle()
 
@@ -513,19 +514,7 @@ class HomeFragment : Fragment() {
                                                         onOpenAlbum = { song ->
                                                             navHelper.navigateToAlbumByName(song.album)
                                                         },
-                                                        onPlayerActionEditTags = { song ->
-                                                            if (!AudioFileActions.tryOpenAudioTagEditor(
-                                                                    context,
-                                                                    song.location,
-                                                                )
-                                                            ) {
-                                                                Toast.makeText(
-                                                                    context,
-                                                                    context.getString(R.string.player_action_no_editor_app),
-                                                                    Toast.LENGTH_LONG,
-                                                                ).show()
-                                                            }
-                                                        },
+                                                        onPlayerActionEditTags = navHelper::navigateToTagEditor,
                                                         onPlayerActionHideSong = viewModel::onSongBlacklist,
                                                         onPlayerActionDeleteSong = viewModel::deleteSongFromDevice,
                                                         onPlayerActionRingtone = { song ->
@@ -543,19 +532,7 @@ class HomeFragment : Fragment() {
                                                                 ).show()
                                                             }
                                                         },
-                                                        onPlayerActionChangeCover = { song ->
-                                                            if (!AudioFileActions.tryOpenAudioForCoverChange(
-                                                                    context,
-                                                                    song.location,
-                                                                )
-                                                            ) {
-                                                                Toast.makeText(
-                                                                    context,
-                                                                    context.getString(R.string.player_action_no_editor_app),
-                                                                    Toast.LENGTH_LONG,
-                                                                ).show()
-                                                            }
-                                                        },
+                                                        onPlayerActionChangeCover = navHelper::navigateToTagEditor,
                                                     )
                                                 }
                                                 Screens.Albums -> {
@@ -627,6 +604,8 @@ class HomeFragment : Fragment() {
                                                             },
                                                             onFolderHide = viewModel::onFolderBlacklist,
                                                             onFolderDelete = viewModel::deleteFolderFromDevice,
+                                                            onFolderRename = viewModel::renameFolder,
+                                                            onFolderSaveNote = viewModel::saveFolderNote,
                                                             folderTrackCount = folderTrackCount,
                                                             onTrackOverflowClick = { mini ->
                                                                 songExtractor.resolveSong(mini.location)?.let { resolved ->
@@ -647,19 +626,7 @@ class HomeFragment : Fragment() {
                                                                 onOpenAlbum = {
                                                                     navHelper.navigateToAlbumByName(sheetSong.album)
                                                                 },
-                                                                onPlayerActionEditTags = { song ->
-                                                                    if (!AudioFileActions.tryOpenAudioTagEditor(
-                                                                            ctx,
-                                                                            song.location,
-                                                                        )
-                                                                    ) {
-                                                                        Toast.makeText(
-                                                                            ctx,
-                                                                            ctx.getString(R.string.player_action_no_editor_app),
-                                                                            Toast.LENGTH_LONG,
-                                                                        ).show()
-                                                                    }
-                                                                },
+                                                                onPlayerActionEditTags = navHelper::navigateToTagEditor,
                                                                 onPlayerActionHideSong = viewModel::onSongBlacklist,
                                                                 onPlayerActionDeleteSong = viewModel::deleteSongFromDevice,
                                                                 onPlayerActionRingtone = { song ->
@@ -677,19 +644,7 @@ class HomeFragment : Fragment() {
                                                                         ).show()
                                                                     }
                                                                 },
-                                                                onPlayerActionChangeCover = { song ->
-                                                                    if (!AudioFileActions.tryOpenAudioForCoverChange(
-                                                                            ctx,
-                                                                            song.location,
-                                                                        )
-                                                                    ) {
-                                                                        Toast.makeText(
-                                                                            ctx,
-                                                                            ctx.getString(R.string.player_action_no_editor_app),
-                                                                            Toast.LENGTH_LONG,
-                                                                        ).show()
-                                                                    }
-                                                                },
+                                                                onPlayerActionChangeCover = navHelper::navigateToTagEditor,
                                                             )
                                                         }
                                                     }
@@ -751,6 +706,7 @@ class HomeFragment : Fragment() {
                                                     onQueueClick = expandQueueBottomSheet,
                                                     song = currentSong,
                                                     showPlayButton = songPlaying == false,
+                                                    widgetStyle = widgetStyle,
                                                     modifier = Modifier.fillMaxWidth(),
                                                     onExpandPlayer = expandFullPlayer,
                                                 )
@@ -844,19 +800,7 @@ class HomeFragment : Fragment() {
                                             volumeBoosterPercent = volumeBoosterPercent,
                                             onVolumeBoosterPercentChange = preferenceProvider::updateVolumeBoosterPercent,
                                             onSettingsClicked = navHelper::navigateToSettings,
-                                            onPlayerActionEditTags = { song ->
-                                                if (!AudioFileActions.tryOpenAudioTagEditor(
-                                                        context,
-                                                        song.location,
-                                                    )
-                                                ) {
-                                                    Toast.makeText(
-                                                        context,
-                                                        context.getString(R.string.player_action_no_editor_app),
-                                                        Toast.LENGTH_LONG,
-                                                    ).show()
-                                                }
-                                            },
+                                            onPlayerActionEditTags = navHelper::navigateToTagEditor,
                                             onPlayerActionHideSong = { song ->
                                                 viewModel.onSongBlacklist(song)
                                             },
@@ -878,19 +822,7 @@ class HomeFragment : Fragment() {
                                                     ).show()
                                                 }
                                             },
-                                            onPlayerActionChangeCover = { song ->
-                                                if (!AudioFileActions.tryOpenAudioForCoverChange(
-                                                        context,
-                                                        song.location,
-                                                    )
-                                                ) {
-                                                    Toast.makeText(
-                                                        context,
-                                                        context.getString(R.string.player_action_no_editor_app),
-                                                        Toast.LENGTH_LONG,
-                                                    ).show()
-                                                }
-                                            },
+                                            onPlayerActionChangeCover = navHelper::navigateToTagEditor,
                                         )
                                     }
                                 }
@@ -969,19 +901,7 @@ class HomeFragment : Fragment() {
                                 onQueueSongOpenAlbum = { s ->
                                     navHelper.navigateToAlbumByName(s.album)
                                 },
-                                onQueueSongEditTags = { song ->
-                                    if (!AudioFileActions.tryOpenAudioTagEditor(
-                                            context,
-                                            song.location,
-                                        )
-                                    ) {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.player_action_no_editor_app),
-                                            Toast.LENGTH_LONG,
-                                        ).show()
-                                    }
-                                },
+                                onQueueSongEditTags = navHelper::navigateToTagEditor,
                                 onQueueSongHide = viewModel::onSongBlacklist,
                                 onQueueSongDelete = viewModel::deleteSongFromDevice,
                                 onQueueSongRingtone = { song ->
@@ -999,19 +919,7 @@ class HomeFragment : Fragment() {
                                         ).show()
                                     }
                                 },
-                                onQueueSongChangeCover = { song ->
-                                    if (!AudioFileActions.tryOpenAudioForCoverChange(
-                                            context,
-                                            song.location,
-                                        )
-                                    ) {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.player_action_no_editor_app),
-                                            Toast.LENGTH_LONG,
-                                        ).show()
-                                    }
-                                },
+                                onQueueSongChangeCover = navHelper::navigateToTagEditor,
                             )
                             PlayerActionsSheetModal(
                                 visible = fullPlayerOverlay == FullPlayerOverlay.Actions,
@@ -1028,19 +936,7 @@ class HomeFragment : Fragment() {
                                     navHelper.navigateToSettings()
                                 },
                                 onOpenAlbum = { navHelper.navigateToAlbumByName(playingSong.album) },
-                                onPlayerActionEditTags = { song ->
-                                    if (!AudioFileActions.tryOpenAudioTagEditor(
-                                            context,
-                                            song.location,
-                                        )
-                                    ) {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.player_action_no_editor_app),
-                                            Toast.LENGTH_LONG,
-                                        ).show()
-                                    }
-                                },
+                                onPlayerActionEditTags = navHelper::navigateToTagEditor,
                                 onPlayerActionHideSong = { song ->
                                     viewModel.onSongBlacklist(song)
                                 },
@@ -1062,19 +958,7 @@ class HomeFragment : Fragment() {
                                         ).show()
                                     }
                                 },
-                                onPlayerActionChangeCover = { song ->
-                                    if (!AudioFileActions.tryOpenAudioForCoverChange(
-                                            context,
-                                            song.location,
-                                        )
-                                    ) {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.player_action_no_editor_app),
-                                            Toast.LENGTH_LONG,
-                                        ).show()
-                                    }
-                                },
+                                onPlayerActionChangeCover = navHelper::navigateToTagEditor,
                             )
                         }
                     }

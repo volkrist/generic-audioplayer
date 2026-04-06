@@ -83,6 +83,27 @@ class SearchViewModel @Inject constructor(
         showMessage(messageStore.getString(R.string.playing))
     }
 
+    /**
+     * Queues the whole current search result section (library songs or dictaphone list) so playback
+     * continues with the next row after the current track ends.
+     */
+    fun playSongFromSearchResults(song: Song) {
+        val result = searchResult.value
+        val fromLibrary = result.songs
+        val idxLib = fromLibrary.indexOfFirst { it.location == song.location }
+        if (idxLib >= 0 && fromLibrary.isNotEmpty()) {
+            setQueue(fromLibrary, idxLib)
+            return
+        }
+        val fromDict = result.dictaphoneRecordings
+        val idxDict = fromDict.indexOfFirst { it.location == song.location }
+        if (idxDict >= 0 && fromDict.isNotEmpty()) {
+            setQueue(fromDict, idxDict)
+            return
+        }
+        setQueue(listOf(song), 0)
+    }
+
     private fun showMessage(message: String) {
         viewModelScope.launch {
             _message.update { message }

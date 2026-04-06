@@ -48,6 +48,9 @@ object Versions {
 
     const val crashActivity = "2.4.0"
 
+    /** ID3/Vorbis/MP4 tag read-write for in-app editor */
+    const val jaudiotagger = "2.2.5"
+
     const val androidxTest = "1.5.0"
     const val mockk = "1.13.8"
 }
@@ -67,6 +70,7 @@ object Libraries {
     const val androidxCore = "androidx.core:core-ktx:${Versions.androidxCore}"
 
     const val androidxLifecycle = "androidx.lifecycle:lifecycle-runtime-ktx:${Versions.androidxLifecycle}"
+    const val androidxLifecycleProcess = "androidx.lifecycle:lifecycle-process:${Versions.androidxLifecycle}"
     const val androidxLifecycleRuntimeCompose = "androidx.lifecycle:lifecycle-runtime-compose:${Versions.androidxLifecycle}"
 
     const val androidxActivityCompose = "androidx.activity:activity-compose:${Versions.androidxActivity}"
@@ -128,6 +132,8 @@ object Libraries {
     const val lottie = "com.airbnb.android:lottie-compose:${Versions.lottie}"
 
     const val crashActivity = "cat.ereza:customactivityoncrash:${Versions.crashActivity}"
+
+    const val jaudiotagger = "net.jthink:jaudiotagger:${Versions.jaudiotagger}"
 
     const val androidxTestKtx = "androidx.test:core-ktx:${Versions.androidxTest}"
     const val mockk = "io.mockk:mockk:${Versions.mockk}"

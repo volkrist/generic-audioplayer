@@ -66,6 +66,7 @@ private data class WidgetCatalogEntry(
 fun WidgetsScreen(
     onBack: () -> Unit,
     onRequestPinWidget: (useSmallProvider: Boolean) -> Unit,
+    onApplyWidgetStyle: (WidgetStyle) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val catalog = remember {
@@ -151,6 +152,7 @@ fun WidgetsScreen(
             items(catalog, key = { it.titleRes }) { entry ->
                 WidgetCatalogCard(
                     entry = entry,
+                    onApplyStyle = { onApplyWidgetStyle(entry.style) },
                     onAdd = { onRequestPinWidget(entry.useSmallProvider) },
                 )
             }
@@ -161,6 +163,7 @@ fun WidgetsScreen(
 @Composable
 private fun WidgetCatalogCard(
     entry: WidgetCatalogEntry,
+    onApplyStyle: () -> Unit,
     onAdd: () -> Unit,
 ) {
     Row(
@@ -201,7 +204,26 @@ private fun WidgetCatalogCard(
                 fontSize = 13.sp,
             )
             Spacer(Modifier.weight(1f))
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedButton(
+                    onClick = onApplyStyle,
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(1.5.dp, Color(0xFF7CB342)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFF7CB342),
+                    ),
+                ) {
+                    Text(
+                        text = stringResource(R.string.widgets_apply_style),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
                 OutlinedButton(
                     onClick = onAdd,
                     shape = RoundedCornerShape(22.dp),

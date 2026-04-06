@@ -33,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -61,8 +62,10 @@ import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.storage_explorer.Directory
 import com.generic.audioplayes.storage_explorer.DirectoryContents
 import com.generic.audioplayes.ui.theme.UiTokens
+import androidx.compose.foundation.layout.heightIn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 @Composable
 fun Files(
@@ -78,6 +81,8 @@ fun Files(
     onFolderAddToPlaylist: (Directory) -> Unit,
     onFolderHide: (Directory) -> Unit,
     onFolderDelete: (Directory) -> Unit,
+    onFolderRename: (Directory, String) -> Unit,
+    onFolderSaveNote: (Directory, String) -> Unit,
     /** Same track count as when opening a folder: [com.generic.audioplayes.data.music.SongExtractor.extractMini]. */
     folderTrackCount: (String) -> Int,
     /** When set, ⋮ opens the library track sheet (resolved to [Song] in [HomeFragment]). */
@@ -107,6 +112,8 @@ fun Files(
                 onAddToPlaylist = { onFolderAddToPlaylist(it) },
                 onHideFolder = { onFolderHide(it) },
                 onDeleteFolderFromDevice = { onFolderDelete(it) },
+                onFolderRename = onFolderRename,
+                onFolderSaveNote = onFolderSaveNote,
             )
         }
         itemsIndexed(
@@ -138,6 +145,8 @@ private fun FolderActionsBottomSheet(
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
     onAddToPlaylist: () -> Unit,
+    onRename: () -> Unit,
+    onEditNote: () -> Unit,
     onHideFolder: () -> Unit,
     onDeleteMenuItem: () -> Unit,
 ) {
@@ -220,6 +229,22 @@ private fun FolderActionsBottomSheet(
                     onAddToPlaylist()
                 },
             )
+            FolderSheetRow(
+                icon = R.drawable.ic_baseline_folder_40,
+                label = stringResource(R.string.folder_action_rename),
+                onClick = {
+                    onDismiss()
+                    onRename()
+                },
+            )
+            FolderSheetRow(
+                icon = R.drawable.ic_baseline_folder_40,
+                label = stringResource(R.string.folder_action_edit_note),
+                onClick = {
+                    onDismiss()
+                    onEditNote()
+                },
+            )
             Divider()
             FolderSheetRow(
                 icon = R.drawable.ic_baseline_remove_circle_40,
@@ -298,15 +323,36 @@ fun Folder(
     onAddToPlaylist: () -> Unit,
     onHideFolder: () -> Unit,
     onDeleteFolderFromDevice: () -> Unit,
+    onFolderRename: (Directory, String) -> Unit,
+    onFolderSaveNote: (Directory, String) -> Unit,
 ) {
     val resource = painterResource(R.drawable.ic_baseline_folder_40)
     var showClickIndicator by remember { mutableStateOf(false) }
     var showFolderMenu by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showNoteDialog by remember { mutableStateOf(false) }
+    var renameField by remember(folder.absolutePath) { mutableStateOf(folder.name) }
+    var noteField by remember(folder.absolutePath) { mutableStateOf("") }
+    var notePreviewRefresh by remember { mutableStateOf(0) }
     var songCount by remember(folder.absolutePath) { mutableStateOf<Int?>(null) }
-    LaunchedEffect(folder.absolutePath) {
+    var notePreview by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(folder.absolutePath, notePreviewRefresh) {
         songCount = withContext(Dispatchers.IO) {
             folderTrackCount(folder.absolutePath)
+        }
+        notePreview = withContext(Dispatchers.IO) {
+            folderNotePreview(folder.absolutePath)
+        }
+    }
+    LaunchedEffect(showRenameDialog) {
+        if (showRenameDialog) renameField = folder.name
+    }
+    LaunchedEffect(showNoteDialog) {
+        if (showNoteDialog) {
+            noteField = withContext(Dispatchers.IO) {
+                readFolderNoteFile(folder.absolutePath)
+            }
         }
     }
     val songCountLabel = songCount?.let { formatTrackCountRu(it) }
@@ -341,6 +387,16 @@ fun Folder(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            notePreview?.let { line ->
+                Text(
+                    text = line,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.65f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             songCount?.let { n ->
                 Text(
                     text = formatTrackCountRu(n),
@@ -385,8 +441,74 @@ fun Folder(
             onPlayNext = onPlayNext,
             onAddToQueue = onAddToQueue,
             onAddToPlaylist = onAddToPlaylist,
+            onRename = { showRenameDialog = true },
+            onEditNote = { showNoteDialog = true },
             onHideFolder = onHideFolder,
             onDeleteMenuItem = { showDeleteConfirm = true },
+        )
+    }
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text(stringResource(R.string.folder_rename_dialog_title)) },
+            text = {
+                OutlinedTextField(
+                    value = renameField,
+                    onValueChange = { renameField = it },
+                    label = { Text(stringResource(R.string.folder_rename_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRenameDialog = false
+                        onFolderRename(folder, renameField)
+                    },
+                ) {
+                    Text(stringResource(R.string.folder_rename_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text(stringResource(R.string.songs_sort_cancel))
+                }
+            },
+        )
+    }
+    if (showNoteDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoteDialog = false },
+            title = { Text(stringResource(R.string.folder_note_dialog_title)) },
+            text = {
+                OutlinedTextField(
+                    value = noteField,
+                    onValueChange = { noteField = it },
+                    label = { Text(stringResource(R.string.folder_note_hint)) },
+                    minLines = 4,
+                    maxLines = 12,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 120.dp),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onFolderSaveNote(folder, noteField)
+                        showNoteDialog = false
+                        notePreviewRefresh = notePreviewRefresh + 1
+                    },
+                ) {
+                    Text(stringResource(R.string.folder_note_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoteDialog = false }) {
+                    Text(stringResource(R.string.songs_sort_cancel))
+                }
+            },
         )
     }
     if (showDeleteConfirm) {
@@ -411,6 +533,20 @@ fun Folder(
             },
         )
     }
+}
+
+private const val FOLDER_NOTE_FILENAME = ".zen_folder_note.txt"
+
+private fun readFolderNoteFile(absolutePath: String): String {
+    val f = File(absolutePath, FOLDER_NOTE_FILENAME)
+    if (!f.isFile) return ""
+    return runCatching { f.readText() }.getOrDefault("")
+}
+
+private fun folderNotePreview(absolutePath: String): String? {
+    val raw = readFolderNoteFile(absolutePath).trim()
+    if (raw.isEmpty()) return null
+    return raw.lineSequence().first().take(120)
 }
 
 private fun formatTrackCountRu(n: Int): String = when {

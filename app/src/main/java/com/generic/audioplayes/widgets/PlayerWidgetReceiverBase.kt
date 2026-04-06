@@ -31,11 +31,18 @@ abstract class PlayerWidgetReceiverBase : GlanceAppWidgetReceiver() {
                                 prefs[albumKey] = intent.getStringExtra("album") ?: ""
                                 prefs[titleKey] = intent.getStringExtra("title") ?: ""
                                 prefs[artistKey] = intent.getStringExtra("artist") ?: ""
+                                intent.getStringExtra("widgetStyle")?.let { prefs[widgetStyleKey] = it }
                             }
                         }
                         WidgetBroadcast.IS_PLAYING_CHANGED -> {
                             updateAppWidgetState(context, glanceId) { prefs ->
                                 prefs[isPlayingKey] = intent.getBooleanExtra("isPlaying", false)
+                            }
+                        }
+                        WidgetBroadcast.WIDGET_STYLE_CHANGED -> {
+                            updateAppWidgetState(context, glanceId) { prefs ->
+                                prefs[widgetStyleKey] =
+                                    intent.getStringExtra("widgetStyle") ?: WidgetStyle.CLASSIC.name
                             }
                         }
                     }

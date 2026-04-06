@@ -27,11 +27,14 @@ import com.generic.audioplayes.data.UserPreferences
 import com.generic.audioplayes.data.UserPreferencesSerializer
 import com.generic.audioplayes.data.AudioPlayerCrashReporter
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.player.AudioPlayerRenderersFactory
+import com.generic.audioplayes.volume.VolumeGainController
 import com.generic.audioplayes.data.music.SongExtractor
 import com.generic.audioplayes.data.services.AnalyticsService
 import com.generic.audioplayes.data.services.AnalyticsServiceImpl
 import com.generic.audioplayes.data.services.BlacklistService
 import com.generic.audioplayes.data.services.BlacklistServiceImpl
+import com.generic.audioplayes.data.QueueStateProvider
 import com.generic.audioplayes.data.services.PlayerService
 import com.generic.audioplayes.data.services.PlayerServiceImpl
 import com.generic.audioplayes.data.services.PlaylistService
@@ -86,7 +89,8 @@ object AppModule {
     @Singleton
     @Provides
     fun providesExoPlayer(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        volumeGainController: VolumeGainController,
     ): ExoPlayer {
         val extractorsFactory = DefaultExtractorsFactory().apply {
             setMp3ExtractorFlags(Mp3Extractor.FLAG_DISABLE_ID3_METADATA)
@@ -95,7 +99,9 @@ object AppModule {
             setContentType(AUDIO_CONTENT_TYPE_MUSIC)
             setUsage(USAGE_MEDIA)
         }.build()
+        val renderersFactory = AudioPlayerRenderersFactory(context, volumeGainController)
         return ExoPlayer.Builder(context).apply {
+            setRenderersFactory(renderersFactory)
             setMediaSourceFactory(DefaultMediaSourceFactory(context, extractorsFactory))
             setAudioAttributes(audioAttributes, true)
             setHandleAudioBecomingNoisy(true)
@@ -243,12 +249,16 @@ object AppModule {
         queueService: QueueService,
         preferenceProvider: AudioPlayerPreferenceProvider,
         crashReporter: AudioPlayerCrashReporter,
+        exoPlayer: ExoPlayer,
+        queueStateProvider: QueueStateProvider,
     ): PlayerService {
         return PlayerServiceImpl(
             context = context,
             queueService = queueService,
             preferenceProvider = preferenceProvider,
             crashReporter = crashReporter,
+            exoPlayer = exoPlayer,
+            queueStateProvider = queueStateProvider,
         )
     }
 

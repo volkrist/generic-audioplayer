@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 class WidgetsFragment : Fragment() {
 
     @Inject lateinit var preferenceProvider: AudioPlayerPreferenceProvider
+    @Inject lateinit var playerWidgetManager: PlayerWidgetManager
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -42,6 +43,15 @@ class WidgetsFragment : Fragment() {
                     WidgetsScreen(
                         onBack = { findNavController().navigateUp() },
                         onRequestPinWidget = { useSmall -> requestPinWidget(useSmall) },
+                        onApplyWidgetStyle = { style ->
+                            preferenceProvider.updateWidgetStyle(style)
+                            playerWidgetManager.notifyWidgetStyleChanged(style)
+                            Toast.makeText(
+                                requireContext(),
+                                R.string.widgets_style_applied,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

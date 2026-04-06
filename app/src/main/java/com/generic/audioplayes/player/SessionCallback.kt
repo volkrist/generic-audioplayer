@@ -59,10 +59,10 @@ class SessionCallback @Inject constructor(
         session.setCustomLayout(
             controller,
             listOf(
-                if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked,
                 AudioPlayerCommandButtons.previous,
                 AudioPlayerCommandButtons.playPause,
                 AudioPlayerCommandButtons.next,
+                if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked,
                 AudioPlayerCommandButtons.cancel
             )
         )
