@@ -17,10 +17,16 @@ enum class RepeatMode(@DrawableRes val iconResource: Int) {
         }
     }
 
-    fun toExoPlayerRepeatMode(): Int {
-        return when(this){
+    /**
+     * [queueSize] must match ExoPlayer playlist size. When [REPEAT_ALL] is selected but there is
+     * only one track, ExoPlayer would loop that single item forever; map to [REPEAT_MODE_OFF] so
+     * playback ends and multi-item queues still wrap as expected.
+     */
+    fun toExoPlayerRepeatMode(queueSize: Int): Int {
+        return when (this) {
             NO_REPEAT -> ExoPlayer.REPEAT_MODE_OFF
-            REPEAT_ALL -> ExoPlayer.REPEAT_MODE_ALL
+            REPEAT_ALL ->
+                if (queueSize <= 1) ExoPlayer.REPEAT_MODE_OFF else ExoPlayer.REPEAT_MODE_ALL
             REPEAT_ONE -> ExoPlayer.REPEAT_MODE_ONE
         }
     }

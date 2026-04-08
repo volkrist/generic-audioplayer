@@ -170,7 +170,7 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
         }
         scope.launch {
             queueService.repeatMode.collect {
-                withContext(Dispatchers.Main) { exoPlayer.repeatMode = it.toExoPlayerRepeatMode() }
+                withContext(Dispatchers.Main) { syncExoPlayerRepeatMode() }
             }
         }
         scope.launch {
@@ -347,6 +347,11 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
         )
     }
 
+    private fun syncExoPlayerRepeatMode() {
+        val n = queueService.queue.size
+        exoPlayer.repeatMode = queueService.repeatMode.value.toExoPlayerRepeatMode(n)
+    }
+
     private fun setQueue(
         mediaItems: List<MediaItem>,
         startIndex: Int,
@@ -362,7 +367,7 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
                 exoPlayer.addMediaItems(mediaItems)
                 exoPlayer.prepare()
                 exoPlayer.seekTo(startIndex, startPositionMs)
-                exoPlayer.repeatMode = repeatMode.toExoPlayerRepeatMode()
+                exoPlayer.repeatMode = repeatMode.toExoPlayerRepeatMode(mediaItems.size)
                 exoPlayer.playbackParameters = preferencesProvider.playbackParams.value
                     .toCorrectedParams()
                     .toExoPlayerPlaybackParameters()
@@ -373,12 +378,14 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
 
     override fun onAppend(song: Song) {
         exoPlayer.addMediaItem(song.toMediaItem())
+        syncExoPlayerRepeatMode()
     }
 
     override fun onAppend(songs: List<Song>) {
         exoPlayer.addMediaItems(
             songs.map(Song::toMediaItem)
         )
+        syncExoPlayerRepeatMode()
     }
 
     override fun onInsert(atIndex: Int, songs: List<Song>) {
@@ -386,6 +393,7 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
             atIndex,
             songs.map(Song::toMediaItem),
         )
+        syncExoPlayerRepeatMode()
     }
 
     override fun onUpdate(updatedSong: Song, position: Int) {
@@ -404,10 +412,12 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
 
     override fun onRemoveAt(index: Int) {
         exoPlayer.removeMediaItem(index)
+        syncExoPlayerRepeatMode()
     }
 
     override fun onClear() {
         crashReporter.logData("AudioPlayerService.onClear()")
+        syncExoPlayerRepeatMode()
     }
 
     override fun onSetQueue(songs: List<Song>, startPlayingFromPosition: Int) {

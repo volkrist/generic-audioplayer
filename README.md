@@ -1,87 +1,135 @@
-# AudioPlayer
-
 <p align="center">
-  <img src="app/src/main/res/ic_launcher-playstore.png" alt="AudioPlayer icon" width="128" height="128">
+    <img src="app/src/main/res/ic_launcher-playstore.png" height="128" style="border-radius: 70px;">
+    <h1 align="center">AudioPlayer</h1>
 </p>
 
-<p align="center">
-  <strong>Material You music player for Android</strong><br>
-  Library, playlists, folders, equalizer, widgets, and more.
-</p>
+<h3 style="width: 100vw; text-align: center;">
+    Material You Themed music player for android
+</h3>
 
-<p align="center">
-  <a href="https://github.com/volkrist/zen-music-android">Source code (GitHub)</a>
-  &nbsp;·&nbsp;
-  <a href="https://play.google.com/store/apps/details?id=com.generic.audioplayes">Google Play</a>
-</p>
+<img src="screenshots/banner.png" style="width: 100vw; border-radius: 70px;">
 
-<p align="center">
-  <a href="https://play.google.com/store/apps/details?id=com.generic.audioplayes">
-    <img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="64">
-  </a>
-</p>
+<h3>
+    <a href='https://play.google.com/store/apps/details?id=com.generic.audioplayes&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'>
+        <img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' height="80"/>
+    </a>     
+</h3>
 
----
 
-## Highlights
-
-- **Material You** — dynamic color, light/dark themes, multiple accent palettes  
-- **Library** — tracks, albums, artists, genres, playlists, folder browser with natural path sorting  
-- **Playback** — queue, shuffle, sleep timer, now playing with rich controls  
-- **Audio** — built-in equalizer  
-- **Tags** — view and edit embedded metadata in the app  
-- **Widgets** — home screen player widgets  
-- **Extras** — backup & restore, dictaphone, search, blacklist, Crashlytics-ready build  
-
----
-
-## Screenshots
-
-The old screenshot set (legacy branding) was removed from the repository. Add new images under `screenshots/` and embed them here when you have up-to-date captures.
-
----
-
-## Tech stack
-
-| Area | Libraries |
-|------|-----------|
-| Language | Kotlin |
-| UI | Jetpack Compose, Material 3 |
-| Async | Coroutines, Flow |
-| DI | Hilt |
-| Player | ExoPlayer / Media3 |
-| Database | Room |
-| Preferences | DataStore, Protocol Buffers |
-| Images | Coil |
-| Other | Navigation, WorkManager, Glance widgets, Firebase Crashlytics (optional), Lottie, LeakCanary (debug), Timber |
-
-**Requirements:** Android **6.0+** (API **23**), target/compile SDK **34**. Current app version **1.2.5** (see `buildSrc`).
-
----
-
-## Build from source
-
-```bash
-git clone https://github.com/volkrist/zen-music-android.git
-cd zen-music-android
-```
-
-1. Set `sdk.dir` in **`local.properties`** (Android SDK path).  
-2. Add **`app/google-services.json`** from [Firebase Console](https://console.firebase.google.com) if you use Google Services / Crashlytics (CI or local placeholder).  
-3. Build debug APK:
-
-```bash
-# Windows
-.\gradlew.bat assembleDebug
-
-# macOS / Linux
-./gradlew assembleDebug
-```
-
-Output: `app/build/outputs/apk/debug/app-debug.apk` (debug package id ends with `.debug`).
-
----
-
-## License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file.
+<h3>Screenshots</h3>
+<h4>Light</h4>
+<div style="display: flex; width: 100vw; flex-wrap: wrap; justify-content: space-around;">
+    <img src="screenshots/Light/storage_access.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/storage_scan.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/all_songs_malibu.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/albums.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/artists.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/playlists.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/genres.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/search.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/now_playing_malibu.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/album_collection.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+</div>
+<h4>Dark</h4>
+<div style="display: flex; width: 100vw; flex-wrap: wrap; justify-content: space-around;">
+    <img src="screenshots/Dark/storage_access.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/storage_scan.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/all_songs_malibu.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/albums.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/artists.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/playlists.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/genres.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/search.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/now_playing_malibu.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/album_collection.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+</div>
+<h3>Has 6 different accent Colors</h3>
+<h4>Light mode</h4>
+<div style="display: flex; width: 100vw; flex-wrap: wrap; justify-content: space-around;">
+    <img src="screenshots/Light/all_songs_default.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/all_songs_elm.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/all_songs_jacksonspurple.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/all_songs_magenta.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/all_songs_malibu.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Light/all_songs_melrose.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+</div>
+<h4>Dark mode</h4>
+<div style="display: flex; width: 100vw; flex-wrap: wrap; justify-content: space-around;">
+    <img src="screenshots/Dark/all_songs_default.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/all_songs_elm.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/all_songs_jacksonspurple.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/all_songs_magenta.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/all_songs_malibu.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+    <img src="screenshots/Dark/all_songs_melrose.jpg" style="height: 300px; margin: 10px 0px 10px 0px;"/>
+</div>
+<h3>Tech Stack and Libraries</h3>
+<ul>
+  <li>
+    Minimum SDK level 23
+  </li>
+  <li>
+    <a href="https://kotlinlang.org/">Kotlin</a>
+  </li>
+  <li>
+    <a href="https://github.com/Kotlin/kotlinx.coroutines">Coroutines</a> for asynchronous tasks
+  </li>
+  <li>
+    <a href="https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/">Flow</a> for emitting values reactively
+  </li>
+  <li>
+    <a href="https://github.com/google/accompanist">Accompanist</a> for commonly required features
+  </li>
+  <li>
+    <a href="https://dagger.dev/hilt/">Hilt</a> for dependency injection
+  </li>
+  <li>
+    <a href="https://github.com/coil-kt/coil">Coil</a> for loading images
+  </li>
+  <li>
+    <a href="https://github.com/square/leakcanary">Leak Canary</a> for detecting memory leaks
+  </li>
+  <li>
+    <a href="https://github.com/JakeWharton/timber">Timber</a> for better logging
+  </li>
+  <li>
+    <a href="https://github.com/airbnb/lottie-android">Lottie</a> for animation resources
+  </li>
+  <li>
+    <a href="https://exoplayer.dev/">ExoPlayer</a> for handling media playing
+  </li>
+  <li>
+    <a href="https://firebase.google.com/docs/crashlytics">Firebase Crashlytics</a> for fetching app crash data
+  </li>
+  <li>
+    <a href="https://github.com/Ereza/CustomActivityOnCrash">Custom Activity On Crash</a> for showing custom screen on app crashes
+  </li>
+  <li>
+    <a href="https://mockk.io/">Mockk</a> for mocking classes in testing
+  </li>
+  <li>
+    Jetpack
+      <ul>
+        <li>
+          <a href="https://developer.android.com/jetpack/compose">Compose</a> - Toolkit for building UI in declarative manner
+        </li>
+        <li>
+          <a href="https://developer.android.com/jetpack/androidx/releases/compose-material3">Material You components</a> - Compose UI components following material 3 guidelines 
+        </li>
+        <li>
+          <a href="https://developer.android.com/jetpack/androidx/releases/room">Room</a> - Store data in SQLite database 
+        </li>
+        <li>
+          <a href="https://developer.android.com/topic/libraries/architecture/datastore">Datastore</a> - Store typed objects with protocol buffers 
+        </li>
+        <li>
+          <a href="https://developer.android.com/jetpack/androidx/releases/lifecycle">Lifecycle</a> - React to android lifecycle changes 
+        </li>
+        <li>
+          <a href="https://developer.android.com/guide/navigation/navigation-getting-started">Navigation Component</a> - Implement navigation in app 
+        </li>
+        <li>
+          <a href="https://developer.android.com/topic/libraries/architecture/workmanager">Work Manager</a> - Performing background tasks
+        </li>
+      </ul>
+  </li>
+</ul>

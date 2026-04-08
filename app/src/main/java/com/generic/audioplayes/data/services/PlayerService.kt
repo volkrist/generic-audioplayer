@@ -94,7 +94,7 @@ class PlayerServiceImpl(
                 addMediaItems(songs.map(Song::toMediaItem))
                 prepare()
                 seekTo(startPlayingFromPosition, startPositionMs)
-                repeatMode = queueService.repeatMode.value.toExoPlayerRepeatMode()
+                repeatMode = queueService.repeatMode.value.toExoPlayerRepeatMode(songs.size)
                 playbackParameters = preferenceProvider.playbackParams.value
                     .toCorrectedParams()
                     .toExoPlayerPlaybackParameters()

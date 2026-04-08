@@ -1,0 +1,13 @@
+---
+description: After editing the AudioPlayer Android app, build and install debug APK on the connected phone
+alwaysApply: true
+---
+
+# Deploy AudioPlayer app after code changes
+
+When you finish changes under the Android Gradle project at `AudioPlayer/`, run a full install on the connected USB device:
+
+1. From PowerShell: `Set-Location "c:\Users\Volkr\Desktop\audioPlayer\AudioPlayer"; .\gradlew.bat installDebug`
+2. Confirm the build reports `Installed on 1 device` (or fix adb/device issues if install fails).
+
+Do this automatically at the end of the task whenever the Android app sources were modified, unless the user explicitly asks not to install.

@@ -19,3 +19,7 @@
 .cxx
 local.properties
 /buildSrc/build/
+
+# Legacy / duplicate project copies (main tree is repo root)
+_zen_extract/
+AudioPlayer/

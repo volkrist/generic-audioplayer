@@ -1,13 +1,13 @@
 package com.generic.audioplayes.nowplaying
 
-import android.content.res.ColorStateList
-import android.widget.SeekBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -18,16 +18,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import com.generic.audioplayes.R
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.ui.theme.UiTokens
 import com.generic.audioplayes.toMS
 import kotlinx.coroutines.delay
+import kotlin.math.roundToLong
 
 @Composable
 fun MusicSlider(
@@ -71,61 +69,37 @@ fun MusicSlider(
     val primaryColor = MaterialTheme.colorScheme.primary
     val resolvedLabelColor =
         if (timeLabelColor == Color.Unspecified) MaterialTheme.colorScheme.onSurface else timeLabelColor
+
+    val durMs = run {
+        val fromMeta = duration.takeIf { it > 0 }
+        val fromPlayer = playerHelper.duration.takeIf { it > 0f && it.isFinite() }?.toLong()
+        (fromMeta ?: fromPlayer ?: 1L).coerceAtLeast(1L)
+    }
+    val progress = (currentValue.toFloat() / durMs.toFloat()).coerceIn(0f, 1f)
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.Center
     ) {
-        AndroidView(
-            factory = { context ->
-                SeekBar(context).apply {
-                    setOnSeekBarChangeListener(
-                        object : SeekBar.OnSeekBarChangeListener {
-                            override fun onProgressChanged(
-                                seekBar: SeekBar?,
-                                progress: Int,
-                                fromUser: Boolean
-                            ) {
-                                if (fromUser) {
-                                    currentValue = progress.toLong()
-                                }
-                            }
-
-                            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                                isDragging = true
-                            }
-
-                            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                                playerHelper.seekTo(currentValue)
-                                isDragging = false
-                            }
-                        }
-                    )
-                    thumb = resources.getDrawable(R.drawable.seekbar_thumb, null)
-                    progressDrawable = resources.getDrawable(R.drawable.progress, null)
-                    thumbTintList =
-                        colorStateListOf(
-                            intArrayOf(android.R.attr.state_enabled) to primaryColor.toArgb(),
-                        )
-                    progressBackgroundTintList =
-                        colorStateListOf(
-                            intArrayOf(android.R.attr.state_enabled) to primaryColor.copy(alpha = 0.3f).toArgb(),
-                        )
-                    progressTintList =
-                        colorStateListOf(
-                            intArrayOf(android.R.attr.state_enabled) to primaryColor.toArgb(),
-                        )
-                }
+        Slider(
+            value = progress,
+            onValueChange = { newValue ->
+                isDragging = true
+                currentValue = (newValue * durMs.toFloat()).roundToLong().coerceIn(0L, durMs)
             },
-            update = { seekBar ->
-                val maxDur = duration.toInt().coerceAtLeast(1)
-                seekBar.max = maxDur
-                if (!isDragging) {
-                    seekBar.progress = currentValue.toInt().coerceIn(0, seekBar.max)
-                }
+            onValueChangeFinished = {
+                playerHelper.seekTo(currentValue)
+                isDragging = false
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp)
+                .padding(vertical = 8.dp),
+            valueRange = 0f..1f,
+            colors = SliderDefaults.colors(
+                thumbColor = primaryColor,
+                activeTrackColor = primaryColor,
+                inactiveTrackColor = primaryColor.copy(alpha = 0.3f),
+            ),
         )
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -137,15 +111,10 @@ fun MusicSlider(
                 color = resolvedLabelColor,
             )
             Text(
-                text = duration.toMS(),
+                text = durMs.toMS(),
                 fontSize = UiTokens.musicSliderTimeLabelSp,
                 color = resolvedLabelColor,
             )
         }
     }
-}
-
-fun colorStateListOf(vararg mapping: Pair<IntArray, Int>): ColorStateList {
-    val (states, colors) = mapping.unzip()
-    return ColorStateList(states.toTypedArray(), colors.toIntArray())
 }
