@@ -705,6 +705,7 @@ class HomeFragment : Fragment() {
                                                     onPausePlayPressed = miniPlayerPlayPauseClicked,
                                                     onQueueClick = expandQueueBottomSheet,
                                                     song = currentSong,
+                                                    playerHelper = playerHelper,
                                                     showPlayButton = songPlaying == false,
                                                     widgetStyle = widgetStyle,
                                                     modifier = Modifier.fillMaxWidth(),

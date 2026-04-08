@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.with
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,12 +29,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -44,16 +54,32 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import com.generic.audioplayes.R
 import com.generic.audioplayes.data.music.Song
+import com.generic.audioplayes.nowplaying.PlayerHelper
 import com.generic.audioplayes.ui.theme.UiTokens
 import com.generic.audioplayes.widgets.WidgetLayoutFamily
 import com.generic.audioplayes.widgets.WidgetStyle
 import com.generic.audioplayes.widgets.layoutFamily
 import com.generic.audioplayes.widgets.miniPlayerBackgroundBrush
 
+private fun miniPlayerPlaybackProgress(song: Song, positionMs: Long, playerHelper: PlayerHelper): Float {
+    val durationMs = when {
+        song.durationMillis > 0 -> song.durationMillis
+        else -> {
+            val d = playerHelper.duration
+            if (d > 0f && d.isFinite()) d.toLong() else 0L
+        }
+    }
+    if (durationMs <= 0L) return 0f
+    return (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+}
+
 private val miniPlayerArtSize = 52.dp
 private val miniPlayFabSize = 48.dp
+private val miniPlayFabRingStroke = 2.dp
 private val practicalArtSize = 56.dp
 private val iconStyleArtSize = 36.dp
 
@@ -64,6 +90,7 @@ fun MiniPlayer(
     onPausePlayPressed: () -> Unit,
     onQueueClick: () -> Unit,
     song: Song?,
+    playerHelper: PlayerHelper,
     widgetStyle: WidgetStyle,
     modifier: Modifier = Modifier,
     /** Tap artwork + title to open full player (play/queue keep their own actions). */
@@ -99,6 +126,7 @@ fun MiniPlayer(
                     onPausePlayPressed = onPausePlayPressed,
                     onQueueClick = onQueueClick,
                     onExpandPlayer = onExpandPlayer,
+                    playerHelper = playerHelper,
                 )
             WidgetLayoutFamily.LITE_CENTER,
             WidgetLayoutFamily.STANDARD_CENTER,
@@ -113,6 +141,7 @@ fun MiniPlayer(
                     onPausePlayPressed = onPausePlayPressed,
                     onQueueClick = onQueueClick,
                     onExpandPlayer = onExpandPlayer,
+                    playerHelper = playerHelper,
                 )
             WidgetLayoutFamily.VINYL_ROW ->
                 MiniPlayerVinylRow(
@@ -124,6 +153,7 @@ fun MiniPlayer(
                     onPausePlayPressed = onPausePlayPressed,
                     onQueueClick = onQueueClick,
                     onExpandPlayer = onExpandPlayer,
+                    playerHelper = playerHelper,
                 )
             WidgetLayoutFamily.PRACTICAL_GRID ->
                 MiniPlayerPracticalRow(
@@ -135,6 +165,7 @@ fun MiniPlayer(
                     onPausePlayPressed = onPausePlayPressed,
                     onQueueClick = onQueueClick,
                     onExpandPlayer = onExpandPlayer,
+                    playerHelper = playerHelper,
                 )
             WidgetLayoutFamily.SIMPLE_COMPACT ->
                 MiniPlayerSimpleCompact(
@@ -146,6 +177,7 @@ fun MiniPlayer(
                     onPausePlayPressed = onPausePlayPressed,
                     onQueueClick = onQueueClick,
                     onExpandPlayer = onExpandPlayer,
+                    playerHelper = playerHelper,
                 )
             WidgetLayoutFamily.ROUND_DARK ->
                 MiniPlayerRoundDark(
@@ -157,6 +189,7 @@ fun MiniPlayer(
                     onPausePlayPressed = onPausePlayPressed,
                     onQueueClick = onQueueClick,
                     onExpandPlayer = onExpandPlayer,
+                    playerHelper = playerHelper,
                 )
             WidgetLayoutFamily.MINI_STACK ->
                 MiniPlayerMiniStack(
@@ -168,6 +201,7 @@ fun MiniPlayer(
                     onPausePlayPressed = onPausePlayPressed,
                     onQueueClick = onQueueClick,
                     onExpandPlayer = onExpandPlayer,
+                    playerHelper = playerHelper,
                 )
             WidgetLayoutFamily.CARD_STACK ->
                 MiniPlayerCardStack(
@@ -179,6 +213,7 @@ fun MiniPlayer(
                     onPausePlayPressed = onPausePlayPressed,
                     onQueueClick = onQueueClick,
                     onExpandPlayer = onExpandPlayer,
+                    playerHelper = playerHelper,
                 )
             WidgetLayoutFamily.ICON_MINI ->
                 MiniPlayerIconMini(
@@ -190,6 +225,7 @@ fun MiniPlayer(
                     onPausePlayPressed = onPausePlayPressed,
                     onQueueClick = onQueueClick,
                     onExpandPlayer = onExpandPlayer,
+                    playerHelper = playerHelper,
                 )
         }
     }
@@ -206,6 +242,7 @@ private fun MiniPlayerClassicRow(
     onPausePlayPressed: () -> Unit,
     onQueueClick: () -> Unit,
     onExpandPlayer: () -> Unit,
+    playerHelper: PlayerHelper,
 ) {
     Row(
         modifier = Modifier
@@ -263,7 +300,12 @@ private fun MiniPlayerClassicRow(
                 }
             }
         }
-        MiniPlayerPlayFab(showPlayButton = showPlayButton, onPausePlayPressed = onPausePlayPressed)
+        MiniPlayerPlayFab(
+            showPlayButton = showPlayButton,
+            onPausePlayPressed = onPausePlayPressed,
+            song = song,
+            playerHelper = playerHelper,
+        )
         MiniPlayerQueueIcon(onQueueClick = onQueueClick, tint = labelPrimary)
     }
 }
@@ -279,6 +321,7 @@ private fun MiniPlayerCenteredColumn(
     onPausePlayPressed: () -> Unit,
     onQueueClick: () -> Unit,
     onExpandPlayer: () -> Unit,
+    playerHelper: PlayerHelper,
 ) {
     Row(
         modifier = Modifier
@@ -321,7 +364,12 @@ private fun MiniPlayerCenteredColumn(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MiniPlayerPlayFab(showPlayButton = showPlayButton, onPausePlayPressed = onPausePlayPressed)
+            MiniPlayerPlayFab(
+            showPlayButton = showPlayButton,
+            onPausePlayPressed = onPausePlayPressed,
+            song = song,
+            playerHelper = playerHelper,
+        )
             MiniPlayerQueueIcon(onQueueClick = onQueueClick, tint = labelPrimary)
         }
     }
@@ -338,6 +386,7 @@ private fun MiniPlayerVinylRow(
     onPausePlayPressed: () -> Unit,
     onQueueClick: () -> Unit,
     onExpandPlayer: () -> Unit,
+    playerHelper: PlayerHelper,
 ) {
     val shape = RoundedCornerShape(8.dp)
     Row(
@@ -406,7 +455,12 @@ private fun MiniPlayerVinylRow(
                 }
             }
         }
-        MiniPlayerPlayFab(showPlayButton = showPlayButton, onPausePlayPressed = onPausePlayPressed)
+        MiniPlayerPlayFab(
+            showPlayButton = showPlayButton,
+            onPausePlayPressed = onPausePlayPressed,
+            song = song,
+            playerHelper = playerHelper,
+        )
         MiniPlayerQueueIcon(onQueueClick = onQueueClick, tint = labelPrimary)
     }
 }
@@ -422,6 +476,7 @@ private fun MiniPlayerPracticalRow(
     onPausePlayPressed: () -> Unit,
     onQueueClick: () -> Unit,
     onExpandPlayer: () -> Unit,
+    playerHelper: PlayerHelper,
 ) {
     Row(
         modifier = Modifier
@@ -481,7 +536,12 @@ private fun MiniPlayerPracticalRow(
                 }
             }
         }
-        MiniPlayerPlayFab(showPlayButton = showPlayButton, onPausePlayPressed = onPausePlayPressed)
+        MiniPlayerPlayFab(
+            showPlayButton = showPlayButton,
+            onPausePlayPressed = onPausePlayPressed,
+            song = song,
+            playerHelper = playerHelper,
+        )
         MiniPlayerQueueIcon(onQueueClick = onQueueClick, tint = labelPrimary)
     }
 }
@@ -497,6 +557,7 @@ private fun MiniPlayerSimpleCompact(
     onPausePlayPressed: () -> Unit,
     onQueueClick: () -> Unit,
     onExpandPlayer: () -> Unit,
+    playerHelper: PlayerHelper,
 ) {
     Row(
         modifier = Modifier
@@ -532,7 +593,12 @@ private fun MiniPlayerSimpleCompact(
                 color = labelSecondary,
             )
         }
-        MiniPlayerPlayFab(showPlayButton = showPlayButton, onPausePlayPressed = onPausePlayPressed)
+        MiniPlayerPlayFab(
+            showPlayButton = showPlayButton,
+            onPausePlayPressed = onPausePlayPressed,
+            song = song,
+            playerHelper = playerHelper,
+        )
         MiniPlayerQueueIcon(onQueueClick = onQueueClick, tint = labelPrimary)
     }
 }
@@ -548,6 +614,7 @@ private fun MiniPlayerRoundDark(
     onPausePlayPressed: () -> Unit,
     onQueueClick: () -> Unit,
     onExpandPlayer: () -> Unit,
+    playerHelper: PlayerHelper,
 ) {
     Row(
         modifier = Modifier
@@ -621,7 +688,12 @@ private fun MiniPlayerRoundDark(
                 }
             }
         }
-        MiniPlayerPlayFab(showPlayButton = showPlayButton, onPausePlayPressed = onPausePlayPressed)
+        MiniPlayerPlayFab(
+            showPlayButton = showPlayButton,
+            onPausePlayPressed = onPausePlayPressed,
+            song = song,
+            playerHelper = playerHelper,
+        )
         MiniPlayerQueueIcon(onQueueClick = onQueueClick, tint = labelPrimary)
     }
 }
@@ -637,6 +709,7 @@ private fun MiniPlayerMiniStack(
     onPausePlayPressed: () -> Unit,
     onQueueClick: () -> Unit,
     onExpandPlayer: () -> Unit,
+    playerHelper: PlayerHelper,
 ) {
     Column(
         modifier = Modifier
@@ -670,7 +743,12 @@ private fun MiniPlayerMiniStack(
                 color = labelSecondary,
                 modifier = Modifier.weight(1f),
             )
-            MiniPlayerPlayFab(showPlayButton = showPlayButton, onPausePlayPressed = onPausePlayPressed)
+            MiniPlayerPlayFab(
+            showPlayButton = showPlayButton,
+            onPausePlayPressed = onPausePlayPressed,
+            song = song,
+            playerHelper = playerHelper,
+        )
             MiniPlayerQueueIcon(onQueueClick = onQueueClick, tint = labelPrimary)
         }
     }
@@ -687,6 +765,7 @@ private fun MiniPlayerCardStack(
     onPausePlayPressed: () -> Unit,
     onQueueClick: () -> Unit,
     onExpandPlayer: () -> Unit,
+    playerHelper: PlayerHelper,
 ) {
     Column(
         modifier = Modifier
@@ -728,7 +807,12 @@ private fun MiniPlayerCardStack(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MiniPlayerPlayFab(showPlayButton = showPlayButton, onPausePlayPressed = onPausePlayPressed)
+            MiniPlayerPlayFab(
+            showPlayButton = showPlayButton,
+            onPausePlayPressed = onPausePlayPressed,
+            song = song,
+            playerHelper = playerHelper,
+        )
             Spacer(Modifier.width(8.dp))
             MiniPlayerQueueIcon(onQueueClick = onQueueClick, tint = labelPrimary)
         }
@@ -746,6 +830,7 @@ private fun MiniPlayerIconMini(
     onPausePlayPressed: () -> Unit,
     onQueueClick: () -> Unit,
     onExpandPlayer: () -> Unit,
+    playerHelper: PlayerHelper,
 ) {
     Row(
         modifier = Modifier
@@ -799,7 +884,12 @@ private fun MiniPlayerIconMini(
                 )
             }
         }
-        MiniPlayerPlayFab(showPlayButton = showPlayButton, onPausePlayPressed = onPausePlayPressed)
+        MiniPlayerPlayFab(
+            showPlayButton = showPlayButton,
+            onPausePlayPressed = onPausePlayPressed,
+            song = song,
+            playerHelper = playerHelper,
+        )
         MiniPlayerQueueIcon(onQueueClick = onQueueClick, tint = labelPrimary)
     }
 }
@@ -835,27 +925,69 @@ private fun MiniPlayerCircleArt(song: Song, size: Dp) {
 private fun MiniPlayerPlayFab(
     showPlayButton: Boolean,
     onPausePlayPressed: () -> Unit,
+    song: Song,
+    playerHelper: PlayerHelper,
 ) {
+    var positionMs by remember(song.location) { mutableStateOf(0L) }
+    LaunchedEffect(song.location) {
+        positionMs = playerHelper.currentPosition.toLong()
+        while (isActive) {
+            positionMs = playerHelper.currentPosition.toLong()
+            delay(250)
+        }
+    }
+    val progress = miniPlayerPlaybackProgress(song, positionMs, playerHelper)
+    val playPauseDesc = stringResource(
+        if (showPlayButton) R.string.play_button else R.string.pause_button,
+    )
     Box(
         modifier = Modifier
+            .semantics(mergeDescendants = true) {
+                contentDescription = playPauseDesc
+            }
             .size(miniPlayFabSize)
             .clip(CircleShape)
-            .border(2.dp, Color.White, CircleShape)
             .clickable(
                 onClick = onPausePlayPressed,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = rememberRipple(bounded = true, radius = 24.dp),
-            )
-            .padding(11.dp),
+            ),
         contentAlignment = Alignment.Center,
     ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val sw = miniPlayFabRingStroke.toPx()
+            val diameter = size.minDimension - sw
+            val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+            val arcSize = Size(diameter, diameter)
+            val stroke = Stroke(width = sw)
+            // Remaining track (dim)
+            drawArc(
+                color = Color.White.copy(alpha = 0.28f),
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = stroke,
+            )
+            // Elapsed (bright white)
+            if (progress > 0.001f) {
+                drawArc(
+                    color = Color.White,
+                    startAngle = -90f,
+                    sweepAngle = 360f * progress,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = stroke,
+                )
+            }
+        }
         Icon(
             painter = painterResource(
                 if (showPlayButton) R.drawable.ic_baseline_play_arrow_40 else R.drawable.ic_baseline_pause_40,
             ),
-            contentDescription = stringResource(
-                if (showPlayButton) R.string.play_button else R.string.pause_button,
-            ),
+            contentDescription = null,
             modifier = Modifier.size(26.dp),
             tint = Color.White,
         )

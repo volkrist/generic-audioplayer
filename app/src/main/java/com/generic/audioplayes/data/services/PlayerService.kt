@@ -16,6 +16,8 @@ import com.generic.audioplayes.player.toMediaItem
 import com.generic.audioplayes.toCorrectedParams
 import com.generic.audioplayes.toExoPlayerPlaybackParameters
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 
@@ -50,6 +52,8 @@ class PlayerServiceImpl(
 ) : PlayerService {
 
     private val lastCallTime = AtomicLong(0)
+    /** Serializes playback starts so two overlapping taps cannot both call [QueueService.setQueue]. */
+    private val startPlaybackMutex = Mutex()
 
     @SuppressLint("RestrictedApi")
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -63,42 +67,37 @@ class PlayerServiceImpl(
         crashReporter.logData(
             "PlayerService.startServiceIfNotRunning() pos=$startPositionMs autoPlay=$autoPlay",
         )
-        synchronized(lastCallTime) {
-            if (lastCallTime.get() + 1000 >= System.currentTimeMillis()) return
-            lastCallTime.set(System.currentTimeMillis())
-        }
-        if (songs.isEmpty()) return
+        startPlaybackMutex.withLock {
+            val now = System.currentTimeMillis()
+            if (lastCallTime.get() + 450 >= now) return
+            lastCallTime.set(now)
+            if (songs.isEmpty()) return
 
-        queueService.setQueue(songs, startPlayingFromPosition)
+            queueService.setQueue(songs, startPlayingFromPosition)
 
-        if (AudioPlayerService.isRunning.get()) {
+            if (AudioPlayerService.isRunning.get()) {
+                // [QueueService] already notified [AudioPlayerService.onSetQueue], which loads the new
+                // queue and seeks/plays on the main ExoPlayer. Do not also drive MediaController here —
+                // that caused a second seek/play and felt like the track "starting twice".
+                return
+            }
+
             MediaController.Builder(
                 context,
                 SessionToken(context, ComponentName(context, AudioPlayerService::class.java)),
             ).buildAsync().await().apply {
                 withContext(Dispatchers.Main) {
+                    stop()
+                    clearMediaItems()
+                    addMediaItems(songs.map(Song::toMediaItem))
+                    prepare()
                     seekTo(startPlayingFromPosition, startPositionMs)
+                    repeatMode = queueService.repeatMode.value.toExoPlayerRepeatMode(songs.size)
+                    playbackParameters = preferenceProvider.playbackParams.value
+                        .toCorrectedParams()
+                        .toExoPlayerPlaybackParameters()
                     if (autoPlay) play() else pause()
                 }
-            }
-            return
-        }
-
-        MediaController.Builder(
-            context,
-            SessionToken(context, ComponentName(context, AudioPlayerService::class.java)),
-        ).buildAsync().await().apply {
-            withContext(Dispatchers.Main) {
-                stop()
-                clearMediaItems()
-                addMediaItems(songs.map(Song::toMediaItem))
-                prepare()
-                seekTo(startPlayingFromPosition, startPositionMs)
-                repeatMode = queueService.repeatMode.value.toExoPlayerRepeatMode(songs.size)
-                playbackParameters = preferenceProvider.playbackParams.value
-                    .toCorrectedParams()
-                    .toExoPlayerPlaybackParameters()
-                if (autoPlay) play() else pause()
             }
         }
     }

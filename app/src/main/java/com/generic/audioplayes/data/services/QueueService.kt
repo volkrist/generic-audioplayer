@@ -194,7 +194,9 @@ class QueueServiceImpl() : QueueService {
     private val callbacks = ArrayList<QueueService.Listener>()
 
     override fun addListener(listener: QueueService.Listener) {
-        callbacks.add(listener)
+        if (listener !in callbacks) {
+            callbacks.add(listener)
+        }
     }
 
     override fun removeListener(listener: QueueService.Listener) {
