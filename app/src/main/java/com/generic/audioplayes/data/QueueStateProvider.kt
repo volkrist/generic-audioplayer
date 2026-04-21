@@ -5,6 +5,7 @@ import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.data.services.QueueService
 import com.generic.audioplayes.data.services.SongService
 import com.generic.audioplayes.nowplaying.RepeatMode
+import com.generic.audioplayes.player.AudioPlayerService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -80,6 +81,19 @@ class QueueStateProvider @Inject constructor(
         queueService: QueueService,
     ): Boolean {
         val tag = "QueueStateProvider.restore"
+        // Пока жив [AudioPlayerService] — именно он единственный владелец текущего состояния
+        // воспроизведения (очередь + позиция). Повторный запуск восстановления вызывает
+        // [QueueService.setQueue], который уведомляет [AudioPlayerService.onSetQueue] и
+        // пересобирает ExoPlayer с startPositionMs=0L и autoPlay=true. Именно из-за этого
+        // текущий трек начинал играть с самого начала каждый раз, когда HomeFragment
+        // пересоздавался (переход Главная <-> Виджеты/Таймер сна/Диктофон повторно дергал
+        // LaunchedEffect(isGranted), который вызывает onReadStoragePermissionGranted),
+        // а также при повторном открытии приложения, пока foreground-сервис ещё жив.
+        if (AudioPlayerService.isRunning.get() && queueService.queue.isNotEmpty()) {
+            Timber.d("$tag skip (service running with populated queue)")
+            crashReporter.logData("$tag skip (service running with populated queue)")
+            return true
+        }
         try {
             val persisted = queueState.data.first()
             val savedLocationsCount = persisted.locationsCount
