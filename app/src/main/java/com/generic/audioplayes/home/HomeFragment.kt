@@ -105,6 +105,7 @@ import com.generic.audioplayes.util.AudioFileActions
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
@@ -278,9 +279,13 @@ class HomeFragment : Fragment() {
                     }
                     LaunchedEffect(Unit) {
                         viewModel.deleteConfirmationSender.collect { pendingIntent ->
-                            deleteIntentSenderLauncher.launch(
-                                IntentSenderRequest.Builder(pendingIntent).build(),
-                            )
+                            runCatching {
+                                deleteIntentSenderLauncher.launch(
+                                    IntentSenderRequest.Builder(pendingIntent).build(),
+                                )
+                            }.onFailure {
+                                viewModel.onDeleteConfirmationCancelled()
+                            }
                         }
                     }
 
@@ -293,8 +298,37 @@ class HomeFragment : Fragment() {
                             }
                         )
 
-                    LaunchedEffect(key1 = readStoragePermissionState) {
+                    // Track whether we've fired the OS permission dialog at least once in this
+                    // session. Without this the composable only showed a "go to Settings"
+                    // snackbar (and never called launchPermissionRequest()), so a freshly
+                    // installed app never prompted the user and the library looked empty.
+                    var didRequestRuntimePermission by rememberSaveable { mutableStateOf(false) }
+
+                    // First chance: native system dialog. Also re-triggers when the user grants
+                    // it from Settings (isGranted flips true → we skip the rest).
+                    LaunchedEffect(readStoragePermissionState.status.isGranted) {
                         if (readStoragePermissionState.status.isGranted) return@LaunchedEffect
+                        if (!didRequestRuntimePermission) {
+                            didRequestRuntimePermission = true
+                            readStoragePermissionState.launchPermissionRequest()
+                        }
+                    }
+
+                    // Fallback: only AFTER we've asked at least once AND the user has picked
+                    // "Don't ask again" (shouldShowRationale == false while status is denied)
+                    // do we escalate to the Settings snackbar. This stops the prompt from
+                    // looping forever after the user grants the permission.
+                    LaunchedEffect(
+                        didRequestRuntimePermission,
+                        readStoragePermissionState.status.isGranted,
+                        readStoragePermissionState.status.shouldShowRationale,
+                    ) {
+                        if (!didRequestRuntimePermission) return@LaunchedEffect
+                        if (readStoragePermissionState.status.isGranted) return@LaunchedEffect
+                        if (readStoragePermissionState.status.shouldShowRationale) {
+                            readStoragePermissionState.launchPermissionRequest()
+                            return@LaunchedEffect
+                        }
                         val snackbarResult = snackbarHostState.showSnackbar(
                             context.getString(R.string.grant_access_to_read_storage),
                             context.getString(R.string.settings),
@@ -307,6 +341,15 @@ class HomeFragment : Fragment() {
                             Uri.fromParts("package", context.packageName, null)
                         ).apply {
                             startActivity(this)
+                        }
+                    }
+
+                    // Kick the library sync as soon as the permission flips to granted so the
+                    // folders tab doesn't stay stuck showing zero tracks until the user forces
+                    // a refresh.
+                    LaunchedEffect(readStoragePermissionState.status.isGranted) {
+                        if (readStoragePermissionState.status.isGranted) {
+                            viewModel.onReadStoragePermissionGranted()
                         }
                     }
 

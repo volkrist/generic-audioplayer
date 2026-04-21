@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!--
+        Android 12+ splash. Without this values-v31 override the OS would fall back to
+        system_accent1_500 (device Material You accent), which is why the splash showed a
+        periwinkle screen with the old white note. We use the same black background + new
+        animated neon note the values/splash_theme.xml fallback uses, so the brief OS splash
+        blends into BrandingSplashOverlay without a color jump.
+    -->
     <style name="Theme.AppSplash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@android:color/system_accent1_500</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/animated_logo</item>
-        <item name="windowSplashScreenAnimationDuration">800</item>
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_animated</item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
 
         <item name="android:windowLightStatusBar">false</item>
         <item name="postSplashScreenTheme">@style/Theme.AudioPlayer</item>

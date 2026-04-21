@@ -11,11 +11,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -29,8 +31,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.generic.audioplayes.R
@@ -76,24 +80,44 @@ fun DictaphoneScreen(
     if (renameTarget != null) {
         AlertDialog(
             onDismissRequest = viewModel::dismissRename,
-            title = { Text(stringResource(R.string.dictaphone_rename)) },
+            containerColor = Color(0xFF1E1B4B),
+            iconContentColor = Color.White,
+            titleContentColor = Color.White,
+            textContentColor = Color.White,
+            title = { Text(stringResource(R.string.dictaphone_rename), color = Color.White) },
             text = {
                 OutlinedTextField(
                     value = renameText,
                     onValueChange = { renameText = it },
                     singleLine = true,
-                    label = { Text(stringResource(R.string.dictaphone_rename_hint)) },
+                    label = {
+                        Text(
+                            stringResource(R.string.dictaphone_rename_hint),
+                            color = Color.White.copy(alpha = 0.7f),
+                        )
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF22D3EE),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
+                        cursorColor = Color(0xFF22D3EE),
+                    ),
                 )
             },
             confirmButton = {
                 TextButton(
                     onClick = { viewModel.confirmRename(renameText) },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF22D3EE)),
                 ) {
                     Text(stringResource(R.string.done))
                 }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::dismissRename) {
+                TextButton(
+                    onClick = viewModel::dismissRename,
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
+                ) {
                     Text(stringResource(R.string.cancel))
                 }
             },
@@ -102,6 +126,7 @@ fun DictaphoneScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
@@ -111,26 +136,41 @@ fun DictaphoneScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            // Colours forced to white / cyan / off‑white across the whole screen: the
+            // DictaphoneFragment sits on top of the dark library gradient, and the Material You
+            // defaults (onSurface / onSurfaceVariant) frequently resolve to dark grey which
+            // became unreadable — the "Recording" button and "0:00" timer were basically
+            // invisible before this pass.
             if (!microphoneGranted) {
                 Text(
                     text = stringResource(R.string.dictaphone_permission_required),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color(0xFFE5E7FF),
                 )
-                Button(onClick = onRequestMicrophonePermission) {
-                    Text(stringResource(R.string.dictaphone_grant_permission))
+                Button(
+                    onClick = onRequestMicrophonePermission,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF22D3EE),
+                        contentColor = Color(0xFF0B1028),
+                    ),
+                ) {
+                    Text(
+                        text = stringResource(R.string.dictaphone_grant_permission),
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
 
             Text(
                 text = stringResource(R.string.dictaphone_folder_hint),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color(0xFFB4B8D6),
             )
 
             Text(
                 text = if (isRecording) formatRecordingElapsed(elapsedMs) else "0:00",
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.SemiBold),
+                color = Color.White,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
 
@@ -141,27 +181,46 @@ fun DictaphoneScreen(
                 Button(
                     onClick = { viewModel.startRecording() },
                     enabled = microphoneGranted && !isRecording,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFEF4444),
+                        contentColor = Color.White,
+                        disabledContainerColor = Color(0xFFEF4444).copy(alpha = 0.35f),
+                        disabledContentColor = Color.White.copy(alpha = 0.55f),
+                    ),
                 ) {
-                    Text(stringResource(R.string.dictaphone_record))
+                    Text(
+                        text = stringResource(R.string.dictaphone_record),
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
                 Button(
                     onClick = { viewModel.stopRecording() },
                     enabled = isRecording,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF22D3EE),
+                        contentColor = Color(0xFF0B1028),
+                        disabledContainerColor = Color(0xFF22D3EE).copy(alpha = 0.25f),
+                        disabledContentColor = Color.White.copy(alpha = 0.55f),
+                    ),
                 ) {
-                    Text(stringResource(R.string.dictaphone_stop))
+                    Text(
+                        text = stringResource(R.string.dictaphone_stop),
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
 
             Text(
                 text = stringResource(R.string.dictaphone_recordings_list),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = Color.White,
             )
 
             if (recordings.isEmpty()) {
                 Text(
                     text = stringResource(R.string.dictaphone_no_recordings),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color(0xFFB4B8D6),
                 )
             } else {
                 LazyColumn(
@@ -193,7 +252,12 @@ private fun RecordingRow(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(
+            // Translucent violet chip on the library gradient: clearly visible, never clashes
+            // with the background, and keeps the body text readable in pure white.
+            containerColor = Color(0xFF1E1B4B).copy(alpha = 0.65f),
+            contentColor = Color.White,
+        ),
     ) {
         Row(
             modifier = Modifier
@@ -205,7 +269,8 @@ private fun RecordingRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.displayTitle,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color.White,
                     maxLines = 2,
                 )
                 val dur = item.durationMs
@@ -213,20 +278,30 @@ private fun RecordingRow(
                     Text(
                         text = dur.toMS(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Color(0xFFB4B8D6),
                     )
                 }
             }
-            TextButton(onClick = onPlayClick) {
+            TextButton(
+                onClick = onPlayClick,
+                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF22D3EE)),
+            ) {
                 Text(
                     if (isPlaying) stringResource(R.string.dictaphone_pause)
                     else stringResource(R.string.dictaphone_play),
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
-            TextButton(onClick = onRenameClick) {
+            TextButton(
+                onClick = onRenameClick,
+                colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
+            ) {
                 Text(stringResource(R.string.dictaphone_rename))
             }
-            TextButton(onClick = onDeleteClick) {
+            TextButton(
+                onClick = onDeleteClick,
+                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFEF4444)),
+            ) {
                 Text(stringResource(R.string.dictaphone_delete))
             }
         }

@@ -21,8 +21,10 @@ import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -105,6 +107,25 @@ class SessionCallback @Inject constructor(
         return result
     }
 
+    /**
+     * Probed by Media3 whenever a new [MediaSession.ControllerInfo] attaches to the session — in
+     * practice that includes: MainActivity resuming (it builds a MediaController to sync the
+     * widget), the home‑screen widgets reconnecting, the system media‑resumption UI, BT/headset
+     * events, and every drawer navigation that lands on a fragment which incidentally creates a
+     * controller.
+     *
+     * Earlier implementation unconditionally called [queueService.setQueue], which re-fires the
+     * [com.generic.audioplayes.data.services.QueueService.Listener] on [AudioPlayerService].
+     * That listener rebuilds the exoplayer media items with `startPositionMs = 0L` and
+     * `autoPlay = true` — i.e. the currently‑playing track gets yanked back to the beginning.
+     * That's exactly the "audio resets when I open the drawer menu" bug.
+     *
+     * Fix:
+     *  1. If the session player is already populated, echo back its current queue + position so
+     *     Media3 is happy and nothing else touches the player.
+     *  2. Only fall through to the full persisted‑state load when the session is genuinely idle
+     *     (first‑launch notification resumption, cold start after swipe‑kill, etc).
+     */
     @UnstableApi
     override fun onPlaybackResumption(
         mediaSession: MediaSession,
@@ -114,12 +135,39 @@ class SessionCallback @Inject constructor(
         val result = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
         scope.launch {
             try {
+                // Read the current session state on the main thread — ExoPlayer is single-threaded.
+                val sessionSnapshot = withContext(Dispatchers.Main) {
+                    val player = mediaSession.player
+                    val count = player.mediaItemCount
+                    if (count == 0) null else LiveSessionSnapshot(
+                        items = buildList {
+                            for (i in 0 until count) add(player.getMediaItemAt(i))
+                        },
+                        index = player.currentMediaItemIndex.coerceAtLeast(0),
+                        positionMs = player.currentPosition.coerceAtLeast(0L),
+                    )
+                }
+                if (sessionSnapshot != null) {
+                    Timber.d(
+                        "SessionCallback.onPlaybackResumption echo live session items=${sessionSnapshot.items.size} idx=${sessionSnapshot.index} pos=${sessionSnapshot.positionMs}",
+                    )
+                    result.set(
+                        MediaSession.MediaItemsWithStartPosition(
+                            sessionSnapshot.items,
+                            sessionSnapshot.index,
+                            sessionSnapshot.positionMs,
+                        ),
+                    )
+                    return@launch
+                }
+
+                // Genuine cold resume — the service has no live queue, repopulate from DataStore.
                 val state = queueState.data.first()
                 val savedCount = state.locationsCount
                 val rawIdx = state.startIndex
                 val rawPos = state.startPositionMs
                 Timber.d(
-                    "SessionCallback.onPlaybackResumption savedLocations=$savedCount rawIndex=$rawIdx rawPositionMs=$rawPos",
+                    "SessionCallback.onPlaybackResumption cold-start savedLocations=$savedCount rawIndex=$rawIdx rawPositionMs=$rawPos",
                 )
                 val songs = songService.getSongsFromLocations(state.locationsList)
                 val locationMap = buildMap {
@@ -138,7 +186,9 @@ class SessionCallback @Inject constructor(
                     "SessionCallback.onPlaybackResumption restoredCount=${orderedSongs.size}",
                 )
                 if (orderedSongs.isEmpty()) {
-                    queueState.updateData { QueueState.getDefaultInstance() }
+                    // Intentionally do NOT clear persisted state here — the library DB may just
+                    // be warming up after a cold boot. Clearing it silently loses the user's
+                    // last-played track; leaving it lets a later restore retry succeed.
                     result.set(
                         MediaSession.MediaItemsWithStartPosition(
                             emptyList(),
@@ -175,11 +225,6 @@ class SessionCallback @Inject constructor(
             } catch (e: Exception) {
                 crashReporter.logException(e)
                 try {
-                    queueState.updateData { QueueState.getDefaultInstance() }
-                } catch (eClear: Exception) {
-                    crashReporter.logException(eClear)
-                }
-                try {
                     result.set(
                         MediaSession.MediaItemsWithStartPosition(
                             emptyList(),
@@ -194,5 +239,11 @@ class SessionCallback @Inject constructor(
         }
         return result
     }
+
+    private data class LiveSessionSnapshot(
+        val items: List<androidx.media3.common.MediaItem>,
+        val index: Int,
+        val positionMs: Long,
+    )
 
 }

@@ -3,36 +3,33 @@ package com.generic.audioplayes.widgets
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,18 +37,23 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.generic.audioplayes.R
+import com.generic.audioplayes.components.TopBarWithBackArrow
+import com.generic.audioplayes.ui.theme.HomeLibraryTokens
 
-private val screenBg = Brush.verticalGradient(
-    0f to Color(0xFF070A18),
-    0.45f to Color(0xFF12102A),
-    1f to Color(0xFF1A0B28),
-)
-
-private val bannerBg = Color(0xFF1A1528).copy(alpha = 0.92f)
-private val cardBg = Color(0xFF2D2340).copy(alpha = 0.92f)
-private val labelMuted = Color(0xFFB0B8D0)
-private val accentGold = Color(0xFFFFB800)
-
+/**
+ * Widget gallery. The earlier revision rendered its own hand‑rolled top bar + hardcoded
+ * gradient that didn't respect system insets, which is why the screenshot showed content
+ * drawn behind the status bar and cropped at the bottom. Now the layout:
+ *
+ *  • Uses [HomeLibraryTokens.libraryShellGradient] for the page background so it matches
+ *    Home, Collections, Tag editor, Volume booster, Dictaphone.
+ *  • Applies [systemBarsPadding] to push content below the status bar and above the gesture
+ *    bar on modern Samsung phones.
+ *  • Uses [TopBarWithBackArrow] (the shared top app bar used everywhere else) so typography
+ *    and back behaviour are identical.
+ *  • Keeps the card styling but pulls accents from [MaterialTheme.colorScheme] so Material
+ *    You / AMOLED / light themes all look coherent.
+ */
 private data class WidgetCatalogEntry(
     @StringRes val titleRes: Int,
     val cols: Int,
@@ -85,53 +87,41 @@ fun WidgetsScreen(
         )
     }
 
+    val accent = MaterialTheme.colorScheme.primary
+    val accentSecondary = MaterialTheme.colorScheme.tertiary
+    val cardBg = Color(0xFF1E1B4B).copy(alpha = 0.55f)
+    val bannerBg = Color(0xFF11122B).copy(alpha = 0.65f)
+    val labelMuted = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(screenBg),
+            .background(HomeLibraryTokens.libraryShellGradient)
+            .systemBarsPadding(),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF0B1020))
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.ArrowBack,
-                contentDescription = stringResource(R.string.back_button),
-                tint = Color.White,
-                modifier = Modifier
-                    .padding(8.dp)
-                    .size(28.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onBack,
-                    ),
-            )
-            Text(
-                text = stringResource(R.string.widgets_screen_title),
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-            )
-        }
+        TopBarWithBackArrow(
+            onBackArrowPressed = onBack,
+            title = stringResource(R.string.widgets_screen_title),
+            actions = {},
+            backgroundColor = Color.Transparent,
+        )
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp)
-                .background(bannerBg, RoundedCornerShape(10.dp))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .background(bannerBg, RoundedCornerShape(14.dp))
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Icon(
                 imageVector = Icons.Outlined.VolumeUp,
                 contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(22.dp),
+                tint = accent,
+                modifier = Modifier
+                    .width(24.dp)
+                    .height(24.dp),
             )
             Text(
                 text = stringResource(R.string.widgets_instruction),
@@ -146,12 +136,20 @@ fun WidgetsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                top = 4.dp,
+                bottom = 24.dp,
+            ),
         ) {
             items(catalog, key = { it.titleRes }) { entry ->
                 WidgetCatalogCard(
                     entry = entry,
+                    cardBg = cardBg,
+                    labelMuted = labelMuted,
+                    applyAccent = accentSecondary,
+                    addAccent = accent,
                     onApplyStyle = { onApplyWidgetStyle(entry.style) },
                     onAdd = { onRequestPinWidget(entry.useSmallProvider) },
                 )
@@ -163,6 +161,10 @@ fun WidgetsScreen(
 @Composable
 private fun WidgetCatalogCard(
     entry: WidgetCatalogEntry,
+    cardBg: Color,
+    labelMuted: Color,
+    applyAccent: Color,
+    addAccent: Color,
     onApplyStyle: () -> Unit,
     onAdd: () -> Unit,
 ) {
@@ -212,10 +214,8 @@ private fun WidgetCatalogCard(
                 OutlinedButton(
                     onClick = onApplyStyle,
                     shape = RoundedCornerShape(22.dp),
-                    border = BorderStroke(1.5.dp, Color(0xFF7CB342)),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF7CB342),
-                    ),
+                    border = BorderStroke(1.5.dp, applyAccent),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = applyAccent),
                 ) {
                     Text(
                         text = stringResource(R.string.widgets_apply_style),
@@ -227,10 +227,8 @@ private fun WidgetCatalogCard(
                 OutlinedButton(
                     onClick = onAdd,
                     shape = RoundedCornerShape(22.dp),
-                    border = BorderStroke(1.5.dp, accentGold),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = accentGold,
-                    ),
+                    border = BorderStroke(1.5.dp, addAccent),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = addAccent),
                 ) {
                     Text(
                         text = stringResource(R.string.widgets_add),

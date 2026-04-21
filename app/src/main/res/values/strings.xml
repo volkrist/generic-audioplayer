@@ -246,7 +246,7 @@
     <string name="tag_editor_save">Save</string>
     <string name="tag_editor_saving">Saving…</string>
     <string name="tag_editor_error">Could not save: %1$s</string>
-    <string name="tag_editor_pick_cover">Choose cover image</string>
+    <string name="tag_editor_pick_cover">Change cover</string>
     <string name="tag_editor_remove_cover">Remove embedded cover</string>
     <string name="tag_editor_field_title">Title</string>
     <string name="tag_editor_field_artist">Artist</string>
@@ -256,6 +256,7 @@
     <string name="tag_editor_field_genre">Genre</string>
     <string name="tag_editor_field_lyricist">Lyricist</string>
     <string name="tag_editor_field_comment">Description / comment</string>
+    <string name="tag_editor_field_track_number">Track number</string>
     <string name="playlist_editor_play_all">Play all</string>
     <string name="playlist_editor_rename">Rename playlist</string>
     <string name="playlist_editor_add_queue">Add current queue</string>

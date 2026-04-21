@@ -64,8 +64,29 @@ object AudioFileActions {
 
     /**
      * Deletes by an already-resolved content [uri] (same [uri] must be used after recoverable confirmation).
+     *
+     * Android version specifics:
+     *  - API 30+ (Android 11): we MUST go through [MediaStore.createDeleteRequest] for any media
+     *    file the app does not own. A plain [android.content.ContentResolver.delete] silently
+     *    returns 0 without asking the user, which is the root cause of the "tap delete and
+     *    nothing happens" bug.
+     *  - API 29 (Android 10): the system throws [RecoverableSecurityException] which carries the
+     *    confirmation [PendingIntent].
+     *  - API < 29: direct delete works.
      */
     fun deleteAudioFileByUri(context: Context, uri: Uri): MediaDeleteResult {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return try {
+                val pi = MediaStore.createDeleteRequest(
+                    context.contentResolver,
+                    listOf(uri),
+                )
+                MediaDeleteResult.Recoverable(pi, uri)
+            } catch (e: Exception) {
+                Timber.e(e, "deleteAudioFileByUri createDeleteRequest")
+                MediaDeleteResult.Failed
+            }
+        }
         return try {
             if (context.contentResolver.delete(uri, null, null) > 0) {
                 MediaDeleteResult.Success
@@ -73,11 +94,47 @@ object AudioFileActions {
                 MediaDeleteResult.Failed
             }
         } catch (e: RecoverableSecurityException) {
-            // User action is [android.app.RemoteAction]; use its PendingIntent for [StartIntentSenderForResult].
             MediaDeleteResult.Recoverable(e.userAction.actionIntent, uri)
         } catch (e: SecurityException) {
             Timber.e(e, "deleteAudioFileByUri")
             MediaDeleteResult.Failed
+        }
+    }
+
+    /**
+     * Performs the post-confirmation actual delete on Android 11+. Once the user grants the
+     * [MediaStore.createDeleteRequest] consent, the file is already removed by the system, but we
+     * still try a [android.content.ContentResolver.delete] cleanup so the row is purged in case
+     * of OEM quirks. Returns [MediaDeleteResult.Success] regardless when the file is gone.
+     */
+    fun confirmDeleteAudioFileByUri(context: Context, uri: Uri): MediaDeleteResult {
+        return try {
+            context.contentResolver.delete(uri, null, null)
+            MediaDeleteResult.Success
+        } catch (e: Exception) {
+            Timber.e(e, "confirmDeleteAudioFileByUri")
+            MediaDeleteResult.Success
+        }
+    }
+
+    /**
+     * Returns a single batched delete request for all [filePaths] on Android 11+. Resolves each
+     * path to its MediaStore content URI; entries that cannot be resolved are skipped. Returns
+     * `null` if API < 30 or no URIs could be resolved.
+     */
+    fun createBatchDeleteRequestOrNull(
+        context: Context,
+        filePaths: List<String>,
+    ): Pair<PendingIntent, List<Uri>>? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        val uris = filePaths.mapNotNull { resolveAudioContentUri(context, it) }
+        if (uris.isEmpty()) return null
+        return try {
+            val pi = MediaStore.createDeleteRequest(context.contentResolver, uris)
+            pi to uris
+        } catch (e: Exception) {
+            Timber.e(e, "createBatchDeleteRequestOrNull")
+            null
         }
     }
 

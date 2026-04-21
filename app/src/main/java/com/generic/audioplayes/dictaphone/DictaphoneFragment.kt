@@ -5,13 +5,17 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
+import com.generic.audioplayes.ui.theme.HomeLibraryTokens
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -52,11 +56,17 @@ class DictaphoneFragment : Fragment() {
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
                 AudioPlayerTheme(themePreference, systemUiController) {
                     val recordAudioPermission = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
-                    Column(Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(HomeLibraryTokens.libraryShellGradient)
+                            .systemBarsPadding(),
+                    ) {
                         TopBarWithBackArrow(
                             onBackArrowPressed = { findNavController().navigateUp() },
                             title = stringResource(R.string.drawer_dictaphone),
                             actions = {},
+                            backgroundColor = Color.Transparent,
                         )
                         DictaphoneScreen(
                             viewModel = viewModel,

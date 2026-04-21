@@ -111,8 +111,10 @@ class QueueStateProvider @Inject constructor(
             crashReporter.logData("$tag restoredCount=${orderedSongs.size}")
 
             if (orderedSongs.isEmpty()) {
-                Timber.w("$tag no songs resolved — clearing persisted queue state")
-                queueState.updateData { QueueState.getDefaultInstance() }
+                // Library DB may not be ready yet (cold start before MediaStore sync). Keep the
+                // persisted snapshot intact so the next restoration attempt (after sync) can use
+                // it; otherwise the user's last-played track silently disappears across restarts.
+                Timber.w("$tag no songs resolved — keeping persisted state for later retry")
                 return false
             }
 

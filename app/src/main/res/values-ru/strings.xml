@@ -246,7 +246,7 @@
     <string name="tag_editor_save">Сохранить</string>
     <string name="tag_editor_saving">Сохранение…</string>
     <string name="tag_editor_error">Не удалось сохранить: %1$s</string>
-    <string name="tag_editor_pick_cover">Выбрать обложку</string>
+    <string name="tag_editor_pick_cover">Изменить обложку</string>
     <string name="tag_editor_remove_cover">Удалить встроенную обложку</string>
     <string name="tag_editor_field_title">Название</string>
     <string name="tag_editor_field_artist">Исполнитель</string>
@@ -256,6 +256,7 @@
     <string name="tag_editor_field_genre">Жанр</string>
     <string name="tag_editor_field_lyricist">Автор текста</string>
     <string name="tag_editor_field_comment">Описание / комментарий</string>
+    <string name="tag_editor_field_track_number">Номер трека</string>
     <string name="playlist_editor_play_all">Play all</string>
     <string name="playlist_editor_rename">Rename playlist</string>
     <string name="playlist_editor_add_queue">Add current queue</string>

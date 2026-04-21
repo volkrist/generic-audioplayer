@@ -7,8 +7,11 @@ import android.os.SystemClock
 import android.view.WindowManager
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -46,6 +49,10 @@ class MainActivity : AppCompatActivity() {
         /** -1 = never refreshed this process (avoid skipping first scan when elapsedRealtime is small). */
         @Volatile
         private var lastForegroundLibraryRefreshAtElapsedMs: Long = -1L
+
+        /** One‑shot flag so the cinematic splash only runs on the first cold start per process. */
+        @Volatile
+        private var splashAlreadyShown: Boolean = false
     }
 
     @Inject lateinit var appUpdateManager: AppUpdateManager
@@ -70,6 +77,8 @@ class MainActivity : AppCompatActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window,false)
         window.statusBarColor = Color.TRANSPARENT
+
+        setupBrandingSplashOverlay()
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -135,6 +144,40 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             crashReporter.logException(e)
+        }
+    }
+
+    /**
+     * Renders [BrandingSplashOverlay] on top of the [binding.root] layout (Android 12+ already
+     * shows its short icon splash; our overlay kicks in once [setContentView] is up and fades
+     * out automatically). We only show it on the first cold start per process so navigating
+     * between app tasks does not stutter the player UI.
+     */
+    private fun setupBrandingSplashOverlay() {
+        if (splashAlreadyShown) {
+            binding.brandingSplash.isVisible = false
+            return
+        }
+        splashAlreadyShown = true
+        val finishedState = mutableStateOf(false)
+        binding.brandingSplash.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                if (!finishedState.value) {
+                    BrandingSplashOverlay(
+                        onFinished = { finishedState.value = true },
+                    )
+                }
+            }
+        }
+        lifecycleScope.launch {
+            // Poll the finished flag so we can detach the ComposeView once the animation is over
+            // (frees the Compose tree so it doesn't keep composing invisible frames forever).
+            while (!finishedState.value) {
+                kotlinx.coroutines.delay(100)
+            }
+            binding.brandingSplash.isVisible = false
+            binding.brandingSplash.disposeComposition()
         }
     }
 }

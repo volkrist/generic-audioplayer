@@ -149,9 +149,13 @@ class CollectionFragment : Fragment() {
                     }
                     LaunchedEffect(Unit) {
                         homeViewModel.deleteConfirmationSender.collect { pendingIntent ->
-                            deleteIntentSenderLauncher.launch(
-                                IntentSenderRequest.Builder(pendingIntent).build(),
-                            )
+                            runCatching {
+                                deleteIntentSenderLauncher.launch(
+                                    IntentSenderRequest.Builder(pendingIntent).build(),
+                                )
+                            }.onFailure {
+                                homeViewModel.onDeleteConfirmationCancelled()
+                            }
                         }
                     }
                     val topBarContainerAlpha by remember {

@@ -68,8 +68,11 @@ class PlayerServiceImpl(
             "PlayerService.startServiceIfNotRunning() pos=$startPositionMs autoPlay=$autoPlay",
         )
         startPlaybackMutex.withLock {
+            // Drop only true accidental double-taps (~120 ms). Previous 450 ms window made the
+            // player feel sluggish: tapping a different track quickly after the first one was
+            // silently ignored.
             val now = System.currentTimeMillis()
-            if (lastCallTime.get() + 450 >= now) return
+            if (lastCallTime.get() + 120 >= now) return
             lastCallTime.set(now)
             if (songs.isEmpty()) return
 
@@ -106,13 +109,11 @@ class PlayerServiceImpl(
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override suspend fun togglePlayPauseIfRunning() {
         if (!AudioPlayerService.isRunning.get()) return
-        MediaController.Builder(
-            context,
-            SessionToken(context, ComponentName(context, AudioPlayerService::class.java)),
-        ).buildAsync().await().apply {
-            withContext(Dispatchers.Main) {
-                if (isPlaying) pause() else play()
-            }
+        // Operate directly on the singleton ExoPlayer instead of building a new MediaController
+        // for every tap — controller creation involves binding to the MediaSessionService and
+        // adds 100-300 ms of perceived lag on each play/pause press.
+        withContext(Dispatchers.Main) {
+            if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
         }
     }
 
@@ -120,14 +121,9 @@ class PlayerServiceImpl(
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override suspend fun stopPlaybackAndClearQueueIfRunning() {
         if (!AudioPlayerService.isRunning.get()) return
-        MediaController.Builder(
-            context,
-            SessionToken(context, ComponentName(context, AudioPlayerService::class.java)),
-        ).buildAsync().await().apply {
-            withContext(Dispatchers.Main) {
-                stop()
-                clearMediaItems()
-            }
+        withContext(Dispatchers.Main) {
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
         }
     }
 

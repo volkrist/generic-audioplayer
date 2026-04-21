@@ -339,9 +339,13 @@ class SongExtractor(
                 songs.add(
                     MiniSong(
                         location = songPath,
-                        title = cursor.getString(titleIndex).trim(),
+                        title = com.generic.audioplayes.tags.maybeFixMojibake(
+                            cursor.getString(titleIndex)?.trim()
+                        ),
                         artUri = "content://media/external/audio/media/${cursor.getLong(songIdIndex)}/albumart",
-                        artist = cursor.getString(artistIndex)
+                        artist = com.generic.audioplayes.tags.maybeFixMojibake(
+                            cursor.getString(artistIndex)
+                        ),
                     )
                 )
             } catch (_: Exception){
@@ -683,20 +687,36 @@ class SongExtractor(
             val bitsPerSample = if (Build.VERSION.SDK_INT >= 31){
                 extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITS_PER_SAMPLE)?.toIntOrNull() ?: 0
             } else 0
+            // Legacy ID3v1 / ID3v2 (and many Russian mp3s from late‑90s rips) store Cyrillic
+            // text as Windows‑1251 or UTF‑8 mis‑labelled as ISO‑8859‑1 in the encoding byte.
+            // [MediaMetadataRetriever] returns it verbatim, so every byte becomes a Latin‑1
+            // code‑point ("Ð Ñ Â" prefixes). Funnel every text field through
+            // [com.generic.audioplayes.tags.maybeFixMojibake] to recover the original string
+            // — it’s a no‑op for well‑formed UTF‑8 tags.
             val song = Song(
                 location = path,
-                title = title,
-                album = album,
+                title = com.generic.audioplayes.tags.maybeFixMojibake(title),
+                album = com.generic.audioplayes.tags.maybeFixMojibake(album),
                 size = size.toFloat().toMBfromB(),
                 addedDate = (dateAddedSec * 1000L).formatToDate(),
                 modifiedDate = modifiedDate.toLong().formatToDate(),
                 dateModifiedSec = dateModifiedSec,
                 dateAddedSec = dateAddedSec,
-                artist = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.trim() ?: UNKNOWN,
-                albumArtist = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)?.trim() ?: UNKNOWN,
-                composer = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_COMPOSER)?.trim() ?: UNKNOWN,
-                genre = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE)?.trim() ?: UNKNOWN,
-                lyricist = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_WRITER)?.trim() ?: UNKNOWN,
+                artist = com.generic.audioplayes.tags.maybeFixMojibake(
+                    extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.trim()
+                ).ifEmpty { UNKNOWN },
+                albumArtist = com.generic.audioplayes.tags.maybeFixMojibake(
+                    extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)?.trim()
+                ).ifEmpty { UNKNOWN },
+                composer = com.generic.audioplayes.tags.maybeFixMojibake(
+                    extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_COMPOSER)?.trim()
+                ).ifEmpty { UNKNOWN },
+                genre = com.generic.audioplayes.tags.maybeFixMojibake(
+                    extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE)?.trim()
+                ).ifEmpty { UNKNOWN },
+                lyricist = com.generic.audioplayes.tags.maybeFixMojibake(
+                    extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_WRITER)?.trim()
+                ).ifEmpty { UNKNOWN },
                 year = extractor.extractMetadata(MediaMetadataRetriever.METADATA_KEY_YEAR)?.toIntOrNull() ?: 0,
                 comment = null,
                 durationMillis = durationMillis,

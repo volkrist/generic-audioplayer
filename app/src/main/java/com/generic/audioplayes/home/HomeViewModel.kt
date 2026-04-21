@@ -1,4 +1,4 @@
-package com.generic.audioplayes.home
+﻿package com.generic.audioplayes.home
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
@@ -38,11 +38,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -75,8 +76,19 @@ class HomeViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
-    private val deleteConfirmationSenderInternal = MutableSharedFlow<PendingIntent>(extraBufferCapacity = 1)
-    val deleteConfirmationSender = deleteConfirmationSenderInternal.asSharedFlow()
+    /**
+     * Delete confirmations are delivered exactly once via a [Channel] (not a SharedFlow): the
+     * fragment that owns the activity-result launcher may briefly be detached during navigation
+     * (Home -> Collection -> back), and a SharedFlow with no live collector silently drops the
+     * intent so the system "Allow this app to delete?" dialog never shows. A buffered channel
+     * holds emissions until the next collector resumes and then hands them off, fixing the
+     * "tapped delete N times before it worked" bug.
+     */
+    private val deleteConfirmationChannel = Channel<PendingIntent>(
+        capacity = Channel.BUFFERED,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val deleteConfirmationSender = deleteConfirmationChannel.receiveAsFlow()
 
     @Volatile
     private var pendingDeleteSong: Song? = null
@@ -87,6 +99,13 @@ class HomeViewModel @Inject constructor(
     /** When non-null, [onDeleteConfirmedByUser] continues [deleteFolderFromDevice] after a recoverable delete. */
     @Volatile
     private var pendingFolderDelete: Directory? = null
+
+    /**
+     * Songs queued for cleanup after a single batched [android.provider.MediaStore.createDeleteRequest]
+     * consent (Android 11+). Prevents prompting the user once per file when deleting a folder.
+     */
+    @Volatile
+    private var pendingBatchDeleteSongs: List<Song> = emptyList()
 
     val songs = songService.songs
         .combine(prefs.songSortOrder){ songs, sortOrder ->
@@ -273,22 +292,60 @@ class HomeViewModel @Inject constructor(
         queueService.addListener(queueServiceListener)
         viewModelScope.launch(Dispatchers.IO) {
             libraryRepository.loadLibraryFromCache()
-            try {
+            val restored = try {
                 queueStateProvider.restoreQueueIfPossible(songService, queueService)
             } catch (e: Exception) {
                 crashReporter.logException(e)
-                Timber.e(e, "HomeViewModel: restore queue failed, clearing persisted state")
+                Timber.e(e, "HomeViewModel: restore queue failed (first attempt)")
+                false
+            }
+            if (restored) {
+                syncExoPlayerWithPersistedQueueIfServiceStopped()
+            }
+            libraryRepository.updateLibraryFromMediaStore()
+            // Library DB may have been empty on cold start (e.g. fresh install of an upgrade or
+            // user revoked storage permission once); retry the restore once the MediaStore sync
+            // finishes so the last-played track is re-attached and never silently disappears.
+            if (!restored) {
                 try {
-                    queueStateProvider.clearPersistedState()
-                } catch (e2: Exception) {
-                    crashReporter.logException(e2)
+                    val secondTry = queueStateProvider.restoreQueueIfPossible(songService, queueService)
+                    if (secondTry) {
+                        syncExoPlayerWithPersistedQueueIfServiceStopped()
+                    }
+                } catch (e: Exception) {
+                    crashReporter.logException(e)
+                    Timber.e(e, "HomeViewModel: restore queue failed (post-sync retry)")
                 }
             }
-            syncExoPlayerWithPersistedQueueIfServiceStopped()
-            libraryRepository.updateLibraryFromMediaStore()
         }
         _currentSongPlaying.update { exoPlayer.isPlaying }
         exoPlayer.addListener(exoPlayerListener)
+    }
+
+    /**
+     * Called from [HomeFragment] the moment the user grants READ_MEDIA_AUDIO /
+     * READ_EXTERNAL_STORAGE. Forces a fresh MediaStore scan so tabs that looked empty during
+     * the denied-permission state populate without waiting for the next cold start. Also retries
+     * the persisted queue restoration in case the cold-start attempt returned an empty library.
+     */
+    fun onReadStoragePermissionGranted() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                libraryRepository.updateLibraryFromMediaStore()
+            } catch (e: Exception) {
+                crashReporter.logException(e)
+            }
+            try {
+                val restored = queueStateProvider.restoreQueueIfPossible(songService, queueService)
+                if (restored) syncExoPlayerWithPersistedQueueIfServiceStopped()
+            } catch (e: Exception) {
+                crashReporter.logException(e)
+            }
+            try {
+                explorer.refreshCurrentDirectory()
+            } catch (_: Exception) {
+            }
+        }
     }
 
     fun onMiniPlayerPlayPause() {
@@ -357,7 +414,7 @@ class HomeViewModel @Inject constructor(
                     is MediaDeleteResult.Recoverable -> {
                         pendingDeleteSong = song
                         pendingDeleteUri = result.uri
-                        deleteConfirmationSenderInternal.emit(result.pendingIntent)
+                        deleteConfirmationChannel.trySend(result.pendingIntent)
                     }
                     MediaDeleteResult.Failed -> {
                         withContext(Dispatchers.Main) {
@@ -376,11 +433,69 @@ class HomeViewModel @Inject constructor(
 
     /** Call after system delete confirmation (`Activity.RESULT_OK`). */
     fun onDeleteConfirmedByUser() {
+        // Batched folder delete (Android 11+): the system removed the whole batch atomically,
+        // we just clean up DB + queue here.
+        val batch = pendingBatchDeleteSongs
+        if (batch.isNotEmpty()) {
+            val folder = pendingFolderDelete
+            pendingBatchDeleteSongs = emptyList()
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    for (s in batch) {
+                        try {
+                            songService.removeSongFromLibraryMetadata(s)
+                        } catch (e: Exception) {
+                            crashReporter.logException(e)
+                        }
+                        withContext(Dispatchers.Main) {
+                            refreshQueueAfterRemovingSong(s)
+                        }
+                    }
+                    libraryRepository.updateLibraryFromMediaStore()
+                    if (folder != null) {
+                        try {
+                            File(folder.absolutePath).deleteRecursively()
+                        } catch (_: Exception) {
+                            deleteDirectoryRecursiveBestEffort(File(folder.absolutePath))
+                        }
+                    }
+                    pendingFolderDelete = null
+                    // Repaint the "Folders" tab immediately so the just‑deleted directory
+                    // disappears from the list without forcing the user to navigate away
+                    // and back. If we were INSIDE the folder that we just removed, walk up
+                    // one level so we don't end up staring at a listing of a dead path.
+                    refreshExplorerAfterFolderDelete(folder)
+                    withContext(Dispatchers.Main) {
+                        showMessage(
+                            messageStore.getString(
+                                if (folder != null) R.string.folder_delete_ok else R.string.player_delete_ok,
+                            ),
+                        )
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e)
+                    pendingFolderDelete = null
+                    withContext(Dispatchers.Main) {
+                        showMessage(messageStore.getString(R.string.some_error_occurred))
+                    }
+                }
+            }
+            return
+        }
         val song = pendingDeleteSong ?: return
         val uri = pendingDeleteUri ?: return
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                when (val result = AudioFileActions.deleteAudioFileByUri(appContext, uri)) {
+                // On Android 11+ the system has already removed the file once the user granted
+                // the createDeleteRequest consent — we just clean up our DB / queue here. On older
+                // APIs we still call deleteAudioFileByUri so the legacy RecoverableSecurityException
+                // path can finish.
+                val result = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    AudioFileActions.confirmDeleteAudioFileByUri(appContext, uri)
+                } else {
+                    AudioFileActions.deleteAudioFileByUri(appContext, uri)
+                }
+                when (result) {
                     MediaDeleteResult.Success -> {
                         pendingDeleteSong = null
                         pendingDeleteUri = null
@@ -391,7 +506,7 @@ class HomeViewModel @Inject constructor(
                         }
                     }
                     is MediaDeleteResult.Recoverable -> {
-                        deleteConfirmationSenderInternal.emit(result.pendingIntent)
+                        deleteConfirmationChannel.trySend(result.pendingIntent)
                     }
                     MediaDeleteResult.Failed -> {
                         pendingDeleteSong = null
@@ -416,6 +531,7 @@ class HomeViewModel @Inject constructor(
         pendingDeleteSong = null
         pendingDeleteUri = null
         pendingFolderDelete = null
+        pendingBatchDeleteSongs = emptyList()
     }
 
     private suspend fun completeDeleteAfterFileRemoved(song: Song) {
@@ -424,8 +540,43 @@ class HomeViewModel @Inject constructor(
             refreshQueueAfterRemovingSong(song)
         }
         libraryRepository.updateLibraryFromMediaStore()
+        // Kick the file explorer so the deleted track also disappears from the current
+        // folder listing live (it reads directory contents on demand, not through a flow).
+        runCatching { explorer.refreshCurrentDirectory() }
         withContext(Dispatchers.Main) {
             showMessage(messageStore.getString(R.string.player_delete_ok))
+        }
+    }
+
+    /**
+     * Forces the Folders tab to re-query its current directory after a delete. When the deleted
+     * folder happens to be the one the user was browsing (or an ancestor of it), we step the
+     * explorer up to the nearest still-existing ancestor so the UI doesn't freeze on a path
+     * that no longer exists.
+     */
+    private fun refreshExplorerAfterFolderDelete(deleted: Directory?) {
+        try {
+            if (deleted != null) {
+                val deletedPath = File(deleted.absolutePath).canonicalFile.absolutePath.trimEnd(File.separatorChar)
+                var walker = File(deletedPath)
+                while (!walker.exists() || !walker.isDirectory) {
+                    val parent = walker.parentFile ?: break
+                    walker = parent
+                }
+                // Always bounce into the parent listing: the deleted folder is obviously gone,
+                // its parent is the screen the user should see after the delete.
+                val parentOfDeleted = File(deletedPath).parentFile
+                if (parentOfDeleted != null && parentOfDeleted.exists() && parentOfDeleted.isDirectory) {
+                    explorer.moveInsideDirectory(parentOfDeleted.absolutePath)
+                } else {
+                    explorer.refreshCurrentDirectory()
+                }
+            } else {
+                explorer.refreshCurrentDirectory()
+            }
+            _isExplorerAtRoot.update { explorer.isRoot }
+        } catch (e: Exception) {
+            Timber.e(e, "refreshExplorerAfterFolderDelete")
         }
     }
 
@@ -596,16 +747,33 @@ class HomeViewModel @Inject constructor(
                 val songs = resolveFolderSongsForDeletion(folder)
                 if (songs.isEmpty()) {
                     val ok = deleteDirectoryRecursiveBestEffort(dir)
+                    if (ok) {
+                        libraryRepository.updateLibraryFromMediaStore()
+                        refreshExplorerAfterFolderDelete(folder)
+                    }
                     withContext(Dispatchers.Main) {
                         pendingFolderDelete = null
-                        if (ok) {
-                            libraryRepository.updateLibraryFromMediaStore()
-                            showMessage(messageStore.getString(R.string.folder_delete_ok))
-                        } else {
-                            showMessage(messageStore.getString(R.string.folder_delete_failed))
-                        }
+                        showMessage(
+                            messageStore.getString(
+                                if (ok) R.string.folder_delete_ok else R.string.folder_delete_failed
+                            )
+                        )
                     }
                     return@launch
+                }
+                // Android 11+: ask once for the whole folder via createDeleteRequest instead of
+                // prompting per file (was previously triggering 1 dialog per song).
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    val batch = AudioFileActions.createBatchDeleteRequestOrNull(
+                        appContext,
+                        songs.map { it.location },
+                    )
+                    if (batch != null) {
+                        pendingBatchDeleteSongs = songs
+                        pendingFolderDelete = folder
+                        deleteConfirmationChannel.trySend(batch.first)
+                        return@launch
+                    }
                 }
                 var deleted = 0
                 for (song in songs) {
@@ -626,7 +794,7 @@ class HomeViewModel @Inject constructor(
                             pendingDeleteSong = song
                             pendingDeleteUri = result.uri
                             pendingFolderDelete = folder
-                            deleteConfirmationSenderInternal.emit(result.pendingIntent)
+                            deleteConfirmationChannel.trySend(result.pendingIntent)
                             return@launch
                         }
                         MediaDeleteResult.Failed -> Unit
@@ -638,6 +806,9 @@ class HomeViewModel @Inject constructor(
                 } catch (_: Exception) {
                     deleteDirectoryRecursiveBestEffort(dir)
                 }
+                // Legacy (pre-Android-11) per-song path — fold the folder out of the explorer
+                // UI as soon as all individual deletes finished.
+                if (deleted > 0) refreshExplorerAfterFolderDelete(folder)
                 withContext(Dispatchers.Main) {
                     pendingFolderDelete = null
                     if (deleted > 0) {
