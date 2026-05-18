@@ -9,7 +9,8 @@ object Versions {
     const val androidxCore = "1.7.0"
     const val androidxLifecycle = "2.6.0-beta01"
 //    const val androidxLifecycleRuntimeCompose = "2.6.0-beta01"
-    const val androidxActivity = "1.5.1"
+    const val androidxActivity = "1.9.3"
+    const val androidxConcurrentFutures = "1.2.0"
     const val androidxJunit = "1.1.3"
     const val androidxEspresso = "3.4.0"
     const val androidxComposeConstraintLayout = "1.0.1"
@@ -74,6 +75,8 @@ object Libraries {
     const val androidxLifecycleRuntimeCompose = "androidx.lifecycle:lifecycle-runtime-compose:${Versions.androidxLifecycle}"
 
     const val androidxActivityCompose = "androidx.activity:activity-compose:${Versions.androidxActivity}"
+    const val androidxConcurrentFuturesKtx =
+        "androidx.concurrent:concurrent-futures-ktx:${Versions.androidxConcurrentFutures}"
 
     const val androidxComposeUi = "androidx.compose.ui:ui:${Versions.androidxComposeUi}"
     const val androidxComposeUiToolingPreview = "androidx.compose.ui:ui-tooling-preview:${Versions.androidxComposeUi}"
@@ -140,9 +143,9 @@ object Libraries {
 }
 
 object Api {
-    const val compileSdk = 34
+    const val compileSdk = 35
     const val minSdk = 23
-    const val targetSdk = 34
+    const val targetSdk = 35
 }
 
 object AnnotationProcessors {
@@ -154,7 +157,7 @@ object AnnotationProcessors {
 object AppVersion {
     private const val Major = 1
     private const val Minor = 2
-    private const val Patch = 5
+    private const val Patch = 10
     const val Code = Major*10000 + Minor*100 + Patch
     const val Name = "$Major.$Minor.$Patch"
 }

@@ -8,7 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
@@ -26,7 +26,6 @@ import com.generic.audioplayes.components.TopBarWithBackArrow
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.generic.audioplayes.ui.theme.HomeLibraryTokens
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -45,9 +44,8 @@ class VolumeBoosterFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                AudioPlayerTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference) {
                     // Same library‑shell gradient as Home / CollectionFragment / TagEditor, so
                     // the Volume Booster screen blends with the rest of the app instead of
                     // showing a stock grey surface.
@@ -55,7 +53,6 @@ class VolumeBoosterFragment : Fragment() {
                         modifier = Modifier
                             .fillMaxSize()
                             .background(HomeLibraryTokens.libraryShellGradient)
-                            .systemBarsPadding(),
                     ) {
                         TopBarWithBackArrow(
                             onBackArrowPressed = { findNavController().navigateUp() },
@@ -67,6 +64,7 @@ class VolumeBoosterFragment : Fragment() {
                             viewModel = viewModel,
                             modifier = Modifier
                                 .fillMaxSize()
+                                .navigationBarsPadding()
                                 .padding(top = 0.dp),
                         )
                     }

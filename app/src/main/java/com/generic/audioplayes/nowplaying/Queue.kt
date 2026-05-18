@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.generic.audioplayes.R
+import com.generic.audioplayes.components.ScreenEmptyState
 import com.generic.audioplayes.components.SongCardV2
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.ui.theme.UiTokens
@@ -143,6 +144,14 @@ fun ColumnScope.Queue(
                             horizontal = UiTokens.paddingSheetHorizontal,
                             vertical = UiTokens.paddingSection,
                         ),
+                )
+            }
+        }
+        if (queue.isEmpty()) {
+            item {
+                ScreenEmptyState(
+                    message = stringResource(R.string.queue_empty),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

@@ -18,4 +18,5 @@ data class SearchResult(
     val playlists: List<Playlist> = emptyList(),
     val dictaphoneRecordings: List<Song> = emptyList(),
     val errorMsg: String? = null,
+    val isLoading: Boolean = false,
 )

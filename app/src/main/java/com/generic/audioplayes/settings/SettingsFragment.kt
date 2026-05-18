@@ -7,6 +7,7 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.generic.audioplayes.ui.scaffoldContentPaddingWithSystemBars
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -27,6 +28,7 @@ import com.generic.audioplayes.R
 import com.generic.audioplayes.components.Snackbar
 import com.generic.audioplayes.components.TopBarWithBackArrow
 import com.generic.audioplayes.data.AudioPlayerCrashReporter
+import com.generic.audioplayes.BuildConfig
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -73,6 +75,11 @@ class SettingsFragment : Fragment() {
                 val faqUrl = stringResource(R.string.settings_faq_url)
                 val termsUrl = stringResource(R.string.settings_terms_url)
                 val appVersionDisplay = stringResource(R.string.app_version_name)
+                val stage4BuildMarker = if (BuildConfig.DEBUG) {
+                    "Debug build: Stage 4 fix active v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
+                } else {
+                    null
+                }
 
                 val onFaqClicked = remember(faqUrl) {
                     {
@@ -184,7 +191,7 @@ class SettingsFragment : Fragment() {
                         },
                         content = { paddingValues ->
                             SettingsList(
-                                paddingValues = paddingValues,
+                                paddingValues = scaffoldContentPaddingWithSystemBars(paddingValues),
                                 lastBackupEpochMs = lastBackupEpochMs,
                                 crossfadeEnabled = crossfadeEnabled,
                                 onCrossfadeChanged = preferenceProvider::updateCrossfadeEnabled,
@@ -206,6 +213,7 @@ class SettingsFragment : Fragment() {
                                 onPrivacyPolicyClicked = onPrivacyPolicyClicked,
                                 onTermsClicked = onTermsClicked,
                                 appVersionDisplay = appVersionDisplay,
+                                stage4BuildMarker = stage4BuildMarker,
                             )
                         },
                         snackbarHost = {

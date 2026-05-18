@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.generic.audioplayes.R
 import com.generic.audioplayes.components.more_options.OptionsAlertDialog
+import com.generic.audioplayes.util.Stage4DebugLog
 import com.generic.audioplayes.components.more_options.SongOptions
 import com.generic.audioplayes.data.music.MiniSong
 import com.generic.audioplayes.data.music.Song
@@ -195,7 +196,10 @@ private fun SongCardBase(
                 contentDescription = stringResource(R.string.more_menu_button),
                 modifier = iconModifier
                     .clickable(
-                        onClick = onOverflowClick,
+                        onClick = {
+                            Stage4DebugLog.i("Track overflow clicked path=${song.location}")
+                            onOverflowClick()
+                        },
                         indication = rememberRipple(
                             bounded = false,
                             radius = UiTokens.rippleSmall
@@ -213,6 +217,7 @@ private fun SongCardBase(
                 modifier = iconModifier
                     .clickable(
                         onClick = {
+                            Stage4DebugLog.i("Track overflow clicked path=${song.location} (OptionsAlertDialog)")
                             optionsVisible = true
                         },
                         indication = rememberRipple(
@@ -380,7 +385,10 @@ fun SongCardHomeSongsRow(
             contentDescription = stringResource(R.string.more_menu_button),
             modifier = iconMod
                 .clickable(
-                    onClick = onOverflowMenuClick,
+                    onClick = {
+                        Stage4DebugLog.i("Track overflow clicked path=${song.location} (HomeSongsRow)")
+                        onOverflowMenuClick()
+                    },
                     indication = rememberRipple(
                         bounded = false,
                         radius = UiTokens.rippleSmall
@@ -569,7 +577,10 @@ fun MiniSongCard(
                 contentDescription = stringResource(R.string.more_menu_button),
                 modifier = iconModifier
                     .clickable(
-                        onClick = onOverflowClick,
+                        onClick = {
+                            Stage4DebugLog.i("Track overflow clicked path=${song.location} (MiniSongCard sheet)")
+                            onOverflowClick()
+                        },
                         indication = rememberRipple(
                             bounded = false,
                             radius = UiTokens.rippleSmall
@@ -587,6 +598,7 @@ fun MiniSongCard(
                 modifier = iconModifier
                     .clickable(
                         onClick = {
+                            Stage4DebugLog.i("Track overflow clicked path=${song.location} (MiniSongCard OptionsAlertDialog)")
                             optionsVisible = true
                         },
                         indication = rememberRipple(

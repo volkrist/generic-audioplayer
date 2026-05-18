@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -93,6 +94,7 @@ fun ThemeScreen(
             .fillMaxSize()
             .background(screenBg)
             .verticalScroll(rememberScrollState())
+            .navigationBarsPadding()
             .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
         SectionTitle(text = stringResource(R.string.graphic_theme_color_section))

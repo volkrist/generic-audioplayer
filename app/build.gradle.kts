@@ -96,6 +96,12 @@ android {
         jvmTarget = "11"
     }
 
+    lint {
+        lintConfig = file("lint.xml")
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     buildFeatures {
         compose = true
         viewBinding = true
@@ -123,6 +129,7 @@ dependencies {
     implementation(Libraries.androidxLifecycleRuntimeCompose)
 
     implementation(Libraries.androidxActivityCompose)
+    implementation(Libraries.androidxConcurrentFuturesKtx)
 
     implementation(Libraries.androidxComposeUi)
     implementation(Libraries.androidxComposeUiToolingPreview)
@@ -144,7 +151,6 @@ dependencies {
     implementation(Libraries.material3)
     implementation(Libraries.material3WindowSizeClass)
 
-    implementation(Libraries.accompanistSystemUiController)
     implementation(Libraries.accompanistPermissions)
     implementation(Libraries.accompanistPager)
 

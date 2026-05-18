@@ -6,6 +6,9 @@ import androidx.lifecycle.coroutineScope
 import androidx.navigation.NavController
 import com.generic.audioplayes.R
 import com.generic.audioplayes.collection.CollectionFragmentDirections
+import com.generic.audioplayes.playlisteditor.PlaylistEditorFragmentDirections
+import com.generic.audioplayes.search.SearchFragmentDirections
+import com.generic.audioplayes.util.Stage4DebugLog
 import com.generic.audioplayes.collection.CollectionType
 import com.generic.audioplayes.data.music.Album
 import com.generic.audioplayes.data.music.AlbumArtistWithSongCount
@@ -205,6 +208,9 @@ class HomeNavHelper(
     }
 
     fun navigateToTagEditor(song: Song) {
+        Stage4DebugLog.i(
+            "Edit tags clicked trackPath=${song.location} destId=${navController.currentDestination?.id}",
+        )
         when (navController.currentDestination?.id) {
             R.id.homeFragment -> navController.navigate(
                 HomeFragmentDirections.actionHomeFragmentToTagEditorFragment(song.location),
@@ -212,7 +218,15 @@ class HomeNavHelper(
             R.id.collectionFragment -> navController.navigate(
                 CollectionFragmentDirections.actionCollectionFragmentToTagEditorFragment(song.location),
             )
-            else -> {}
+            R.id.searchFragment -> navController.navigate(
+                SearchFragmentDirections.actionSearchFragmentToTagEditorFragment(song.location),
+            )
+            R.id.playlistEditorFragment -> navController.navigate(
+                PlaylistEditorFragmentDirections.actionPlaylistEditorFragmentToTagEditorFragment(song.location),
+            )
+            else -> Stage4DebugLog.i(
+                "navigateToTagEditor: no route from destId=${navController.currentDestination?.id}",
+            )
         }
     }
 }

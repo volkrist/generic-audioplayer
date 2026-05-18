@@ -57,11 +57,14 @@ import com.generic.audioplayes.R
 import com.generic.audioplayes.components.FullScreenSadMessage
 import com.generic.audioplayes.components.MiniSongCard
 import com.generic.audioplayes.components.more_options.SongOptions
+import com.generic.audioplayes.ui.theme.ActionSheetColors
 import com.generic.audioplayes.data.music.MiniSong
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.storage_explorer.Directory
 import com.generic.audioplayes.storage_explorer.DirectoryContents
 import com.generic.audioplayes.ui.theme.UiTokens
+import com.generic.audioplayes.util.Stage4DebugLog
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.heightIn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -150,12 +153,15 @@ private fun FolderActionsBottomSheet(
     onHideFolder: () -> Unit,
     onDeleteMenuItem: () -> Unit,
 ) {
+    LaunchedEffect(folderName) {
+        Stage4DebugLog.i("Folder menu opened folderName=$folderName")
+    }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        containerColor = ActionSheetColors.sheetBackground,
+        contentColor = ActionSheetColors.onSheet,
         shape = RoundedCornerShape(
             topStart = UiTokens.sheetCornerTopLarge,
             topEnd = UiTokens.sheetCornerTopLarge,
@@ -184,6 +190,7 @@ private fun FolderActionsBottomSheet(
                         text = folderName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
+                        color = ActionSheetColors.onSheet,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -191,12 +198,12 @@ private fun FolderActionsBottomSheet(
                         Text(
                             text = sub,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = ActionSheetColors.muted,
                         )
                     }
                 }
             }
-            Divider()
+            Divider(color = ActionSheetColors.divider)
             FolderSheetRow(
                 icon = R.drawable.ic_baseline_play_arrow_40,
                 label = stringResource(R.string.folder_action_play),
@@ -245,7 +252,7 @@ private fun FolderActionsBottomSheet(
                     onEditNote()
                 },
             )
-            Divider()
+            Divider(color = ActionSheetColors.divider)
             FolderSheetRow(
                 icon = R.drawable.ic_baseline_remove_circle_40,
                 label = stringResource(R.string.folder_action_hide),
@@ -269,6 +276,10 @@ private fun FolderActionsBottomSheet(
                     .fillMaxWidth()
                     .padding(horizontal = UiTokens.paddingScreen),
                 shape = RoundedCornerShape(UiTokens.cornerPill),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = ActionSheetColors.gridCell,
+                    contentColor = ActionSheetColors.onSheet,
+                ),
             ) {
                 Text(stringResource(R.string.folder_sheet_close))
             }
@@ -302,11 +313,12 @@ private fun FolderSheetRow(
             painter = painterResource(icon),
             contentDescription = null,
             modifier = Modifier.size(UiTokens.iconSizeMedium),
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = ActionSheetColors.onSheet,
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
+            color = ActionSheetColors.onSheet,
         )
     }
 }
@@ -420,6 +432,7 @@ fun Folder(
                     .size(26.dp)
                     .clickable(
                         onClick = {
+                            Stage4DebugLog.i("Folder overflow clicked folderPath=${folder.absolutePath}")
                             showFolderMenu = true
                         },
                         indication = rememberRipple(
@@ -520,6 +533,7 @@ fun Folder(
                 TextButton(
                     onClick = {
                         showDeleteConfirm = false
+                        Stage4DebugLog.i("Folder delete clicked folderPath=${folder.absolutePath}")
                         onDeleteFolderFromDevice()
                     },
                 ) {

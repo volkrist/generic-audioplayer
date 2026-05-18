@@ -12,11 +12,11 @@ import kotlin.jvm.JvmName
 @JvmName("sortedSongsByFolderPlaybackOrder")
 fun List<Song>.sortedByFolderPlaybackOrder(ascending: Boolean = true): List<Song> {
     val cmp = Comparator<Song> { a, b -> NaturalOrder.compareNatural(a.location, b.location) }
-    return sortedWith(if (ascending) cmp else cmp.reversed())
+    return sortedWith(if (ascending) cmp else cmp.reversedCompat())
 }
 
 @JvmName("sortedMiniSongsByFolderPlaybackOrder")
 fun List<MiniSong>.sortedByFolderPlaybackOrder(ascending: Boolean = true): List<MiniSong> {
     val cmp = Comparator<MiniSong> { a, b -> NaturalOrder.compareNatural(a.location, b.location) }
-    return sortedWith(if (ascending) cmp else cmp.reversed())
+    return sortedWith(if (ascending) cmp else cmp.reversedCompat())
 }

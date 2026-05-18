@@ -24,7 +24,6 @@ import androidx.navigation.fragment.navArgs
 import com.generic.audioplayes.components.TopBarWithBackArrow
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -43,9 +42,8 @@ class PlaceholderFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                AudioPlayerTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference) {
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         topBar = {

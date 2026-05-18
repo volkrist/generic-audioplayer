@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -41,6 +43,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
 import coil.compose.AsyncImage
 import com.generic.audioplayes.R
+import com.generic.audioplayes.components.ScreenErrorState
+import com.generic.audioplayes.components.ScreenLoadingState
 import com.generic.audioplayes.components.TopBarWithBackArrow
 import com.generic.audioplayes.ui.theme.HomeLibraryTokens
 
@@ -69,6 +73,12 @@ fun TagEditorScreen(
             backgroundColor = Color.Transparent,
         )
         when {
+            state.loading -> {
+                ScreenLoadingState()
+            }
+            state.loadError != null -> {
+                ScreenErrorState(message = state.loadError)
+            }
             state.saving -> {
                 Column(
                     modifier = Modifier
@@ -87,6 +97,8 @@ fun TagEditorScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
+                        .navigationBarsPadding()
+                        .imePadding()
                         .padding(horizontal = 20.dp, vertical = 16.dp),
                 ) {
                     CoverArtBlock(
@@ -258,6 +270,8 @@ private fun LabeledField(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
                 disabledContainerColor = Color.Transparent,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                 focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                 unfocusedIndicatorColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
             ),

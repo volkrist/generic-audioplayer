@@ -116,16 +116,21 @@ class SongExtractor(
 
     fun resolveSong(location: String): Song? {
         if (!checkReadStoragePermission()) return null
-        val selection = MediaStore.Audio.Media.DATA + " LIKE ?"
-        val selectionArgs = arrayOf(location)
-        val cursor = context.contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            projection,
-            selection,
-            selectionArgs,
-            MediaStore.Audio.Media.DATE_ADDED,
-            null
-        ) ?: return null
+        for (candidate in com.generic.audioplayes.util.pathCandidatesForLookup(location)) {
+            val cursor = context.contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                "${MediaStore.Audio.Media.DATA} = ?",
+                arrayOf(candidate),
+                MediaStore.Audio.Media.DATE_ADDED,
+                null,
+            )?.use { c -> readSongFromCursor(c) }?.let { return it }
+        }
+        return null
+    }
+
+    private fun readSongFromCursor(cursor: android.database.Cursor): Song? {
+        if (!cursor.moveToFirst()) return null
         val dataIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
         val titleIndex = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE)
         val albumIndex = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM)
@@ -133,9 +138,7 @@ class SongExtractor(
         val dateAddedIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATE_ADDED)
         val dateModifiedIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATE_MODIFIED)
         val songIdIndex = cursor.getColumnIndex(MediaStore.Audio.Media._ID)
-        var resSong: Song? = null
-        cursor.moveToFirst()
-        try {
+        return try {
             val songPath = cursor.getString(dataIndex)
             val songFile = File(songPath)
             if (!songFile.exists()) throw FileNotFoundException()
@@ -146,7 +149,7 @@ class SongExtractor(
             val songId = cursor.getLong(songIdIndex)
             val title = cursor.getString(titleIndex).trim()
             val album = cursor.getString(albumIndex).trim()
-            resSong = getSong(
+            getSong(
                 path = songPath,
                 size = size,
                 dateAddedSec = dateAddedSec,
@@ -156,11 +159,9 @@ class SongExtractor(
                 title = title,
                 album = album,
             )
-        } catch (_: Exception){
-
+        } catch (_: Exception) {
+            null
         }
-        cursor.close()
-        return resSong
     }
 
     suspend fun extract(folderPath: String? = null): List<Song> {

@@ -84,6 +84,8 @@ import com.generic.audioplayes.data.UserPreferences.PlaybackParams
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.snapPlaybackParamPercent
 import com.generic.audioplayes.ui.theme.UiTokens
+import com.generic.audioplayes.util.Stage4DebugLog
+import androidx.compose.runtime.LaunchedEffect
 import kotlin.math.roundToInt
 
 private val volumeBoosterPresets: List<Int> = listOf(125, 150, 175, 200)
@@ -121,6 +123,10 @@ fun PlayerActionsSheetModal(
     onPlayerActionChangeCover: (Song) -> Unit,
 ) {
     if (!visible) return
+    LaunchedEffect(song.location) {
+        Stage4DebugLog.i("PlayerActionsSheetModal opened path=${song.location}")
+    }
+    val scheme = MaterialTheme.colorScheme
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -151,8 +157,8 @@ fun PlayerActionsSheetModal(
                     topStart = UiTokens.sheetCornerTopLarge,
                     topEnd = UiTokens.sheetCornerTopLarge,
                 ),
-                color = playerActionsSheetBg,
-                contentColor = playerActionsSheetText,
+                color = scheme.surfaceVariant,
+                contentColor = scheme.onSurface,
             ) {
                 PlayerActionsSheetContent(
                     currentSong = song,
@@ -325,6 +331,7 @@ private fun PlayerActionsSheetContent(
                 label = stringResource(R.string.player_action_edit_tags),
                 icon = Icons.Outlined.EditNote,
                 onClick = {
+                    Stage4DebugLog.i("Edit tags clicked trackPath=${currentSong.location} (PlayerActionsSheetModal)")
                     onPlayerActionEditTags(currentSong)
                     onDismiss()
                 },

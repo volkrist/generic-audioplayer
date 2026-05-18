@@ -1,7 +1,6 @@
 package com.generic.audioplayes.util
 
 import android.app.PendingIntent
-import android.app.RecoverableSecurityException
 import android.content.ActivityNotFoundException
 import android.content.ContentUris
 import android.content.Context
@@ -93,9 +92,8 @@ object AudioFileActions {
             } else {
                 MediaDeleteResult.Failed
             }
-        } catch (e: RecoverableSecurityException) {
-            MediaDeleteResult.Recoverable(e.userAction.actionIntent, uri)
         } catch (e: SecurityException) {
+            recoverableDeleteResultOrNull(e, uri)?.let { return it }
             Timber.e(e, "deleteAudioFileByUri")
             MediaDeleteResult.Failed
         }
@@ -122,18 +120,35 @@ object AudioFileActions {
      * path to its MediaStore content URI; entries that cannot be resolved are skipped. Returns
      * `null` if API < 30 or no URIs could be resolved.
      */
+    data class BatchDeleteRequest(
+        val pendingIntent: PendingIntent,
+        val resolvedUris: List<Uri>,
+        val unresolvedPaths: List<String>,
+    )
+
     fun createBatchDeleteRequestOrNull(
         context: Context,
         filePaths: List<String>,
-    ): Pair<PendingIntent, List<Uri>>? {
+    ): BatchDeleteRequest? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
-        val uris = filePaths.mapNotNull { resolveAudioContentUri(context, it) }
+        val resolved = LinkedHashMap<String, Uri>()
+        val unresolved = mutableListOf<String>()
+        for (path in filePaths.distinct()) {
+            val uri = resolveAudioContentUri(context, path)
+            if (uri != null) {
+                resolved[path] = uri
+            } else {
+                unresolved.add(path)
+                Timber.w("createBatchDeleteRequest: no MediaStore URI for %s", path)
+            }
+        }
+        val uris = resolved.values.toList()
         if (uris.isEmpty()) return null
         return try {
             val pi = MediaStore.createDeleteRequest(context.contentResolver, uris)
-            pi to uris
+            BatchDeleteRequest(pi, uris, unresolved)
         } catch (e: Exception) {
-            Timber.e(e, "createBatchDeleteRequestOrNull")
+            Timber.e(e, "createBatchDeleteRequestOrNull count=%d", uris.size)
             null
         }
     }
@@ -174,20 +189,8 @@ object AudioFileActions {
         return null
     }
 
-    /** Paths that may match MediaStore.DATA when the app stores a different string form. */
-    private fun pathCandidatesForMediaLookup(filePath: String): List<String> {
-        return buildList {
-            add(filePath)
-            try {
-                add(File(filePath).canonicalPath)
-            } catch (_: Exception) {
-            }
-            try {
-                add(File(filePath).absolutePath)
-            } catch (_: Exception) {
-            }
-        }.distinct()
-    }
+    private fun pathCandidatesForMediaLookup(filePath: String): List<String> =
+        pathCandidatesForLookup(filePath)
 
     fun setAsRingtone(context: Context, filePath: String): Boolean {
         val uri = audioContentUri(context, filePath) ?: return false
@@ -223,4 +226,36 @@ object AudioFileActions {
         // Same entry as tag edit: album art is embedded in ID3/Vorbis by most editors.
         return tryOpenAudioTagEditor(context, filePath)
     }
+
+    /**
+     * Android 11+: system dialog so the app may modify this media file (tag write).
+     * Launch [PendingIntent] via [androidx.activity.result.IntentSenderRequest], then retry the write.
+     */
+    fun createWriteRequestOrNull(context: Context, filePath: String): PendingIntent? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        val uri = resolveAudioContentUri(context, filePath) ?: return null
+        return try {
+            MediaStore.createWriteRequest(context.contentResolver, listOf(uri))
+        } catch (e: Exception) {
+            Timber.e(e, "createWriteRequestOrNull path=%s", filePath)
+            null
+        }
+    }
+
+    fun createWriteRequestForUriOrNull(context: Context, uri: Uri): PendingIntent? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        return try {
+            MediaStore.createWriteRequest(context.contentResolver, listOf(uri))
+        } catch (e: Exception) {
+            Timber.e(e, "createWriteRequestForUriOrNull uri=%s", uri)
+            null
+        }
+    }
+}
+
+@Suppress("NewApi")
+private fun recoverableDeleteResultOrNull(e: SecurityException, uri: Uri): MediaDeleteResult? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+    if (e !is android.app.RecoverableSecurityException) return null
+    return MediaDeleteResult.Recoverable(e.userAction.actionIntent, uri)
 }

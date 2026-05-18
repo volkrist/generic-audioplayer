@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -47,8 +47,7 @@ import com.generic.audioplayes.ui.theme.HomeLibraryTokens
  *
  *  • Uses [HomeLibraryTokens.libraryShellGradient] for the page background so it matches
  *    Home, Collections, Tag editor, Volume booster, Dictaphone.
- *  • Applies [systemBarsPadding] to push content below the status bar and above the gesture
- *    bar on modern Samsung phones.
+ *  • Top bar applies status-bar insets; list uses [navigationBarsPadding] for gesture nav.
  *  • Uses [TopBarWithBackArrow] (the shared top app bar used everywhere else) so typography
  *    and back behaviour are identical.
  *  • Keeps the card styling but pulls accents from [MaterialTheme.colorScheme] so Material
@@ -97,7 +96,6 @@ fun WidgetsScreen(
         modifier = modifier
             .fillMaxSize()
             .background(HomeLibraryTokens.libraryShellGradient)
-            .systemBarsPadding(),
     ) {
         TopBarWithBackArrow(
             onBackArrowPressed = onBack,
@@ -136,6 +134,7 @@ fun WidgetsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .navigationBarsPadding()
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(

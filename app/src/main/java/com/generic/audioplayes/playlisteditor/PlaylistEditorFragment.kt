@@ -26,7 +26,6 @@ import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.home.HomeViewModel
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.generic.audioplayes.util.AudioFileActions
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -84,9 +83,8 @@ class PlaylistEditorFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                AudioPlayerTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference) {
                     val context = LocalContext.current
                     val deleteIntentSenderLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.StartIntentSenderForResult(),

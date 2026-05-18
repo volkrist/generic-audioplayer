@@ -195,6 +195,7 @@
     <string name="folder_added_to_queue">Добавлено в очередь</string>
     <string name="folder_delete_ok">Папка удалена</string>
     <string name="folder_delete_failed">Не удалось удалить папку</string>
+    <string name="folder_delete_partial">Удалено %1$d из %2$d файлов. Не удалось: %3$d</string>
     <string name="folder_delete_confirm_title">Удалить папку?</string>
     <string name="folder_delete_confirm_body">Все файлы в этой папке будут удалены с устройства. Это действие нельзя отменить.</string>
     <string name="folder_action_play">Воспроизвести</string>
@@ -246,6 +247,9 @@
     <string name="tag_editor_save">Save</string>
     <string name="tag_editor_saving">Saving…</string>
     <string name="tag_editor_error">Could not save: %1$s</string>
+    <string name="tag_editor_load_failed">Could not load track metadata</string>
+    <string name="tag_editor_write_failed">Could not write tags to file. Check storage permission or try another track.</string>
+    <string name="tag_editor_saved_library_only">Title updated in library. Allow file access in the system dialog to save tags in the file.</string>
     <string name="tag_editor_pick_cover">Change cover</string>
     <string name="tag_editor_remove_cover">Remove embedded cover</string>
     <string name="tag_editor_field_title">Title</string>
@@ -322,6 +326,7 @@
     <string name="save">Save</string>
     <string name="speed_and_pitch_controller">Скорость</string>
     <string name="queue_button">Queue button</string>
+    <string name="queue_empty">Queue is empty. Play a song to build your queue.</string>
     <string name="next_button">Next button</string>
     <string name="previous_button">Previous button</string>
     <string name="settings">Настройки</string>

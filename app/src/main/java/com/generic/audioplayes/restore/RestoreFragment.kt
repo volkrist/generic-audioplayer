@@ -28,6 +28,7 @@ import com.generic.audioplayes.components.BlockingProgressIndicator
 import com.generic.audioplayes.components.CancelConfirmTopBar
 import com.generic.audioplayes.components.Snackbar
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
+import com.generic.audioplayes.ui.scaffoldContentPaddingWithSystemBars
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.generic.audioplayes.util.Resource
 import dagger.hilt.android.AndroidEntryPoint
@@ -95,7 +96,7 @@ class RestoreFragment: Fragment() {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(paddingValues),
+                                    .padding(scaffoldContentPaddingWithSystemBars(paddingValues)),
                                 contentAlignment = Alignment.Center
                             ){
                                 if (selectList.size != songs.size){

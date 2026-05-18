@@ -106,7 +106,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -162,12 +161,11 @@ class HomeFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                AudioPlayerTheme(themePreference, systemUiController) {
-                    LaunchedEffect(Unit) {
-                        systemUiController.setStatusBarColor(Color.Transparent, darkIcons = false)
-                    }
+                AudioPlayerTheme(
+                    themePreference = themePreference,
+                    statusBarUseDarkIcons = false,
+                ) {
                     val context = LocalContext.current
                     val selectedTabs by preferenceProvider.selectedTabs.collectAsStateWithLifecycle()
                     var currentScreen by rememberSaveable { mutableStateOf(Screens.Songs) }

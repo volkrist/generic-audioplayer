@@ -1,13 +1,16 @@
 package com.generic.audioplayes.tags
 
+import android.app.Activity
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -18,7 +21,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
@@ -41,7 +43,6 @@ class TagEditorFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                val systemUiController = rememberSystemUiController()
                 val state by viewModel.ui.collectAsStateWithLifecycle()
                 val context = LocalContext.current
                 val pickCover = rememberLauncherForActivityResult(
@@ -56,7 +57,27 @@ class TagEditorFragment : Fragment() {
                         viewModel.setPickedCover(bytes, mime)
                     }
                 }
-                AudioPlayerTheme(themePreference, systemUiController) {
+                val writeConsentLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.StartIntentSenderForResult(),
+                ) { result ->
+                    if (result.resultCode == Activity.RESULT_OK) {
+                        viewModel.onWriteConsentGranted()
+                    } else {
+                        viewModel.onWriteConsentDenied()
+                    }
+                }
+                LaunchedEffect(Unit) {
+                    viewModel.writeConfirmationSender.collect { pendingIntent ->
+                        runCatching {
+                            writeConsentLauncher.launch(
+                                IntentSenderRequest.Builder(pendingIntent).build(),
+                            )
+                        }.onFailure {
+                            viewModel.onWriteConsentDenied()
+                        }
+                    }
+                }
+                AudioPlayerTheme(themePreference) {
                     TagEditorScreen(
                         state = state,
                         onBack = { navController.popBackStack() },

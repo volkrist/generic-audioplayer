@@ -195,6 +195,7 @@
     <string name="folder_added_to_queue">Добавлено в очередь</string>
     <string name="folder_delete_ok">Папка удалена</string>
     <string name="folder_delete_failed">Не удалось удалить папку</string>
+    <string name="folder_delete_partial">Удалено %1$d из %2$d файлов. Не удалось: %3$d</string>
     <string name="folder_delete_confirm_title">Удалить папку?</string>
     <string name="folder_delete_confirm_body">Все файлы в этой папке будут удалены с устройства. Это действие нельзя отменить.</string>
     <string name="folder_action_play">Воспроизвести</string>
@@ -246,6 +247,9 @@
     <string name="tag_editor_save">Сохранить</string>
     <string name="tag_editor_saving">Сохранение…</string>
     <string name="tag_editor_error">Не удалось сохранить: %1$s</string>
+    <string name="tag_editor_load_failed">Не удалось загрузить метаданные трека</string>
+    <string name="tag_editor_write_failed">Не удалось записать теги в файл. Проверьте доступ к хранилищу.</string>
+    <string name="tag_editor_saved_library_only">Название обновлено в библиотеке. Разрешите доступ к файлу в системном окне, чтобы сохранить теги в файл.</string>
     <string name="tag_editor_pick_cover">Изменить обложку</string>
     <string name="tag_editor_remove_cover">Удалить встроенную обложку</string>
     <string name="tag_editor_field_title">Название</string>
@@ -322,6 +326,7 @@
     <string name="save">Save</string>
     <string name="speed_and_pitch_controller">Скорость</string>
     <string name="queue_button">Queue button</string>
+    <string name="queue_empty">Очередь пуста. Воспроизведите трек, чтобы добавить его в очередь.</string>
     <string name="next_button">Next button</string>
     <string name="previous_button">Previous button</string>
     <string name="settings">Настройки</string>

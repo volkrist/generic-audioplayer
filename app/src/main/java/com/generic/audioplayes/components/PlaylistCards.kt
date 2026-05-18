@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.generic.audioplayes.R
 import com.generic.audioplayes.components.more_options.OptionsAlertDialog
+import com.generic.audioplayes.util.Stage4DebugLog
 import com.generic.audioplayes.components.more_options.PlaylistOptions
 import com.generic.audioplayes.data.music.PlaylistWithSongCount
 import com.generic.audioplayes.ui.theme.UiTokens
@@ -138,6 +139,9 @@ fun PlaylistCard(
                 .size(UiTokens.artworkThumbMini)
                 .clickable(
                     onClick = {
+                        Stage4DebugLog.i(
+                            "Playlist overflow clicked playlist=${playlistWithSongCount.playlistName}",
+                        )
                         optionsVisible = true
                     },
                     indication = rememberRipple(

@@ -31,6 +31,7 @@ import com.generic.audioplayes.util.AudioFileActions
 import com.generic.audioplayes.util.MediaDeleteResult
 import com.generic.audioplayes.util.MessageStore
 import com.generic.audioplayes.util.NaturalOrder
+import com.generic.audioplayes.util.reversedCompat
 import com.generic.audioplayes.util.sortedByFolderPlaybackOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -51,6 +52,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.generic.audioplayes.util.Stage4DebugLog
 import timber.log.Timber
 import android.app.PendingIntent
 import android.content.Context
@@ -106,6 +108,10 @@ class HomeViewModel @Inject constructor(
      */
     @Volatile
     private var pendingBatchDeleteSongs: List<Song> = emptyList()
+
+    /** Paths in a folder batch that had no MediaStore URI (handled after batch consent). */
+    @Volatile
+    private var pendingBatchUnresolvedPaths: List<String> = emptyList()
 
     val songs = songService.songs
         .combine(prefs.songSortOrder){ songs, sortOrder ->
@@ -438,42 +444,81 @@ class HomeViewModel @Inject constructor(
         val batch = pendingBatchDeleteSongs
         if (batch.isNotEmpty()) {
             val folder = pendingFolderDelete
+            val unresolvedPaths = pendingBatchUnresolvedPaths
             pendingBatchDeleteSongs = emptyList()
+            pendingBatchUnresolvedPaths = emptyList()
             viewModelScope.launch(Dispatchers.IO) {
                 try {
+                    var removed = 0
+                    var failed = 0
                     for (s in batch) {
+                        if (File(s.location).exists()) {
+                            failed++
+                            continue
+                        }
                         try {
                             songService.removeSongFromLibraryMetadata(s)
+                            removed++
                         } catch (e: Exception) {
                             crashReporter.logException(e)
+                            failed++
                         }
                         withContext(Dispatchers.Main) {
                             refreshQueueAfterRemovingSong(s)
                         }
                     }
+                    for (path in unresolvedPaths) {
+                        when (
+                            AudioFileActions.deleteAudioFileFromDeviceWithFallback(
+                                appContext,
+                                path,
+                            )
+                        ) {
+                            MediaDeleteResult.Success -> {
+                                songService.getSongByLocation(path)?.let { song ->
+                                    songService.removeSongFromLibraryMetadata(song)
+                                    withContext(Dispatchers.Main) {
+                                        refreshQueueAfterRemovingSong(song)
+                                    }
+                                }
+                                removed++
+                            }
+                            is MediaDeleteResult.Recoverable -> {
+                                failed++
+                                Timber.w("folder batch: unresolved still recoverable %s", path)
+                            }
+                            MediaDeleteResult.Failed -> {
+                                failed++
+                                Timber.w("folder batch: unresolved delete failed %s", path)
+                            }
+                        }
+                    }
                     libraryRepository.updateLibraryFromMediaStore()
                     if (folder != null) {
-                        try {
-                            File(folder.absolutePath).deleteRecursively()
-                        } catch (_: Exception) {
-                            deleteDirectoryRecursiveBestEffort(File(folder.absolutePath))
+                        val dir = File(folder.absolutePath)
+                        if (dir.exists()) {
+                            if (!dir.deleteRecursively()) {
+                                deleteDirectoryRecursiveBestEffort(dir)
+                            }
                         }
                     }
                     pendingFolderDelete = null
-                    // Repaint the "Folders" tab immediately so the just‑deleted directory
-                    // disappears from the list without forcing the user to navigate away
-                    // and back. If we were INSIDE the folder that we just removed, walk up
-                    // one level so we don't end up staring at a listing of a dead path.
                     refreshExplorerAfterFolderDelete(folder)
                     withContext(Dispatchers.Main) {
-                        showMessage(
-                            messageStore.getString(
-                                if (folder != null) R.string.folder_delete_ok else R.string.player_delete_ok,
-                            ),
-                        )
+                        val msg = when {
+                            folder == null -> messageStore.getString(R.string.player_delete_ok)
+                            failed > 0 -> messageStore.getString(
+                                R.string.folder_delete_partial,
+                                removed,
+                                batch.size + unresolvedPaths.size,
+                                failed,
+                            )
+                            else -> messageStore.getString(R.string.folder_delete_ok)
+                        }
+                        showMessage(msg)
                     }
                 } catch (e: Exception) {
-                    Timber.e(e)
+                    Timber.e(e, "onDeleteConfirmedByUser batch")
                     pendingFolderDelete = null
                     withContext(Dispatchers.Main) {
                         showMessage(messageStore.getString(R.string.some_error_occurred))
@@ -532,6 +577,7 @@ class HomeViewModel @Inject constructor(
         pendingDeleteUri = null
         pendingFolderDelete = null
         pendingBatchDeleteSongs = emptyList()
+        pendingBatchUnresolvedPaths = emptyList()
     }
 
     private suspend fun completeDeleteAfterFileRemoved(song: Song) {
@@ -727,9 +773,41 @@ class HomeViewModel @Inject constructor(
         }
         val primary = candidates.firstOrNull() ?: return merged.values.toList()
         songExtractor.extractAllSongsUnderFolderRecursive(primary).forEach { song ->
-            merged.putIfAbsent(song.location, song)
+            if (!merged.containsKey(song.location)) {
+                merged[song.location] = song
+            }
         }
+        discoverSongsOnDiskUnderFolder(primary).forEach { song ->
+            if (!merged.containsKey(song.location)) {
+                merged[song.location] = song
+            }
+        }
+        Stage4DebugLog.i(
+            "resolveFolderSongsForDeletion path=$primary merged=${merged.size}",
+        )
         return merged.values.toList()
+    }
+
+    private suspend fun discoverSongsOnDiskUnderFolder(folderPath: String): List<Song> {
+        val dir = File(folderPath.trimEnd('/'))
+        if (!dir.isDirectory) return emptyList()
+        val audioExt = setOf("mp3", "m4a", "mp4", "flac", "ogg", "wav", "aac", "opus", "wma", "m4b")
+        val paths = try {
+            dir.walkTopDown()
+                .maxDepth(12)
+                .filter { it.isFile && it.extension.lowercase() in audioExt }
+                .map { it.absolutePath }
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, "discoverSongsOnDiskUnderFolder %s", folderPath)
+            return emptyList()
+        }
+        val songs = LinkedHashMap<String, Song>()
+        for (path in paths) {
+            val song = songService.getSongByLocation(path) ?: songExtractor.resolveSong(path) ?: continue
+            songs[song.location] = song
+        }
+        return songs.values.toList()
     }
 
     fun deleteFolderFromDevice(folder: Directory, fromContinuation: Boolean = false) {
@@ -745,12 +823,38 @@ class HomeViewModel @Inject constructor(
                     return@launch
                 }
                 val songs = resolveFolderSongsForDeletion(folder)
+                val batchPreview = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    AudioFileActions.createBatchDeleteRequestOrNull(
+                        appContext,
+                        songs.map { it.location },
+                    )
+                } else {
+                    null
+                }
+                Stage4DebugLog.i(
+                    "folderPath=${folder.absolutePath} filesInFolder count=${songs.size} " +
+                        "resolvedUris count=${batchPreview?.resolvedUris?.size ?: 0} " +
+                        "unresolvedPaths count=${batchPreview?.unresolvedPaths?.size ?: 0}",
+                )
                 if (songs.isEmpty()) {
+                    runCatching {
+                        dir.walkBottomUp().forEach { entry ->
+                            if (entry.isFile) {
+                                if (!entry.delete()) {
+                                    Timber.w("folder delete: could not delete file %s", entry.absolutePath)
+                                }
+                            }
+                        }
+                    }.onFailure { Timber.e(it, "folder delete walk") }
                     val ok = deleteDirectoryRecursiveBestEffort(dir)
                     if (ok) {
                         libraryRepository.updateLibraryFromMediaStore()
                         refreshExplorerAfterFolderDelete(folder)
                     }
+                    Stage4DebugLog.i(
+                        "delete result=${if (ok) "empty_folder_ok" else "empty_folder_fail"} " +
+                            "room deleted count=n/a ui refresh triggered=$ok",
+                    )
                     withContext(Dispatchers.Main) {
                         pendingFolderDelete = null
                         showMessage(
@@ -761,21 +865,23 @@ class HomeViewModel @Inject constructor(
                     }
                     return@launch
                 }
-                // Android 11+: ask once for the whole folder via createDeleteRequest instead of
-                // prompting per file (was previously triggering 1 dialog per song).
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                    val batch = AudioFileActions.createBatchDeleteRequestOrNull(
-                        appContext,
-                        songs.map { it.location },
-                    )
+                    val batch = batchPreview
                     if (batch != null) {
+                        Stage4DebugLog.i(
+                            "delete result=pending_system_dialog resolvedUris=${batch.resolvedUris.size} " +
+                                "unresolvedPaths=${batch.unresolvedPaths.size}",
+                        )
                         pendingBatchDeleteSongs = songs
+                        pendingBatchUnresolvedPaths = batch.unresolvedPaths
                         pendingFolderDelete = folder
-                        deleteConfirmationChannel.trySend(batch.first)
+                        deleteConfirmationChannel.trySend(batch.pendingIntent)
                         return@launch
                     }
+                    Timber.w("deleteFolderFromDevice: batch request unavailable, falling back per-file")
                 }
                 var deleted = 0
+                var failed = 0
                 for (song in songs) {
                     when (
                         val result = AudioFileActions.deleteAudioFileFromDeviceWithFallback(
@@ -797,24 +903,40 @@ class HomeViewModel @Inject constructor(
                             deleteConfirmationChannel.trySend(result.pendingIntent)
                             return@launch
                         }
-                        MediaDeleteResult.Failed -> Unit
+                        MediaDeleteResult.Failed -> {
+                            failed++
+                            Timber.w("deleteFolderFromDevice failed %s", song.location)
+                        }
                     }
                 }
                 libraryRepository.updateLibraryFromMediaStore()
-                try {
-                    dir.deleteRecursively()
-                } catch (_: Exception) {
-                    deleteDirectoryRecursiveBestEffort(dir)
+                if (deleted > 0) {
+                    try {
+                        dir.deleteRecursively()
+                    } catch (_: Exception) {
+                        deleteDirectoryRecursiveBestEffort(dir)
+                    }
+                    refreshExplorerAfterFolderDelete(folder)
                 }
-                // Legacy (pre-Android-11) per-song path — fold the folder out of the explorer
-                // UI as soon as all individual deletes finished.
-                if (deleted > 0) refreshExplorerAfterFolderDelete(folder)
+                Stage4DebugLog.i(
+                    "delete result=per_file deleted=$deleted failed=$failed total=${songs.size} " +
+                        "room deleted count=$deleted ui refresh triggered=${deleted > 0}",
+                )
                 withContext(Dispatchers.Main) {
                     pendingFolderDelete = null
-                    if (deleted > 0) {
-                        showMessage(messageStore.getString(R.string.folder_delete_ok))
-                    } else {
-                        showMessage(messageStore.getString(R.string.folder_delete_failed))
+                    when {
+                        deleted == songs.size -> showMessage(
+                            messageStore.getString(R.string.folder_delete_ok),
+                        )
+                        deleted > 0 -> showMessage(
+                            messageStore.getString(
+                                R.string.folder_delete_partial,
+                                deleted,
+                                songs.size,
+                                failed,
+                            ),
+                        )
+                        else -> showMessage(messageStore.getString(R.string.folder_delete_failed))
                     }
                 }
             } catch (e: Exception) {
@@ -1033,7 +1155,7 @@ class HomeViewModel @Inject constructor(
     val filesInCurrentDestination = _filesInCurrentDestination
         .combine(prefs.folderSortOrder){ files, sortOrder ->
             val dirAsc = Comparator<Directory> { a, b -> NaturalOrder.compareNatural(a.name, b.name) }
-            val dirDsc = dirAsc.reversed()
+            val dirDsc = dirAsc.reversedCompat()
             when (sortOrder) {
                 SortOptions.NameDSC.ordinal -> DirectoryContents(
                     directories = files.directories.sortedWith(dirDsc),
@@ -1124,22 +1246,40 @@ class HomeViewModel @Inject constructor(
             }
             val f = File(folder.absolutePath)
             if (!f.isDirectory) {
+                Stage4DebugLog.w("renameFolder not a directory path=${folder.absolutePath}")
                 showMessage(messageStore.getString(R.string.folder_rename_error))
                 return@launch
             }
             val parent = f.parentFile ?: run {
+                Stage4DebugLog.w("renameFolder no parent path=${folder.absolutePath}")
                 showMessage(messageStore.getString(R.string.folder_rename_error))
                 return@launch
             }
             val dest = File(parent, trimmed)
             if (dest.exists()) {
+                Stage4DebugLog.w("renameFolder dest exists path=${dest.absolutePath}")
                 showMessage(messageStore.getString(R.string.folder_rename_error))
                 return@launch
             }
-            if (!f.renameTo(dest)) {
+            val renamed = runCatching {
+                java.nio.file.Files.move(
+                    f.toPath(),
+                    dest.toPath(),
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                )
+                true
+            }.getOrElse {
+                Timber.w(it, "renameFolder Files.move failed, trying renameTo")
+                f.renameTo(dest)
+            }
+            if (!renamed) {
+                Stage4DebugLog.w(
+                    "renameFolder failed from=${f.absolutePath} to=${dest.absolutePath} canWrite=${f.canWrite()}",
+                )
                 showMessage(messageStore.getString(R.string.folder_rename_error))
                 return@launch
             }
+            Stage4DebugLog.i("renameFolder ok to=${dest.absolutePath}")
             explorer.adjustCurrentPathAfterFolderRename(folder.absolutePath, dest.absolutePath)
             explorer.refreshCurrentDirectory()
             _isExplorerAtRoot.update { explorer.isRoot }
@@ -1154,15 +1294,26 @@ class HomeViewModel @Inject constructor(
 
     fun saveFolderNote(folder: Directory, text: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            val dir = File(folder.absolutePath)
             val noteFile = File(folder.absolutePath, ".zen_folder_note.txt")
+            Stage4DebugLog.i(
+                "saveFolderNote path=${folder.absolutePath} dirWritable=${dir.canWrite()} textLen=${text.length}",
+            )
             val result = runCatching {
                 if (text.isBlank()) {
                     if (noteFile.exists()) noteFile.delete()
                 } else {
+                    if (!dir.exists() && !dir.mkdirs()) {
+                        error("folder missing: ${dir.absolutePath}")
+                    }
                     noteFile.writeText(text.trim())
                 }
             }
-            result.onFailure { e ->
+            result.onSuccess {
+                Stage4DebugLog.i("saveFolderNote ok path=${folder.absolutePath}")
+                showMessage(messageStore.getString(R.string.done))
+            }.onFailure { e ->
+                Stage4DebugLog.e("saveFolderNote failed path=${folder.absolutePath}", e)
                 crashReporter.logException(e as? Exception ?: Exception(e))
                 showMessage(messageStore.getString(R.string.folder_rename_error))
             }

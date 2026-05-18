@@ -57,7 +57,10 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.generic.audioplayes.R
 import com.generic.audioplayes.data.music.Song
+import com.generic.audioplayes.ui.theme.ActionSheetColors
 import com.generic.audioplayes.ui.theme.UiTokens
+import com.generic.audioplayes.util.Stage4DebugLog
+import androidx.compose.runtime.LaunchedEffect
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -106,7 +109,7 @@ fun QueueSongActionsBottomSheet(
 }
 
 /**
- * Same track actions layout as the queue / folder reference (header, 2×3 grid, list rows) for Home → Songs.
+ * Track overflow on Home → Songs / folder mini-tracks (grid + list rows, player-matched chrome).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,15 +130,15 @@ fun HomeLibrarySongActionsBottomSheet(
     onRemoveFromPlaylist: (() -> Unit)? = null,
 ) {
     if (!visible) return
+    LaunchedEffect(song.location) {
+        Stage4DebugLog.i("HomeLibrarySongActionsBottomSheet opened path=${song.location}")
+    }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val sheetBg = Color(0xFF21212B)
-    val sheetFg = Color(0xFFF3F4F6)
-    val divider = Color(0xFF3D3D48)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = sheetBg,
-        contentColor = sheetFg,
+        containerColor = ActionSheetColors.sheetBackground,
+        contentColor = ActionSheetColors.onSheet,
         shape = RoundedCornerShape(
             topStart = UiTokens.sheetCornerTopLarge,
             topEnd = UiTokens.sheetCornerTopLarge,
@@ -150,11 +153,11 @@ fun HomeLibrarySongActionsBottomSheet(
             onPlayerActionDeleteSong = onPlayerActionDeleteSong,
             onPlayerActionRingtone = onPlayerActionRingtone,
             onPlayerActionChangeCover = onPlayerActionChangeCover,
-            dragHandleColor = sheetFg.copy(alpha = 0.45f),
-            dividerColor = divider,
-            gridCellBackground = Color(0xFF2A2D36),
+            dragHandleColor = ActionSheetColors.muted.copy(alpha = 0.45f),
+            dividerColor = ActionSheetColors.divider,
+            gridCellBackground = ActionSheetColors.gridCell,
         ) {
-            Divider(color = divider)
+            Divider(color = ActionSheetColors.divider)
             QueueSongSheetRow(
                 icon = R.drawable.ic_baseline_playlist_play_40,
                 label = stringResource(R.string.folder_action_play_next),
@@ -163,7 +166,7 @@ fun HomeLibrarySongActionsBottomSheet(
                     onPlayNext()
                 },
             )
-            Divider(color = divider)
+            Divider(color = ActionSheetColors.divider)
             QueueSongSheetRow(
                 icon = R.drawable.ic_baseline_queue_music_40,
                 label = stringResource(R.string.folder_action_add_queue),
@@ -172,7 +175,7 @@ fun HomeLibrarySongActionsBottomSheet(
                     onAddToQueue()
                 },
             )
-            Divider(color = divider)
+            Divider(color = ActionSheetColors.divider)
             QueueSongSheetRow(
                 icon = R.drawable.ic_baseline_playlist_add_40,
                 label = stringResource(R.string.folder_action_add_playlist),
@@ -182,7 +185,7 @@ fun HomeLibrarySongActionsBottomSheet(
                 },
             )
             if (onRemoveFromPlaylist != null) {
-                Divider(color = divider)
+                Divider(color = ActionSheetColors.divider)
                 QueueSongSheetRow(
                     icon = R.drawable.ic_baseline_playlist_remove_40,
                     label = stringResource(R.string.track_action_remove_from_playlist),
@@ -380,6 +383,7 @@ private fun SongTrackActionsSheetContent(
                 label = stringResource(R.string.player_action_edit_tags),
                 painter = painterResource(R.drawable.baseline_bug_report_40),
                 onClick = {
+                    Stage4DebugLog.i("Edit tags clicked trackPath=${song.location}")
                     onPlayerActionEditTags(song)
                     onDismiss()
                 },

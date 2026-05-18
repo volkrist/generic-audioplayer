@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import com.generic.audioplayes.ui.scaffoldContentPaddingWithSystemBars
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.fragment.app.Fragment
@@ -32,7 +33,6 @@ import com.generic.audioplayes.components.Snackbar
 import com.generic.audioplayes.components.TopBarWithBackArrow
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -85,7 +85,6 @@ class BackupRestoreFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
                 val lastBackup by preferenceProvider.lastBackupExportEpochMs.collectAsStateWithLifecycle()
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -105,7 +104,7 @@ class BackupRestoreFragment : Fragment() {
                     }
                 }
 
-                AudioPlayerTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference) {
                     Scaffold(
                         topBar = {
                             TopBarWithBackArrow(
@@ -124,7 +123,7 @@ class BackupRestoreFragment : Fragment() {
                         Surface(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(padding),
+                                .padding(scaffoldContentPaddingWithSystemBars(padding)),
                             color = MaterialTheme.colorScheme.surface,
                         ) {
                             Box(Modifier.fillMaxSize()) {

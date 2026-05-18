@@ -1,8 +1,8 @@
 package com.generic.audioplayes
 
-import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
 import cat.ereza.customactivityoncrash.CustomActivityOnCrash
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
@@ -36,15 +35,13 @@ import com.generic.audioplayes.ui.theme.DefaultTheme
 class CrashActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         val config = CustomActivityOnCrash.getConfigFromIntent(intent) ?: run {
             finish()
             return
         }
-
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
 
         setContent {
             val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.bug))

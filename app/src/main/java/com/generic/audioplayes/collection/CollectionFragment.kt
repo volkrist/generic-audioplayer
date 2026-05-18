@@ -50,6 +50,7 @@ import com.generic.audioplayes.home.HomeViewModel
 import com.generic.audioplayes.nowplaying.HomeLibrarySongActionsBottomSheet
 import com.generic.audioplayes.nowplaying.PlayerHelper
 import com.generic.audioplayes.player.AudioPlayerBroadcastReceiver
+import com.generic.audioplayes.ui.scaffoldContentPaddingWithSystemBars
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.generic.audioplayes.util.AudioFileActions
 import dagger.hilt.android.AndroidEntryPoint
@@ -195,15 +196,15 @@ class CollectionFragment : Fragment() {
                             )
                         },
                         content = { paddingValues ->
-                            val padding by remember {
-                                derivedStateOf {
-                                    PaddingValues(
-                                        start = paddingValues.calculateStartPadding(LayoutDirection.Ltr),
-                                        end = paddingValues.calculateEndPadding(LayoutDirection.Ltr),
-                                        bottom = paddingValues.calculateBottomPadding(),
-                                    )
-                                }
-                            }
+                            val merged = scaffoldContentPaddingWithSystemBars(
+                                paddingValues,
+                                includeIme = false,
+                            )
+                            val padding = PaddingValues(
+                                start = merged.calculateStartPadding(LayoutDirection.Ltr),
+                                end = merged.calculateEndPadding(LayoutDirection.Ltr),
+                                bottom = merged.calculateBottomPadding(),
+                            )
                             LazyColumn(
                                 contentPadding = padding,
                                 state = songsListState,

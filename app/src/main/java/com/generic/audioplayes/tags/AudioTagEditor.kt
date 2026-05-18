@@ -1,7 +1,15 @@
 package com.generic.audioplayes.tags
 
+import android.app.PendingIntent
+import android.content.Context
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import com.generic.audioplayes.util.AudioFileActions
+import com.generic.audioplayes.util.Stage4DebugLog
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.FieldKey
+import org.jaudiotagger.tag.Tag
 import org.jaudiotagger.tag.images.Artwork
 import org.jaudiotagger.tag.images.StandardArtwork
 import timber.log.Timber
@@ -116,6 +124,13 @@ private fun naturalRussianScore(s: String): Int {
     return score
 }
 
+sealed class TagFileWriteResult {
+    object Success : TagFileWriteResult()
+    /** Launch [pendingIntent], then call [AudioTagEditor.writeFile] again for the same path. */
+    data class NeedsWriteConsent(val pendingIntent: PendingIntent) : TagFileWriteResult()
+    data class Error(val cause: Throwable) : TagFileWriteResult()
+}
+
 /**
  * Reads/writes embedded tags (ID3, Vorbis, MP4, …) via JAudioTagger.
  */
@@ -158,31 +173,180 @@ object AudioTagEditor {
     /**
      * Writes tags and optionally embeds cover art (JPEG/PNG bytes).
      * [mimeType] e.g. `image/jpeg` or `image/png`.
+     *
+     * On scoped storage (Download, etc.) [File.canWrite] is often false even when MediaStore
+     * allows writing via content URI — use [context] so we can copy → edit in cache → write back.
      */
     fun writeFile(
+        context: Context,
         path: String,
+        draft: TagEditDraft,
+        coverBytes: ByteArray?,
+        coverMimeType: String?,
+        writeConsentGranted: Boolean = false,
+    ): TagFileWriteResult {
+        val file = File(path)
+        if (!file.isFile) {
+            return TagFileWriteResult.Error(IllegalStateException("not a file"))
+        }
+        if (file.canWrite()) {
+            Stage4DebugLog.i("writeFile direct path=$path")
+            return writeTagsToFile(file, draft, coverBytes, coverMimeType).toTagFileWriteResult()
+        }
+        if (!writeConsentGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            AudioFileActions.createWriteRequestOrNull(context, path)?.let { pi ->
+                Stage4DebugLog.i("writeFile needs createWriteRequest path=$path")
+                return TagFileWriteResult.NeedsWriteConsent(pi)
+            }
+        }
+        val uri = AudioFileActions.audioContentUri(context, path)
+            ?: return TagFileWriteResult.Error(IllegalStateException("no MediaStore uri for: $path"))
+        Stage4DebugLog.i("writeFile via MediaStore uri=$uri path=$path")
+        return writeTagsViaContentUri(context, uri, file, draft, coverBytes, coverMimeType)
+    }
+
+    private fun Result<Unit>.toTagFileWriteResult(): TagFileWriteResult =
+        fold(
+            onSuccess = { TagFileWriteResult.Success },
+            onFailure = { TagFileWriteResult.Error(it) },
+        )
+
+    private fun writeTagsViaContentUri(
+        context: Context,
+        uri: Uri,
+        sourceFile: File,
+        draft: TagEditDraft,
+        coverBytes: ByteArray?,
+        coverMimeType: String?,
+    ): TagFileWriteResult {
+        val ext = sourceFile.extension.takeIf { it.isNotBlank() } ?: "mp3"
+        val temp = File.createTempFile("tag_edit_", ".$ext", context.cacheDir)
+        return try {
+            var copied = copyUriToFile(context, uri, temp)
+            if (!copied) {
+                copied = copyUriToFile(context, uri, temp, useReadOnly = true)
+            }
+            if (!copied && sourceFile.canRead()) {
+                sourceFile.copyTo(temp, overwrite = true)
+                copied = temp.isFile && temp.length() > 0L
+            }
+            if (!temp.isFile || temp.length() == 0L) {
+                return TagFileWriteResult.Error(IllegalStateException("could not read audio for tag write"))
+            }
+            writeTagsToFile(temp, draft, coverBytes, coverMimeType).getOrElse {
+                return TagFileWriteResult.Error(it)
+            }
+            when (val copy = copyFileToUri(context, uri, temp)) {
+                is TagFileWriteResult.Success -> TagFileWriteResult.Success
+                is TagFileWriteResult.NeedsWriteConsent -> copy
+                is TagFileWriteResult.Error -> copy
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "writeTagsViaContentUri")
+            TagFileWriteResult.Error(e)
+        } finally {
+            temp.delete()
+        }
+    }
+
+    private fun copyUriToFile(
+        context: Context,
+        uri: Uri,
+        dest: File,
+        useReadOnly: Boolean = false,
+    ): Boolean = runCatching {
+        val mode = if (useReadOnly) "r" else "rw"
+        try {
+            context.contentResolver.openFileDescriptor(uri, mode)?.use { pfd ->
+                java.io.FileInputStream(pfd.fileDescriptor).use { input ->
+                    dest.outputStream().use { output -> input.copyTo(output) }
+                }
+                return@runCatching dest.isFile && dest.length() > 0L
+            }
+        } catch (_: Exception) {
+            // fall through to InputStream
+        }
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            dest.outputStream().use { output -> input.copyTo(output) }
+        }
+        dest.isFile && dest.length() > 0L
+    }.getOrDefault(false)
+
+    private fun copyFileToUri(context: Context, uri: Uri, source: File): TagFileWriteResult {
+        return try {
+            writeBytesToMediaUri(context, uri, source)
+            TagFileWriteResult.Success
+        } catch (e: SecurityException) {
+            recoverableWriteResultOrNull(e)?.let { return it }
+            Timber.e(e, "copyFileToUri security uri=%s", uri)
+            TagFileWriteResult.Error(e)
+        } catch (e: Exception) {
+            Timber.e(e, "copyFileToUri uri=%s", uri)
+            TagFileWriteResult.Error(e)
+        }
+    }
+
+    private fun writeBytesToMediaUri(context: Context, uri: Uri, source: File) {
+        var usedPendingFlag = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            runCatching {
+                val pending = android.content.ContentValues().apply {
+                    put(MediaStore.Audio.Media.IS_PENDING, 1)
+                }
+                context.contentResolver.update(uri, pending, null, null)
+                usedPendingFlag = true
+            }.onFailure { e ->
+                Stage4DebugLog.w("IS_PENDING skipped uri=$uri err=${e.message}")
+            }
+        }
+        try {
+            context.contentResolver.openOutputStream(uri, "wt")?.use { out ->
+                source.inputStream().use { it.copyTo(out) }
+            } ?: context.contentResolver.openFileDescriptor(uri, "rw")?.use { pfd ->
+                java.io.FileOutputStream(pfd.fileDescriptor).use { out ->
+                    source.inputStream().use { it.copyTo(out) }
+                }
+            } ?: error("could not open output stream for $uri")
+        } finally {
+            if (usedPendingFlag && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                runCatching {
+                    val done = android.content.ContentValues().apply {
+                        put(MediaStore.Audio.Media.IS_PENDING, 0)
+                    }
+                    context.contentResolver.update(uri, done, null, null)
+                }
+            }
+        }
+    }
+
+    private fun recoverableWriteResultOrNull(e: SecurityException): TagFileWriteResult? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        if (e !is android.app.RecoverableSecurityException) return null
+        Stage4DebugLog.i("writeFile RecoverableSecurityException — needs user consent")
+        return TagFileWriteResult.NeedsWriteConsent(e.userAction.actionIntent)
+    }
+
+    private fun writeTagsToFile(
+        file: File,
         draft: TagEditDraft,
         coverBytes: ByteArray?,
         coverMimeType: String?,
     ): Result<Unit> {
         return try {
-            val file = File(path)
-            if (!file.isFile) {
-                return Result.failure(IllegalStateException("not a file"))
-            }
             val audioFile = AudioFileIO.read(file)
             val tag = audioFile.tagOrCreateDefault
-            tag.setField(FieldKey.TITLE, draft.title.trim())
-            tag.setField(FieldKey.ARTIST, draft.artist.trim())
-            tag.setField(FieldKey.ALBUM, draft.album.trim())
-            tag.setField(FieldKey.ALBUM_ARTIST, draft.albumArtist.trim())
-            tag.setField(FieldKey.YEAR, draft.year.trim())
-            tag.setField(FieldKey.GENRE, draft.genre.trim())
-            tag.setField(FieldKey.LYRICIST, draft.lyricist.trim())
-            tag.setField(FieldKey.COMMENT, draft.comment.trim())
+            val title = draft.title.trim().ifBlank { file.nameWithoutExtension.ifBlank { "Unknown" } }
+            applyTextField(tag, FieldKey.TITLE, title)
+            applyTextField(tag, FieldKey.ARTIST, draft.artist)
+            applyTextField(tag, FieldKey.ALBUM, draft.album)
+            applyTextField(tag, FieldKey.ALBUM_ARTIST, draft.albumArtist)
+            applyTextField(tag, FieldKey.YEAR, draft.year)
+            applyTextField(tag, FieldKey.GENRE, draft.genre)
+            applyTextField(tag, FieldKey.LYRICIST, draft.lyricist)
+            applyTextField(tag, FieldKey.COMMENT, draft.comment)
             val trackTrimmed = draft.trackNumber.trim()
             if (trackTrimmed.isNotEmpty()) {
-                tag.setField(FieldKey.TRACK, trackTrimmed)
+                applyTextField(tag, FieldKey.TRACK, trackTrimmed)
             } else {
                 runCatching { tag.deleteField(FieldKey.TRACK) }
             }
@@ -201,8 +365,25 @@ object AudioTagEditor {
             AudioFileIO.write(audioFile)
             Result.success(Unit)
         } catch (e: Exception) {
-            Timber.e(e, "writeFile")
+            Timber.e(e, "writeTagsToFile")
             Result.failure(e)
+        }
+    }
+
+    /**
+     * ID3v2 throws [org.jaudiotagger.tag.FieldDataInvalidException] when setting empty text on a
+     * missing/corrupt frame — delete the field instead of writing "".
+     */
+    private fun applyTextField(tag: Tag, key: FieldKey, value: String) {
+        val trimmed = value.trim()
+        if (trimmed.isEmpty()) {
+            runCatching { tag.deleteField(key) }
+            return
+        }
+        runCatching { tag.setField(key, trimmed) }.onFailure { e ->
+            Timber.w(e, "setField %s failed, delete then retry", key)
+            runCatching { tag.deleteField(key) }
+            tag.setField(key, trimmed)
         }
     }
 }

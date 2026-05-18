@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BlurOn
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Info
@@ -120,6 +121,7 @@ fun SettingsList(
     onPrivacyPolicyClicked: () -> Unit,
     onTermsClicked: () -> Unit,
     appVersionDisplay: String,
+    stage4BuildMarker: String? = null,
 ) {
     val settingsGradient = Brush.verticalGradient(
         colors = listOf(
@@ -165,6 +167,7 @@ fun SettingsList(
                 onPrivacyPolicyClicked = onPrivacyPolicyClicked,
                 onTermsClicked = onTermsClicked,
                 appVersionDisplay = appVersionDisplay,
+                stage4BuildMarker = stage4BuildMarker,
             )
         }
     }
@@ -284,6 +287,7 @@ private fun ReferenceHelpSection(
     onPrivacyPolicyClicked: () -> Unit,
     onTermsClicked: () -> Unit,
     appVersionDisplay: String,
+    stage4BuildMarker: String? = null,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         HelpSectionTitle(title = stringResource(R.string.settings_section_help))
@@ -334,6 +338,14 @@ private fun ReferenceHelpSection(
             description = appVersionDisplay,
             minimalStyle = true,
         )
+        stage4BuildMarker?.takeIf { it.isNotBlank() }?.let { marker ->
+            Setting(
+                title = marker,
+                icon = Icons.Outlined.Build,
+                description = null,
+                minimalStyle = true,
+            )
+        }
     }
 }
 

@@ -23,6 +23,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.generic.audioplayes.R
+import com.generic.audioplayes.components.ScreenEmptyState
 import com.generic.audioplayes.components.SongCardV3
 import com.generic.audioplayes.data.music.Album
 import com.generic.audioplayes.data.music.Artist
@@ -173,13 +174,9 @@ fun ResultContent(
         }
         if (empty) {
             item {
-                Text(
-                    text = stringResource(R.string.search_no_results),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                ScreenEmptyState(
+                    message = stringResource(R.string.search_no_results),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

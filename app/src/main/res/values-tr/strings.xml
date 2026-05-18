@@ -23,6 +23,7 @@
     <string name="search_global_hint">Parça, albüm, sanatçı, klasör, çalma listesi, diktafon…</string>
     <string name="search_type_hint">Aramak için yazın. Sonuçlar kategorilere ayrılır.</string>
     <string name="search_no_results">Sonuç yok</string>
+    <string name="queue_empty">Kuyruk boş. Kuyruk oluşturmak için bir şarkı çalın.</string>
     <string name="search_section_songs">Şarkılar</string>
     <string name="search_section_albums">Albümler</string>
     <string name="search_section_artists">Sanatçılar</string>

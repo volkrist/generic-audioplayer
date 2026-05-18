@@ -4,9 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -50,7 +48,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.generic.audioplayes.R
-import com.generic.audioplayes.components.FullScreenSadMessage
+import com.generic.audioplayes.components.ScreenEmptyState
+import com.generic.audioplayes.components.ScreenLoadingState
+import com.generic.audioplayes.ui.scaffoldContentPaddingWithSystemBars
 import com.generic.audioplayes.components.Snackbar
 import com.generic.audioplayes.components.SongCardV2
 import com.generic.audioplayes.data.music.Song
@@ -223,38 +223,26 @@ fun PlaylistEditorScreen(
             SnackbarHost(hostState = snackbarHostState) { Snackbar(it) }
         },
     ) { padding ->
+        val contentPadding = scaffoldContentPaddingWithSystemBars(padding, includeIme = false)
         when {
             playlistWithSongs == null -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
+                ScreenLoadingState(paddingValues = contentPadding)
             }
             songs.isEmpty() -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    FullScreenSadMessage(stringResource(R.string.no_songs_found))
-                }
+                ScreenEmptyState(
+                    message = stringResource(R.string.no_songs_found),
+                    paddingValues = contentPadding,
+                )
             }
             else -> {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding)
+                        .padding(contentPadding)
                         .background(MaterialTheme.colorScheme.surface)
                         .dragContainer(dragDropState),
                     state = listState,
-                    contentPadding = WindowInsets.systemBars
-                        .only(WindowInsetsSides.Bottom)
-                        .asPaddingValues(),
+                    contentPadding = PaddingValues(bottom = 12.dp),
                 ) {
                     itemsIndexed(
                         items = songs,

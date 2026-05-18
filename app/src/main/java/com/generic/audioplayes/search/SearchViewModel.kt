@@ -48,6 +48,7 @@ class SearchViewModel @Inject constructor(
                 if (trimmed.isEmpty()) {
                     emit(SearchResult())
                 } else {
+                    emit(SearchResult(isLoading = true))
                     emit(searchRepository.search(trimmed))
                 }
             }

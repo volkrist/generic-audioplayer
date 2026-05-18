@@ -6,22 +6,16 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
@@ -30,7 +24,9 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
 import com.generic.audioplayes.R
 import com.generic.audioplayes.collection.CollectionType
-import com.generic.audioplayes.components.FullScreenSadMessage
+import com.generic.audioplayes.components.ScreenEmptyState
+import com.generic.audioplayes.components.ScreenErrorState
+import com.generic.audioplayes.components.ScreenLoadingState
 import com.generic.audioplayes.components.Snackbar
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.music.Album
@@ -38,6 +34,7 @@ import com.generic.audioplayes.data.music.Artist
 import com.generic.audioplayes.data.music.Playlist
 import com.generic.audioplayes.data.music.Song
 import com.generic.audioplayes.home.HomeViewModel
+import com.generic.audioplayes.ui.scaffoldContentPaddingWithSystemBars
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -84,32 +81,30 @@ class SearchFragment : Fragment() {
                             )
                         },
                         content = { paddingValues ->
+                            val contentPadding = scaffoldContentPaddingWithSystemBars(paddingValues)
+                            val errorMessage = searchResult.errorMsg
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                             ) {
                                 when {
-                                    searchResult.errorMsg != null -> {
-                                        FullScreenSadMessage(searchResult.errorMsg)
+                                    searchResult.isLoading -> {
+                                        ScreenLoadingState(paddingValues = contentPadding)
+                                    }
+                                    errorMessage != null -> {
+                                        ScreenErrorState(
+                                            message = errorMessage,
+                                            paddingValues = contentPadding,
+                                        )
                                     }
                                     query.isBlank() -> {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(paddingValues)
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.search_type_hint),
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                textAlign = TextAlign.Center,
-                                            )
-                                        }
+                                        ScreenEmptyState(
+                                            message = stringResource(R.string.search_type_hint),
+                                            paddingValues = contentPadding,
+                                        )
                                     }
                                     else -> {
                                         ResultContent(
-                                            contentPadding = paddingValues,
+                                            contentPadding = contentPadding,
                                             searchResult = searchResult,
                                             onSongClicked = this@SearchFragment::handleSongClick,
                                             onAlbumClicked = this@SearchFragment::handleAlbumClick,

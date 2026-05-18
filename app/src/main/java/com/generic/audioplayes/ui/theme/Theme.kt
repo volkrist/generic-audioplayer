@@ -8,14 +8,12 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.generic.audioplayes.data.UserPreferences
-import com.google.accompanist.systemuicontroller.SystemUiController
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.generic.audioplayes.ui.SyncSystemBarsTheme
 
 /**
  * Dense dark “library shell” chrome for [com.generic.audioplayes.home.HomeFragment].
@@ -54,6 +52,15 @@ object HomeLibraryTokens {
     val bottomNavHeight get() = UiTokens.bottomNavHeight
 }
 
+/** Bottom sheets for track/folder actions — matches full-player action sheet chrome. */
+object ActionSheetColors {
+    val sheetBackground = Color(0xFF21212B)
+    val onSheet = Color(0xFFF3F4F6)
+    val muted = Color(0xFF9CA3AF)
+    val divider = Color(0xFF3D3D48)
+    val gridCell = Color(0xFF2A2D36)
+}
+
 
 @Composable
 fun DefaultTheme(content: @Composable () -> Unit) {
@@ -70,7 +77,8 @@ fun DefaultTheme(content: @Composable () -> Unit) {
 @Composable
 fun AudioPlayerTheme(
     themePreference: ThemePreference,
-    systemUiController: SystemUiController = rememberSystemUiController(),
+    /** When set, overrides icon contrast for dark chrome (e.g. Home library gradient). */
+    statusBarUseDarkIcons: Boolean? = null,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -93,17 +101,7 @@ fun AudioPlayerTheme(
         wantsAmoled -> themePreference.accent.getColorScheme(isDark = true).toAmoled()
         else -> themePreference.accent.getColorScheme(isDark)
     }
-    DisposableEffect(themePreference, systemUiController) {
-        systemUiController.setSystemBarsColor(
-            color = Color.Transparent,
-            darkIcons = !isDark,
-            isNavigationBarContrastEnforced = false,
-            transformColorForLightContent = {
-                Color.Transparent
-            }
-        )
-        onDispose { }
-    }
+    SyncSystemBarsTheme(useDarkStatusBarIcons = statusBarUseDarkIcons ?: !isDark)
     MaterialTheme(
         colorScheme = colourScheme,
         typography = AudioPlayerTypography,

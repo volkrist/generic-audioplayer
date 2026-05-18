@@ -1,16 +1,16 @@
 package com.generic.audioplayes
 
 import android.content.ComponentName
-import android.graphics.Color
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.WindowManager
+import androidx.activity.enableEdgeToEdge
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
+import androidx.concurrent.futures.await
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.view.WindowCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -19,7 +19,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.work.await
 import com.generic.audioplayes.data.AudioPlayerCrashReporter
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.data.music.SongExtractor
@@ -70,13 +69,11 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var songExtractor: SongExtractor
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         installSplashScreen()
+        enableEdgeToEdge()
+        super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        WindowCompat.setDecorFitsSystemWindows(window,false)
-        window.statusBarColor = Color.TRANSPARENT
 
         setupBrandingSplashOverlay()
 

@@ -53,6 +53,8 @@ interface SongService {
     fun getTopTracks(): Flow<List<Song>>
 
     suspend fun updateSong(song: Song)
+    suspend fun getSongByLocation(location: String): Song?
+
     suspend fun getSongsFromLocations(locations: List<String>): List<Song>
 
     suspend fun getSongsByAlbumName(albumName: String): List<Song>
@@ -151,6 +153,13 @@ class SongServiceImpl(
 
     override suspend fun updateSong(song: Song) {
         songDao.updateSong(song)
+    }
+
+    override suspend fun getSongByLocation(location: String): Song? {
+        songDao.getSongByLocation(location)?.let { return it }
+        return songDao.getSongsFromLocations(
+            com.generic.audioplayes.util.pathCandidatesForLookup(location),
+        ).firstOrNull()
     }
 
     override suspend fun getSongsFromLocations(locations: List<String>): List<Song> {

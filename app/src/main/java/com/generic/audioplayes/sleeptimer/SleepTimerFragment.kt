@@ -20,7 +20,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -53,9 +52,8 @@ class SleepTimerFragment : DialogFragment() {
             setBackgroundColor(AndroidColor.TRANSPARENT)
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                AudioPlayerTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = Color.Transparent,

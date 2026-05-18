@@ -393,17 +393,8 @@ fun CollectionPlaybackShell(
                 },
                 onOpenAlbum = { navHelper.navigateToAlbumByName(playingSong.album) },
                 onPlayerActionEditTags = { song ->
-                    if (!AudioFileActions.tryOpenAudioTagEditor(
-                            context,
-                            song.location,
-                        )
-                    ) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.player_action_no_editor_app),
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
+                    fullPlayerOverlay = CollectionPlaybackOverlay.None
+                    navHelper.navigateToTagEditor(song)
                 },
                 onPlayerActionHideSong = homeViewModel::onSongBlacklist,
                 onPlayerActionDeleteSong = homeViewModel::deleteSongFromDevice,

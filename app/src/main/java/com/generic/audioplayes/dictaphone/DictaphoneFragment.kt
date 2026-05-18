@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,7 +27,6 @@ import com.generic.audioplayes.ui.theme.AudioPlayerTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -52,15 +51,13 @@ class DictaphoneFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
-                AudioPlayerTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference) {
                     val recordAudioPermission = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(HomeLibraryTokens.libraryShellGradient)
-                            .systemBarsPadding(),
                     ) {
                         TopBarWithBackArrow(
                             onBackArrowPressed = { findNavController().navigateUp() },
@@ -70,7 +67,9 @@ class DictaphoneFragment : Fragment() {
                         )
                         DictaphoneScreen(
                             viewModel = viewModel,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .navigationBarsPadding(),
                             microphoneGranted = recordAudioPermission.status.isGranted,
                             onRequestMicrophonePermission = {
                                 recordAudioPermission.launchPermissionRequest()

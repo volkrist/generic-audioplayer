@@ -26,7 +26,6 @@ import com.generic.audioplayes.R
 import com.generic.audioplayes.components.TopBarWithBackArrow
 import com.generic.audioplayes.data.AudioPlayerPreferenceProvider
 import com.generic.audioplayes.ui.theme.AudioPlayerTheme
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -51,7 +50,6 @@ class ThemeFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val systemUiController = rememberSystemUiController()
                 val themePreference by preferenceProvider.theme.collectAsStateWithLifecycle()
                 val pickLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.GetContent(),
@@ -74,7 +72,7 @@ class ThemeFragment : Fragment() {
                         ),
                     )
                 }
-                AudioPlayerTheme(themePreference, systemUiController) {
+                AudioPlayerTheme(themePreference) {
                     Column(Modifier.fillMaxSize()) {
                         TopBarWithBackArrow(
                             onBackArrowPressed = { findNavController().navigateUp() },
