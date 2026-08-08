@@ -22,6 +22,7 @@ object NotificationHelper {
 
     const val PLAYER_NOTIFICATION_ID = 20
     const val PLAYER_CHANNEL_ID = "audio_player_playback"
+    const val PLAYER_CHANNEL_NAME = "Playback"
 
     fun ensureNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -33,7 +34,7 @@ object NotificationHelper {
     private fun createChannel(context: Context) {
         val channel = NotificationChannel(
             PLAYER_CHANNEL_ID,
-            "Playback",
+            PLAYER_CHANNEL_NAME,
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = "Music playback controls and lock screen"

@@ -23,3 +23,12 @@ local.properties
 # Legacy / duplicate project copies (main tree is repo root)
 _zen_extract/
 AudioPlayer/
+
+# On-device snapshot of the debug variant (personal library data), kept locally only
+debug-backup/
+
+# Local diagnostics
+install-*.log
+screen-*.png
+ui.xml
+hs_err_pid*.log

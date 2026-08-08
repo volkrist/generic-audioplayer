@@ -1,13 +1,30 @@
 ---
-description: After editing the AudioPlayer Android app, build and install debug APK on the connected phone
+description: After editing the AudioPlayer Android app, build and install the release APK on the connected phone
 alwaysApply: true
 ---
 
 # Deploy AudioPlayer app after code changes
 
-When you finish changes under the Android Gradle project at `AudioPlayer/`, run a full install on the connected USB device:
+Only the release build may be installed on the phone. The `.debug` variant must never be left on the
+device: it shows up as a second app, holds its own media session and notification, and competes for
+the media button with the real app.
 
-1. From PowerShell: `Set-Location "c:\Users\Volkr\Desktop\audioPlayer\AudioPlayer"; .\gradlew.bat installDebug`
+When you finish changes under the Android Gradle project at `c:\Users\Volkr\Desktop\audioPlayer`:
+
+1. From PowerShell: `Set-Location "c:\Users\Volkr\Desktop\audioPlayer"; .\gradlew.bat installRelease`
 2. Confirm the build reports `Installed on 1 device` (or fix adb/device issues if install fails).
 
-Do this automatically at the end of the task whenever the Android app sources were modified, unless the user explicitly asks not to install.
+Do this automatically at the end of the task whenever the Android app sources were modified, unless
+the user explicitly asks not to install.
+
+## Debug builds
+
+Never run `installDebug`. Debug logging (Timber output) is only available in the debug variant, so if
+a problem cannot be diagnosed from the release build:
+
+1. Install it temporarily: `.\gradlew.bat installDebug`
+2. Collect the logs.
+3. Uninstall it again in the same task: `adb uninstall com.generic.audioplayes.debug`
+
+A snapshot of the debug variant's data taken before it was removed lives in `debug-backup/`
+(untracked, contains personal library data) — see the README there for how to restore it.

@@ -7,7 +7,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.view.KeyEvent
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -17,6 +20,7 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
+import androidx.media3.session.MediaController
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.generic.audioplayes.Constants
@@ -74,6 +78,22 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
     private val scope = CoroutineScope(job + Dispatchers.Default)
 
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    /**
+     * Position to seek to in [onSetQueue] instead of the default 0. Set only by
+     * [resumePersistedPlaybackIfIdle] so a media button restores the saved position rather than
+     * restarting the track.
+     */
+    private var pendingResumePositionMs: Long? = null
+
+    private var resumeFromMediaButtonInFlight = false
+
+    /** Set while a media-button resume is restoring the queue; consumed by [setQueue]. */
+    private var playThroughSessionPending = false
+
+    private var resumeController: MediaController? = null
+
+    private var mediaSessionReleased = false
 
     private val debouncedSaveRunnable = Runnable {
         scope.launch(Dispatchers.Main) {
@@ -147,6 +167,10 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
             .setId(System.currentTimeMillis().toString())
             .build()
 
+        // Registered before the collectors below so Media3 can post the foreground notification as
+        // early as possible — the system kills the process if startForeground() is late by 5s.
+        setMediaNotificationProvider(playerNotificationManager)
+
         queueService.addListener(this)
 
         IntentFilter(Constants.PACKAGE_NAME).also {
@@ -182,8 +206,95 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
                 }
             }
         }
+    }
 
-        setMediaNotificationProvider(playerNotificationManager)
+    /**
+     * A media button that arrives while the process is dead is delivered before [onCreate] has built
+     * the [MediaSession], so Media3 has nowhere to dispatch it and the play command is lost. Nothing
+     * then starts playing, no playback notification is posted, and the system kills the service for
+     * missing the `startForeground()` deadline. Restoring the saved queue here covers that gap.
+     */
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == Intent.ACTION_MEDIA_BUTTON && isPlayRequest(intent)) {
+            resumePersistedPlaybackIfIdle()
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    private fun isPlayRequest(intent: Intent): Boolean {
+        val keyEvent = IntentCompat.getParcelableExtra(
+            intent,
+            Intent.EXTRA_KEY_EVENT,
+            KeyEvent::class.java,
+        ) ?: return true
+        return when (keyEvent.keyCode) {
+            KeyEvent.KEYCODE_MEDIA_PLAY,
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+            KeyEvent.KEYCODE_HEADSETHOOK,
+            -> true
+            else -> false
+        }
+    }
+
+    private fun resumePersistedPlaybackIfIdle() {
+        if (resumeFromMediaButtonInFlight || exoPlayer.mediaItemCount > 0) return
+        resumeFromMediaButtonInFlight = true
+        scope.launch {
+            try {
+                pendingResumePositionMs = queueStateProvider.readStartPositionMs()
+                playThroughSessionPending = true
+                val restored = queueStateProvider.restoreQueueIfPossible(songService, queueService)
+                if (!restored) {
+                    pendingResumePositionMs = null
+                    playThroughSessionPending = false
+                    crashReporter.logData("AudioPlayerService media button: nothing to resume")
+                }
+            } catch (e: Exception) {
+                pendingResumePositionMs = null
+                playThroughSessionPending = false
+                crashReporter.logException(e)
+            } finally {
+                resumeFromMediaButtonInFlight = false
+            }
+        }
+    }
+
+    /**
+     * Media3 promotes the service to a foreground service only for play requests that travel through
+     * the session — that is where its notification bookkeeping lives. Playing on [exoPlayer] directly
+     * leaves the service in the background, and once the media button's 10-second temporary allowlist
+     * expires the platform pauses the playback again. Repeating the request through a controller of
+     * our own session keeps that bookkeeping intact.
+     */
+    private fun requestPlayThroughSession() {
+        val controllerFuture = MediaController.Builder(this, mediaSession.token).buildAsync()
+        controllerFuture.addListener(
+            {
+                try {
+                    resumeController?.release()
+                    resumeController = controllerFuture.get().apply { play() }
+                } catch (e: Exception) {
+                    crashReporter.logException(e)
+                }
+            },
+            ContextCompat.getMainExecutor(this),
+        )
+    }
+
+    /**
+     * media3 decides whether the service must run in the foreground from the state of its own
+     * notification controller, which mirrors [exoPlayer] with a delay. The notification refresh this
+     * service triggers on playback changes can overtake that mirror, so the decision gets fixed at
+     * "not playing" and nothing arrives later to correct it: the service stays a background service
+     * and the platform stops playback within a minute. Asking for one more update once the mirror
+     * caught up makes media3 promote the service.
+     */
+    private val foregroundRecheckRunnable = Runnable {
+        try {
+            triggerNotificationUpdate()
+        } catch (e: Exception) {
+            crashReporter.logException(e)
+        }
     }
 
     private val exoPlayerListener = object : Player.Listener {
@@ -226,9 +337,11 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
             }
             playerWidgetManager.notifyIsPlayingChanged(isPlaying)
             schedulePersistQueueState()
+            mainHandler.removeCallbacks(foregroundRecheckRunnable)
             if (isPlaying) {
                 mainHandler.removeCallbacks(periodicSaveRunnable)
                 mainHandler.postDelayed(periodicSaveRunnable, 12_000L)
+                mainHandler.postDelayed(foregroundRecheckRunnable, 700L)
             } else {
                 mainHandler.removeCallbacks(periodicSaveRunnable)
             }
@@ -289,6 +402,7 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
         isRunning.set(false)
         mainHandler.removeCallbacks(debouncedSaveRunnable)
         mainHandler.removeCallbacks(periodicSaveRunnable)
+        mainHandler.removeCallbacks(foregroundRecheckRunnable)
         // Pause before snapshot so wasPlaying=false and position matches where playback stopped
         // (sleep timer / notification close should resume from this point, not "still playing").
         try {
@@ -314,6 +428,9 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
             }
         }
         volumeBoosterManager.releaseLoudnessEffect()
+        resumeController?.release()
+        resumeController = null
+        releaseMediaSessionOnce()
         with(queueService) {
             clearQueue()
             removeListener(this@AudioPlayerService)
@@ -372,6 +489,10 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
                     .toCorrectedParams()
                     .toExoPlayerPlaybackParameters()
                 if (autoPlay) exoPlayer.play() else exoPlayer.pause()
+                if (playThroughSessionPending) {
+                    playThroughSessionPending = false
+                    requestPlayThroughSession()
+                }
             }
         }
     }
@@ -423,7 +544,9 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
     override fun onSetQueue(songs: List<Song>, startPlayingFromPosition: Int) {
         crashReporter.logData("AudioPlayerService.onSetQueue(List<Song>,Int)")
         val mediaItems = songs.map(Song::toMediaItem)
-        setQueue(mediaItems, startPlayingFromPosition, startPositionMs = 0L, autoPlay = true)
+        val resumeAtMs = pendingResumePositionMs ?: 0L
+        pendingResumePositionMs = null
+        setQueue(mediaItems, startPlayingFromPosition, startPositionMs = resumeAtMs, autoPlay = true)
     }
 
     /**
@@ -493,8 +616,18 @@ class AudioPlayerService : MediaSessionService(), QueueService.Listener, AudioPl
          * To close the media session, first call mediaSession.release followed by stopSelf()
          * See issue: https://github.com/androidx/media/issues/389#issuecomment-1546611545
          */
-        mediaSession.release()
+        releaseMediaSessionOnce()
         stopSelf()
+    }
+
+    private fun releaseMediaSessionOnce() {
+        if (mediaSessionReleased) return
+        mediaSessionReleased = true
+        try {
+            mediaSession.release()
+        } catch (e: Exception) {
+            crashReporter.logException(e)
+        }
     }
 
 }

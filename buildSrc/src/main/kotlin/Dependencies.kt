@@ -40,7 +40,7 @@ object Versions {
     const val timber = "5.0.1"
 
     const val exoPlayer = "2.18.1"
-    const val media3 = "1.2.1"
+    const val media3 = "1.11.0"
 
     const val coilCompose = "2.7.0"
     const val palette = "1.0.0"
@@ -153,7 +153,7 @@ object AnnotationProcessors {
 object AppVersion {
     private const val Major = 1
     private const val Minor = 2
-    private const val Patch = 11
+    private const val Patch = 12
     const val Code = Major*10000 + Minor*100 + Patch
     const val Name = "$Major.$Minor.$Patch"
 }

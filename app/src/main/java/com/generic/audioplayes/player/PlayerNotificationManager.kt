@@ -45,6 +45,17 @@ class PlayerNotificationManager @Inject constructor(
         }
     }
 
+    /**
+     * Lets [androidx.media3.session.MediaSessionService] post a placeholder foreground notification
+     * before [createNotification] runs, so a media button arriving on a cold start cannot trip the
+     * 5-second `startForeground()` deadline.
+     */
+    override fun getNotificationChannelInfo(): MediaNotification.Provider.NotificationChannelInfo =
+        MediaNotification.Provider.NotificationChannelInfo(
+            NotificationHelper.PLAYER_CHANNEL_ID,
+            NotificationHelper.PLAYER_CHANNEL_NAME,
+        )
+
     override fun createNotification(
         mediaSession: MediaSession,
         customLayout: ImmutableList<CommandButton>,
