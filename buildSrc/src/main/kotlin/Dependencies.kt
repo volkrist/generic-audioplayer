@@ -143,9 +143,9 @@ object Libraries {
 }
 
 object Api {
-    const val compileSdk = 35
+    const val compileSdk = 36
     const val minSdk = 23
-    const val targetSdk = 35
+    const val targetSdk = 36
 }
 
 object AnnotationProcessors {
@@ -157,7 +157,7 @@ object AnnotationProcessors {
 object AppVersion {
     private const val Major = 1
     private const val Minor = 2
-    private const val Patch = 10
+    private const val Patch = 11
     const val Code = Major*10000 + Minor*100 + Patch
     const val Name = "$Major.$Minor.$Patch"
 }
