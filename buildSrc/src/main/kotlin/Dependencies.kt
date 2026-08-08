@@ -1,59 +1,58 @@
 object Versions {
-    const val kotlin = "1.8.0"
-    const val coroutines = "1.7.1"
-    const val kotlinxCollectionsImmutable = "0.3.8"
+    const val kotlin = "2.2.21"
+    const val coroutines = "1.10.2"
+    const val kotlinxCollectionsImmutable = "0.4.0"
 
-    const val androidxComposeUi = "1.3.3"
-    const val androidxComposeCompiler = "1.4.1"
-    const val androidxComposeMaterial = "1.3.1"
-    const val androidxCore = "1.7.0"
-    const val androidxLifecycle = "2.6.0-beta01"
-//    const val androidxLifecycleRuntimeCompose = "2.6.0-beta01"
+    const val androidxComposeUi = "1.7.8"
+    const val androidxComposeMaterial = "1.7.8"
+    const val androidxCore = "1.15.0"
+    const val androidxLifecycle = "2.8.7"
     const val androidxActivity = "1.9.3"
     const val androidxConcurrentFutures = "1.2.0"
-    const val androidxJunit = "1.1.3"
-    const val androidxEspresso = "3.4.0"
-    const val androidxComposeConstraintLayout = "1.0.1"
-    const val androidxSplashScreen = "1.0.0-beta02"
+    const val androidxJunit = "1.2.1"
+    const val androidxEspresso = "3.6.1"
+    const val androidxComposeConstraintLayout = "1.1.0"
+    const val androidxSplashScreen = "1.0.1"
     const val androidxGlance = "1.1.1"
-    const val androidxWorkManager = "2.8.1"
+    const val androidxWorkManager = "2.9.1"
 
-    const val appCompat = "1.6.1"
-    const val navigation = "2.5.3"
+    const val appCompat = "1.7.0"
+    const val navigation = "2.8.9"
 
-    const val room = "2.5.0"
-    const val datastore = "1.0.0"
+    const val room = "2.8.4"
+    const val datastore = "1.1.1"
     const val kotlinLite = "3.18.0"
+    const val protobufPlugin = "0.9.6"
 
-    const val firebaseBom = "31.2.3"
-    const val googleServices = "4.3.15"
+    const val firebaseBom = "34.15.0"
+    const val googleServices = "4.4.3"
     const val appUpdate = "2.1.0"
-    const val crashlyticsGradlePlugin = "2.9.4"
+    const val crashlyticsGradlePlugin = "3.0.5"
 
-    const val material3 = "1.1.2"
-    const val accompanist = "0.28.0"
+    const val material3 = "1.3.2"
+    const val accompanist = "0.36.0"
 
     const val junit = "4.13.2"
 
-    const val hilt = "2.38.1"
-    const val hiltWork = "1.0.0"
+    const val hilt = "2.57.2"
+    const val hiltWork = "1.2.0"
 
     const val timber = "5.0.1"
 
     const val exoPlayer = "2.18.1"
     const val media3 = "1.2.1"
 
-    const val coilCompose = "2.2.2"
+    const val coilCompose = "2.7.0"
     const val palette = "1.0.0"
-    const val lottie = "5.2.0"
+    const val lottie = "6.6.10"
 
     const val crashActivity = "2.4.0"
 
     /** ID3/Vorbis/MP4 tag read-write for in-app editor */
     const val jaudiotagger = "2.2.5"
 
-    const val androidxTest = "1.5.0"
-    const val mockk = "1.13.8"
+    const val androidxTest = "1.6.1"
+    const val mockk = "1.13.13"
 }
 
 object Plugins {
@@ -97,7 +96,7 @@ object Libraries {
     const val kotlinLite = "com.google.protobuf:protobuf-kotlin-lite:${Versions.kotlinLite}"
 
     const val firebaseBom = "com.google.firebase:firebase-bom:${Versions.firebaseBom}"
-    const val firebaseCrashlytics = "com.google.firebase:firebase-crashlytics-ktx"
+    const val firebaseCrashlytics = "com.google.firebase:firebase-crashlytics"
     const val appUpdate = "com.google.android.play:app-update-ktx:${Versions.appUpdate}"
 
     const val androidxComposeMaterial = "androidx.compose.material:material:${Versions.androidxComposeMaterial}"
@@ -114,10 +113,7 @@ object Libraries {
     const val material3 = "androidx.compose.material3:material3:${Versions.material3}"
     const val material3WindowSizeClass = "androidx.compose.material3:material3-window-size-class:${Versions.material3}"
 
-    const val accompanistSystemUiController = "com.google.accompanist:accompanist-systemuicontroller:${Versions.accompanist}"
     const val accompanistPermissions = "com.google.accompanist:accompanist-permissions:${Versions.accompanist}"
-    const val accompanistPager = "com.google.accompanist:accompanist-pager:${Versions.accompanist}"
-    const val accompanistPagerIndicator = "com.google.accompanist:accompanist-pager-indicators:${Versions.accompanist}"
 
     const val hilt = "com.google.dagger:hilt-android:${Versions.hilt}"
     const val hiltWork = "androidx.hilt:hilt-work:${Versions.hiltWork}"

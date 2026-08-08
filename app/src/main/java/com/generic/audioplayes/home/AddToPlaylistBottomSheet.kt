@@ -20,7 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -158,7 +158,7 @@ private fun CreateNewPlaylistSheetRow(
             .height(UiTokens.listItemHeightTall)
             .clickable(
                 onClick = { dialogVisible = true },
-                indication = rememberRipple(bounded = true, radius = UiTokens.rippleLarge),
+                indication = ripple(bounded = true, radius = UiTokens.rippleLarge),
                 interactionSource = remember { MutableInteractionSource() },
             )
             .padding(horizontal = UiTokens.paddingSheetHorizontal, vertical = 4.dp),
@@ -241,7 +241,7 @@ private fun FavouritesSheetRow(
             .height(UiTokens.listItemHeightTall)
             .clickable(
                 onClick = onClick,
-                indication = rememberRipple(bounded = true, radius = UiTokens.rippleLarge),
+                indication = ripple(bounded = true, radius = UiTokens.rippleLarge),
                 interactionSource = remember { MutableInteractionSource() },
             )
             .padding(horizontal = UiTokens.paddingSheetHorizontal, vertical = 4.dp),
@@ -300,7 +300,7 @@ private fun PlaylistPickRow(
             .height(UiTokens.listItemHeightTall)
             .clickable(
                 onClick = onClick,
-                indication = rememberRipple(bounded = true, radius = UiTokens.rippleLarge),
+                indication = ripple(bounded = true, radius = UiTokens.rippleLarge),
                 interactionSource = remember { MutableInteractionSource() },
             )
             .padding(horizontal = UiTokens.paddingSheetHorizontal, vertical = 4.dp),

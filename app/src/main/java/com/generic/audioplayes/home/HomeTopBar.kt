@@ -22,7 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -150,7 +150,7 @@ fun HomeTopBar(
                     .padding(8.dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = rememberRipple(bounded = false, radius = UiTokens.rippleMedium),
+                        indication = ripple(bounded = false, radius = UiTokens.rippleMedium),
                         onClick = onThemeIconClicked,
                     ),
                 tint = topIconTint,
@@ -164,7 +164,7 @@ fun HomeTopBar(
                     .padding(10.dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = rememberRipple(bounded = false, radius = UiTokens.rippleMedium),
+                        indication = ripple(bounded = false, radius = UiTokens.rippleMedium),
                         onClick = onSearchClicked,
                     ),
                 tint = topIconTint,
@@ -178,7 +178,7 @@ fun HomeTopBar(
                     .padding(10.dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = rememberRipple(bounded = false, radius = UiTokens.rippleMedium),
+                        indication = ripple(bounded = false, radius = UiTokens.rippleMedium),
                         onClick = onSettingsClicked,
                     ),
                 tint = topIconTint,
@@ -265,7 +265,7 @@ fun HomeTopBar(
                         .padding(4.dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = rememberRipple(bounded = false, radius = UiTokens.rippleMedium),
+                            indication = ripple(bounded = false, radius = UiTokens.rippleMedium),
                             onClick = {
                                 when {
                                     currentScreen == Screens.Songs && onSongsSortSheetRequest != null ->
@@ -294,7 +294,7 @@ fun HomeTopBar(
                         .padding(4.dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = rememberRipple(bounded = false, radius = UiTokens.rippleMedium),
+                            indication = ripple(bounded = false, radius = UiTokens.rippleMedium),
                             onClick = onLayoutIconClicked,
                         ),
                     tint = Color.White,

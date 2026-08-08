@@ -1,30 +1,31 @@
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id ("com.android.application")
     id ("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
     kotlin("kapt")
     id("dagger.hilt.android.plugin")
     id("androidx.navigation.safeargs.kotlin")
     id("kotlin-parcelize")
-    id("com.google.protobuf") version "0.9.1"
+    id("com.google.protobuf") version Versions.protobufPlugin
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
-    id("dev.shreyaspatil.compose-compiler-report-generator") version "1.1.0"
 }
 
 android {
     signingConfigs {
         create("prod") {
-            val props = gradleLocalProperties(rootDir)
+            val props = gradleLocalProperties(rootDir, providers)
             storeFile = props["STORE_FILE"]?.let { file(it) }
             storePassword = props["STORE_PASSWORD"] as String? ?: ""
             keyAlias = props["KEY_ALIAS"] as String? ?: ""
             keyPassword = props["KEY_PASSWORD"] as String? ?: ""
         }
         create("ir"){
-            val props = gradleLocalProperties(rootDir)
+            val props = gradleLocalProperties(rootDir, providers)
             storeFile = props["IR_STORE_FILE"]?.let { file(it) }
             storePassword = props["IR_STORE_PASSWORD"] as String? ?: ""
             keyAlias = props["IR_KEY_ALIAS"] as String? ?: ""
@@ -92,8 +93,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = "11"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
+        }
     }
 
     lint {
@@ -106,10 +109,6 @@ android {
         compose = true
         viewBinding = true
         buildConfig = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = Versions.androidxComposeCompiler
     }
 
     packaging {
@@ -152,7 +151,6 @@ dependencies {
     implementation(Libraries.material3WindowSizeClass)
 
     implementation(Libraries.accompanistPermissions)
-    implementation(Libraries.accompanistPager)
 
     implementation(Libraries.appCompat)
     implementation(Libraries.navigationUi)
@@ -199,8 +197,8 @@ dependencies {
 
 allprojects {
     tasks.withType<KotlinCompile>().configureEach {
-        kotlinOptions {
-            jvmTarget = JavaVersion.VERSION_11.toString()
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
         }
     }
 }

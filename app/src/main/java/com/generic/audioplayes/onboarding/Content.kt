@@ -5,13 +5,12 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.generic.audioplayes.data.music.ScanStatus
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.rememberPagerState
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -20,7 +19,7 @@ import kotlin.math.max
 
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@OptIn(ExperimentalPagerApi::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ColumnScope.ContentApi33(
     scanStatus: ScanStatus,
@@ -28,14 +27,13 @@ fun ColumnScope.ContentApi33(
     setOnBoardingComplete: () -> Unit,
 ) {
     val pageCount = 3
-    val pagerState = rememberPagerState()
+    val pagerState = rememberPagerState(pageCount = { pageCount })
     val scope = rememberCoroutineScope()
     val readExternalStoragePermissionState =
         rememberPermissionState(permission = Manifest.permission.READ_MEDIA_AUDIO)
     val notificationPermissionState =
         rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
     HorizontalPager(
-        count = pageCount,
         modifier = Modifier
             .weight(0.85f)
             .fillMaxSize(),
@@ -79,7 +77,7 @@ fun ColumnScope.ContentApi33(
     )
 }
 
-@OptIn(ExperimentalPagerApi::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ColumnScope.Content(
     scanStatus: ScanStatus,
@@ -87,12 +85,11 @@ fun ColumnScope.Content(
     setOnBoardingComplete: () -> Unit,
 ) {
     val pageCount = 2
-    val pagerState = rememberPagerState()
+    val pagerState = rememberPagerState(pageCount = { pageCount })
     val scope = rememberCoroutineScope()
     val readExternalStoragePermissionState =
         rememberPermissionState(permission = Manifest.permission.READ_EXTERNAL_STORAGE)
     HorizontalPager(
-        count = pageCount,
         modifier = Modifier
             .weight(0.85f)
             .fillMaxSize(),

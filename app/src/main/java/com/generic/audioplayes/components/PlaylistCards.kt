@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -144,7 +144,7 @@ fun PlaylistCard(
                         )
                         optionsVisible = true
                     },
-                    indication = rememberRipple(
+                    indication = ripple(
                         bounded = false,
                         radius = UiTokens.rippleSmall
                     ),
@@ -223,7 +223,7 @@ fun PlaylistCardV2(
                         onClick = {
                             optionsVisible = true
                         },
-                        indication = rememberRipple(bounded = false, radius = UiTokens.rippleSmall),
+                        indication = ripple(bounded = false, radius = UiTokens.rippleSmall),
                         interactionSource = remember { MutableInteractionSource() }
                     ),
                 tint = Color.White.copy(alpha = 0.85f),
@@ -262,7 +262,7 @@ fun PlaylistUserPlaylistRow(
                 .weight(1f)
                 .clickable(
                     onClick = { onPlaylistClicked(playlistWithSongCount.playlistId) },
-                    indication = rememberRipple(bounded = true, radius = UiTokens.rippleLarge),
+                    indication = ripple(bounded = true, radius = UiTokens.rippleLarge),
                     interactionSource = remember { MutableInteractionSource() },
                 ),
             verticalAlignment = Alignment.CenterVertically,
@@ -309,7 +309,7 @@ fun PlaylistUserPlaylistRow(
                 .padding(10.dp)
                 .clickable(
                     onClick = { optionsVisible = true },
-                    indication = rememberRipple(bounded = false, radius = UiTokens.rippleSmall),
+                    indication = ripple(bounded = false, radius = UiTokens.rippleSmall),
                     interactionSource = remember { MutableInteractionSource() },
                 ),
             tint = Color.White.copy(alpha = 0.85f),

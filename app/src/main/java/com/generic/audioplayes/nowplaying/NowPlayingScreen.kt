@@ -66,7 +66,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -507,7 +507,7 @@ private fun NowPlayingTrackTitleBlock(
                 enabled = artistOpenable,
                 onClick = onOpenArtist,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = true),
+                indication = ripple(bounded = true),
             ),
         )
     }
@@ -545,7 +545,7 @@ private fun NowPlayingSecondaryActionsRow(
                 .clickable(
                     onClick = onAddCurrentSongToPlaylist,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true, radius = UiTokens.rippleSmall),
+                    indication = ripple(bounded = true, radius = UiTokens.rippleSmall),
                 )
                 .padding(UiTokens.paddingItemTight),
             tint = iconTint,
@@ -559,7 +559,7 @@ private fun NowPlayingSecondaryActionsRow(
                 .clickable(
                     onClick = onEqualizerClicked,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true, radius = UiTokens.rippleSmall),
+                    indication = ripple(bounded = true, radius = UiTokens.rippleSmall),
                 )
                 .padding(UiTokens.paddingItemTight),
             tint = iconTint,
@@ -573,7 +573,7 @@ private fun NowPlayingSecondaryActionsRow(
                 .clickable(
                     onClick = onSleepTimerClicked,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true, radius = UiTokens.rippleSmall),
+                    indication = ripple(bounded = true, radius = UiTokens.rippleSmall),
                 )
                 .padding(UiTokens.paddingItemTight),
             tint = iconTint,
@@ -587,7 +587,7 @@ private fun NowPlayingSecondaryActionsRow(
                 .clickable(
                     onClick = onQueueClicked,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true, radius = UiTokens.rippleSmall),
+                    indication = ripple(bounded = true, radius = UiTokens.rippleSmall),
                 )
                 .padding(UiTokens.paddingItemTight),
             tint = iconTint,
@@ -620,7 +620,7 @@ private fun MusicSliderWithSeekRow(
                 .clickable(
                     onClick = { playerHelper.seekRelative(-10_000L) },
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true),
+                    indication = ripple(bounded = true),
                 )
                 .padding(horizontal = UiTokens.paddingItemTight, vertical = UiTokens.paddingItemTight),
         )
@@ -641,7 +641,7 @@ private fun MusicSliderWithSeekRow(
                 .clickable(
                     onClick = { playerHelper.seekRelative(10_000L) },
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = true),
+                    indication = ripple(bounded = true),
                 )
                 .padding(horizontal = UiTokens.paddingItemTight, vertical = UiTokens.paddingItemTight),
         )
@@ -734,7 +734,7 @@ private fun ShuffleButton(
             .clickable(
                 onClick = onClick,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = true, radius = UiTokens.rippleMedium),
+                indication = ripple(bounded = true, radius = UiTokens.rippleMedium),
             )
             .padding(UiTokens.metaSpacingSmall),
         colorFilter = ColorFilter.tint(iconTint ?: MaterialTheme.colorScheme.onSurface),
@@ -783,7 +783,7 @@ private fun LikeButton(
                         )
                     }
                 },
-                indication = rememberRipple(
+                indication = ripple(
                     bounded = false, radius = UiTokens.rippleLarge
                 ),
                 interactionSource = remember { MutableInteractionSource() }
@@ -807,7 +807,7 @@ private fun PreviousButton(
         .clickable(
             onClick = onPreviousPressed,
             interactionSource = remember { MutableInteractionSource() },
-            indication = rememberRipple(
+            indication = ripple(
                 bounded = true, radius = UiTokens.rippleHuge
             )
         )
@@ -833,7 +833,7 @@ private fun PausePlayButton(
         .clickable(
             onClick = onPausePlayPressed,
             interactionSource = remember { MutableInteractionSource() },
-            indication = rememberRipple(
+            indication = ripple(
                 bounded = true, radius = UiTokens.rippleHuge
             )
         )
@@ -858,7 +858,7 @@ private fun NextButton(
         .clickable(
             onClick = onNextPressed,
             interactionSource = remember { MutableInteractionSource() },
-            indication = rememberRipple(
+            indication = ripple(
                 bounded = true, radius = UiTokens.rippleHuge
             )
         )
@@ -877,7 +877,7 @@ private fun QueueButton(
         .size(UiTokens.iconSizeLarge)
         .clickable(
             onClick = onQueueClicked,
-            indication = rememberRipple(
+            indication = ripple(
                 bounded = false, radius = UiTokens.rippleLarge
             ),
             interactionSource = remember { MutableInteractionSource() }
@@ -929,7 +929,7 @@ private fun SongInfo(
                         Modifier.clickable(
                             onClick = onOpenArtist,
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = rememberRipple(bounded = true),
+                            indication = ripple(bounded = true),
                         )
                     } else {
                         Modifier
@@ -951,7 +951,7 @@ private fun SongInfo(
                         Modifier.clickable(
                             onClick = onOpenAlbum,
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = rememberRipple(bounded = true),
+                            indication = ripple(bounded = true),
                         )
                     } else {
                         Modifier
@@ -968,7 +968,7 @@ private fun SongInfo(
                     .clickable(
                         onClick = onOpenFolder,
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = rememberRipple(bounded = true),
+                        indication = ripple(bounded = true),
                     )
                     .padding(horizontal = UiTokens.paddingItem, vertical = UiTokens.smartSectionTitlePaddingBottom),
             ) {
@@ -1007,7 +1007,7 @@ fun PlaybackSpeedAndPitchController(
             .clickable(
                 onClick = { showDialog = true },
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = false, radius = UiTokens.rippleSmall)
+                indication = ripple(bounded = false, radius = UiTokens.rippleSmall)
             ),
         tint = MaterialTheme.colorScheme.onSurface
     )
@@ -1121,7 +1121,7 @@ fun RepeatModeController(
             .clickable(
                 onClick = toggleRepeatMode,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = true, radius = UiTokens.rippleMedium),
+                indication = ripple(bounded = true, radius = UiTokens.rippleMedium),
             )
             .padding(UiTokens.metaSpacingSmall),
         tint = iconTint ?: MaterialTheme.colorScheme.onSurface,

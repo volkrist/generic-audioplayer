@@ -24,7 +24,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -301,7 +301,7 @@ private fun FolderSheetRow(
             .clip(RoundedCornerShape(UiTokens.cornerSmall))
             .clickable(
                 onClick = onClick,
-                indication = rememberRipple(radius = 160.dp),
+                indication = ripple(radius = 160.dp),
                 interactionSource = remember { MutableInteractionSource() },
             )
             .padding(
@@ -435,7 +435,7 @@ fun Folder(
                             Stage4DebugLog.i("Folder overflow clicked folderPath=${folder.absolutePath}")
                             showFolderMenu = true
                         },
-                        indication = rememberRipple(
+                        indication = ripple(
                             bounded = false,
                             radius = 20.dp,
                         ),

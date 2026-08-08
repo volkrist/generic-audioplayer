@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -270,7 +270,7 @@ private fun MiniPlayerClassicRow(
                     .clickable(
                         onClick = onExpandPlayer,
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = rememberRipple(color = Color.White.copy(alpha = 0.12f)),
+                        indication = ripple(color = Color.White.copy(alpha = 0.12f)),
                     ),
             ) {
                 MiniPlayerCircleArt(song = song, size = miniPlayerArtSize)
@@ -336,7 +336,7 @@ private fun MiniPlayerCenteredColumn(
                 .clickable(
                     onClick = onExpandPlayer,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(color = Color.White.copy(alpha = 0.12f)),
+                    indication = ripple(color = Color.White.copy(alpha = 0.12f)),
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -409,7 +409,7 @@ private fun MiniPlayerVinylRow(
                 modifier = Modifier.clickable(
                     onClick = onExpandPlayer,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(color = Color.White.copy(alpha = 0.12f)),
+                    indication = ripple(color = Color.White.copy(alpha = 0.12f)),
                 ),
             ) {
                 Box(
@@ -498,7 +498,7 @@ private fun MiniPlayerPracticalRow(
                 modifier = Modifier.clickable(
                     onClick = onExpandPlayer,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(color = Color.White.copy(alpha = 0.12f)),
+                    indication = ripple(color = Color.White.copy(alpha = 0.12f)),
                 ),
             ) {
                 Box(modifier = Modifier.size(practicalArtSize)) {
@@ -573,7 +573,7 @@ private fun MiniPlayerSimpleCompact(
                 .clickable(
                     onClick = onExpandPlayer,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(color = Color.White.copy(alpha = 0.12f)),
+                    indication = ripple(color = Color.White.copy(alpha = 0.12f)),
                 ),
             verticalArrangement = Arrangement.Center,
         ) {
@@ -636,7 +636,7 @@ private fun MiniPlayerRoundDark(
                 modifier = Modifier.clickable(
                     onClick = onExpandPlayer,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(color = Color.White.copy(alpha = 0.12f)),
+                    indication = ripple(color = Color.White.copy(alpha = 0.12f)),
                 ),
             ) {
                 Box(
@@ -719,7 +719,7 @@ private fun MiniPlayerMiniStack(
             .clickable(
                 onClick = onExpandPlayer,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(color = Color.White.copy(alpha = 0.12f)),
+                indication = ripple(color = Color.White.copy(alpha = 0.12f)),
             ),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -775,7 +775,7 @@ private fun MiniPlayerCardStack(
             .clickable(
                 onClick = onExpandPlayer,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(color = Color.White.copy(alpha = 0.12f)),
+                indication = ripple(color = Color.White.copy(alpha = 0.12f)),
             ),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -846,7 +846,7 @@ private fun MiniPlayerIconMini(
                 .clickable(
                     onClick = onExpandPlayer,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(color = Color.White.copy(alpha = 0.12f)),
+                    indication = ripple(color = Color.White.copy(alpha = 0.12f)),
                 ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -950,7 +950,7 @@ private fun MiniPlayerPlayFab(
             .clickable(
                 onClick = onPausePlayPressed,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = true, radius = 24.dp),
+                indication = ripple(bounded = true, radius = 24.dp),
             ),
         contentAlignment = Alignment.Center,
     ) {
@@ -1008,7 +1008,7 @@ private fun MiniPlayerQueueIcon(
             .clickable(
                 onClick = onQueueClick,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = false, radius = 22.dp),
+                indication = ripple(bounded = false, radius = 22.dp),
             ),
         tint = tint,
     )

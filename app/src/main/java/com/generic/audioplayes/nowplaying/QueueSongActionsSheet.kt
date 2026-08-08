@@ -23,7 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -571,7 +571,7 @@ private fun QueueSongSheetRow(
             .clip(RoundedCornerShape(UiTokens.cornerSmall))
             .clickable(
                 onClick = onClick,
-                indication = rememberRipple(radius = 160.dp),
+                indication = ripple(radius = 160.dp),
                 interactionSource = remember { MutableInteractionSource() },
             )
             .padding(

@@ -29,7 +29,7 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -212,7 +212,7 @@ private fun SmartPlaylistListRow(
             .height(UiTokens.listItemHeightTall)
             .clickable(
                 onClick = onClick,
-                indication = rememberRipple(bounded = true, radius = UiTokens.rippleLarge),
+                indication = ripple(bounded = true, radius = UiTokens.rippleLarge),
                 interactionSource = remember { MutableInteractionSource() },
             )
             .padding(vertical = 4.dp),
@@ -261,7 +261,7 @@ private fun SmartPlaylistListRow(
                 .padding(10.dp)
                 .clickable(
                     onClick = onClick,
-                    indication = rememberRipple(bounded = false, radius = UiTokens.rippleSmall),
+                    indication = ripple(bounded = false, radius = UiTokens.rippleSmall),
                     interactionSource = remember { MutableInteractionSource() },
                 ),
             tint = Color.White.copy(alpha = 0.85f),
@@ -282,7 +282,7 @@ private fun CreatePlaylistListRow(
             .height(UiTokens.listItemHeightTall)
             .clickable(
                 onClick = { isDialogVisible = true },
-                indication = rememberRipple(bounded = true, radius = UiTokens.rippleLarge),
+                indication = ripple(bounded = true, radius = UiTokens.rippleLarge),
                 interactionSource = remember { MutableInteractionSource() },
             )
             .padding(vertical = 4.dp),
@@ -464,7 +464,7 @@ private fun PlaylistToolsActions(
                                 listState.animateScrollToItem(0)
                             }
                         },
-                        indication = rememberRipple(bounded = false, radius = 22.dp),
+                        indication = ripple(bounded = false, radius = 22.dp),
                         interactionSource = remember { MutableInteractionSource() },
                     ),
                 contentAlignment = Alignment.Center,

@@ -11,7 +11,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -163,7 +163,7 @@ fun PersonCard(
                         onClick = {
                             optionsVisible = true
                         },
-                        indication = rememberRipple(
+                        indication = ripple(
                             bounded = false,
                             radius = UiTokens.rippleSmall
                         ),

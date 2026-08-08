@@ -13,7 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -181,7 +181,7 @@ private fun SongCardBase(
                             )
                         }
                     },
-                    indication = rememberRipple(
+                    indication = ripple(
                         bounded = false,
                         radius = UiTokens.rippleSmall
                     ),
@@ -200,7 +200,7 @@ private fun SongCardBase(
                             Stage4DebugLog.i("Track overflow clicked path=${song.location}")
                             onOverflowClick()
                         },
-                        indication = rememberRipple(
+                        indication = ripple(
                             bounded = false,
                             radius = UiTokens.rippleSmall
                         ),
@@ -220,7 +220,7 @@ private fun SongCardBase(
                             Stage4DebugLog.i("Track overflow clicked path=${song.location} (OptionsAlertDialog)")
                             optionsVisible = true
                         },
-                        indication = rememberRipple(
+                        indication = ripple(
                             bounded = false,
                             radius = UiTokens.rippleSmall
                         ),
@@ -371,7 +371,7 @@ fun SongCardHomeSongsRow(
                             )
                         }
                     },
-                    indication = rememberRipple(
+                    indication = ripple(
                         bounded = false,
                         radius = UiTokens.rippleSmall
                     ),
@@ -389,7 +389,7 @@ fun SongCardHomeSongsRow(
                         Stage4DebugLog.i("Track overflow clicked path=${song.location} (HomeSongsRow)")
                         onOverflowMenuClick()
                     },
-                    indication = rememberRipple(
+                    indication = ripple(
                         bounded = false,
                         radius = UiTokens.rippleSmall
                     ),
@@ -581,7 +581,7 @@ fun MiniSongCard(
                             Stage4DebugLog.i("Track overflow clicked path=${song.location} (MiniSongCard sheet)")
                             onOverflowClick()
                         },
-                        indication = rememberRipple(
+                        indication = ripple(
                             bounded = false,
                             radius = UiTokens.rippleSmall
                         ),
@@ -601,7 +601,7 @@ fun MiniSongCard(
                             Stage4DebugLog.i("Track overflow clicked path=${song.location} (MiniSongCard OptionsAlertDialog)")
                             optionsVisible = true
                         },
-                        indication = rememberRipple(
+                        indication = ripple(
                             bounded = false,
                             radius = UiTokens.rippleSmall
                         ),

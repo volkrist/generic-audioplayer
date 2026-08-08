@@ -8,7 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -144,7 +144,7 @@ fun TopBarWithBackArrow(
                 .size(30.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(
+                    indication = ripple(
                         bounded = false,
                         radius = 25.dp,
                     ),
@@ -230,7 +230,7 @@ fun CancelConfirmTopBar(
                 .size(30.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(
+                    indication = ripple(
                         bounded = false,
                         radius = 25.dp,
                     ),
@@ -249,7 +249,7 @@ fun CancelConfirmTopBar(
                 .size(30.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(
+                    indication = ripple(
                         bounded = false,
                         radius = 25.dp,
                     ),

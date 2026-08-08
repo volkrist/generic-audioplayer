@@ -24,7 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -169,7 +169,7 @@ fun GenreCard(
                         onClick = {
                             optionsVisible = true
                         },
-                        indication = rememberRipple(
+                        indication = ripple(
                             bounded = false,
                             radius = UiTokens.rippleSmall
                         ),
