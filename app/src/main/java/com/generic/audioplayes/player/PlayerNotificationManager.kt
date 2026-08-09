@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaNotification
@@ -70,14 +71,18 @@ class PlayerNotificationManager @Inject constructor(
 
         val largeIcon = NotificationHelper.loadArtworkBitmap(context, metadata?.artworkUri)
 
-        // Indices 0–2 = previous | play/pause | next (transport always visible in compact shade).
-        val mediaStyle = MediaStyleNotificationHelper.MediaStyle(mediaSession)
-            .setShowActionsInCompactView(0, 1, 2)
-
         val playing = player.isPlaying
         val isLiked = queueService.getSongAtIndex(player.currentMediaItemIndex)?.favourite ?: false
 
         Timber.d("PlayerNotificationManager track=$title playing=$playing liked=$isLiked")
+
+        val actions = buildActions(mediaSession, player, actionFactory, customLayout, playing, isLiked)
+
+        // Transport occupies the leading actions, so those are the ones worth keeping in the
+        // collapsed shade.
+        val compactIndices = IntArray(minOf(TRANSPORT_ACTION_COUNT, actions.size)) { it }
+        val mediaStyle = MediaStyleNotificationHelper.MediaStyle(mediaSession)
+            .setShowActionsInCompactView(*compactIndices)
 
         val styleBg = preferenceProvider.widgetStyle.value.notificationColorizedBackgroundArgb()
         val builder = NotificationCompat.Builder(context, NotificationHelper.PLAYER_CHANNEL_ID)
@@ -112,42 +117,66 @@ class PlayerNotificationManager @Inject constructor(
             .setOngoing(playing)
             .setPriority(NotificationCompat.PRIORITY_MAX)
 
-        // Layout order matches [AudioPlayerService.updateNotification]:
-        // 0 previous, 1 play/pause, 2 next, 3 like/unlike, 4 close.
-        for ((index, commandButton) in customLayout.withIndex()) {
-            val action = when (index) {
-                0, 2 -> actionFactory.createMediaAction(
-                    mediaSession,
-                    IconCompat.createWithResource(context, commandButton.iconResId),
-                    commandButton.displayName,
-                    commandButton.playerCommand,
-                )
-                1 -> actionFactory.createMediaAction(
-                    mediaSession,
-                    IconCompat.createWithResource(
-                        context,
-                        if (playing) R.drawable.ic_baseline_pause_40
-                        else R.drawable.ic_baseline_play_arrow_40,
-                    ),
-                    if (playing) "Pause" else "Play",
-                    commandButton.playerCommand,
-                )
-                3 -> actionFactory.createCustomActionFromCustomCommandButton(
-                    mediaSession,
-                    if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked,
-                )
-                4 -> actionFactory.createCustomActionFromCustomCommandButton(
-                    mediaSession,
-                    commandButton,
-                )
-                else -> null
-            }
-            if (action != null) {
-                builder.addAction(action)
-            }
-        }
+        actions.forEach(builder::addAction)
 
         return MediaNotification(NotificationHelper.PLAYER_NOTIFICATION_ID, builder.build())
+    }
+
+    /**
+     * Transport actions are derived from the player instead of from [mediaButtonPreferences], because
+     * the preferences only carry this app's custom buttons — media3 fills the play/pause, previous and
+     * next slots from the available player commands itself. Reading transport out of that list by
+     * position is what left the shade without a media card at all.
+     */
+    private fun buildActions(
+        mediaSession: MediaSession,
+        player: Player,
+        actionFactory: MediaNotification.ActionFactory,
+        mediaButtonPreferences: ImmutableList<CommandButton>,
+        playing: Boolean,
+        isLiked: Boolean,
+    ): List<NotificationCompat.Action> = buildList {
+        add(
+            actionFactory.createMediaAction(
+                mediaSession,
+                IconCompat.createWithResource(context, R.drawable.ic_baseline_skip_previous_40),
+                "Previous",
+                Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+            ),
+        )
+        add(
+            actionFactory.createMediaAction(
+                mediaSession,
+                IconCompat.createWithResource(
+                    context,
+                    if (playing) R.drawable.ic_baseline_pause_40
+                    else R.drawable.ic_baseline_play_arrow_40,
+                ),
+                if (playing) "Pause" else "Play",
+                Player.COMMAND_PLAY_PAUSE,
+            ),
+        )
+        add(
+            actionFactory.createMediaAction(
+                mediaSession,
+                IconCompat.createWithResource(context, R.drawable.ic_baseline_skip_next_40),
+                "Next",
+                Player.COMMAND_SEEK_TO_NEXT,
+            ),
+        )
+        for (button in mediaButtonPreferences) {
+            val customAction = button.sessionCommand?.customAction ?: continue
+            val resolved = when (customAction) {
+                AudioPlayerCommands.LIKE, AudioPlayerCommands.UNLIKE ->
+                    if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked
+                else -> button
+            }
+            add(actionFactory.createCustomActionFromCustomCommandButton(mediaSession, resolved))
+        }
+    }
+
+    private companion object {
+        const val TRANSPORT_ACTION_COUNT = 3
     }
 
     override fun handleCustomCommand(

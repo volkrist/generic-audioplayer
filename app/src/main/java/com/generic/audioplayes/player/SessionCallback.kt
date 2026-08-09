@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.datastore.core.DataStore
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
@@ -38,6 +39,15 @@ class SessionCallback @Inject constructor(
     private val crashReporter: AudioPlayerCrashReporter,
 ): MediaSession.Callback {
 
+    /**
+     * The player commands granted here are the full set rather than the ones the session reports at
+     * this moment. media3 builds its notification controller as soon as the session exists, when
+     * [ExoPlayer][androidx.media3.exoplayer.ExoPlayer] still has no items and therefore almost no
+     * available commands. Echoing that snapshot back pins the controller to it for good: the platform
+     * session then advertises no transport actions, so System UI shows no media card and headset
+     * buttons have nowhere to go, and media3 sees an empty timeline and drops the notification
+     * altogether. The player itself still rejects anything it cannot currently do.
+     */
     override fun onConnect(
         session: MediaSession,
         controller: MediaSession.ControllerInfo
@@ -48,25 +58,34 @@ class SessionCallback @Inject constructor(
         availableCommands.add(AudioPlayerCommandButtons.liked.sessionCommand!!)
         availableCommands.add(AudioPlayerCommandButtons.unliked.sessionCommand!!)
         availableCommands.add(AudioPlayerCommandButtons.cancel.sessionCommand!!)
-        return MediaSession.ConnectionResult.accept(
-            availableCommands.build(),
-            connectionResult.availablePlayerCommands
-        )
+        return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+            .setAvailableSessionCommands(availableCommands.build())
+            .setAvailablePlayerCommands(Player.Commands.EMPTY.buildUpon().addAllCommands().build())
+            .setMediaButtonPreferences(
+                AudioPlayerCommandButtons.mediaButtonPreferences(
+                    queueService.currentSong.value?.favourite ?: false,
+                ),
+            )
+            .build()
     }
+
+    /**
+     * Where [AudioPlayerService.onSetQueue] should start the restored queue. Repopulating
+     * [queueService] in [onPlaybackResumption] notifies the service, which otherwise starts the track
+     * from the beginning and loses the position the user stopped at.
+     */
+    private var pendingResumePositionMs: Long? = null
+
+    fun consumePendingResumePositionMs(): Long? =
+        pendingResumePositionMs.also { pendingResumePositionMs = null }
 
     override fun onPostConnect(session: MediaSession, controller: MediaSession.ControllerInfo) {
         super.onPostConnect(session, controller)
         val isLiked = queueService.currentSong.value?.favourite ?: false
         Timber.d("onPostConnect() -> ${session.player.currentMediaItem?.mediaMetadata?.title} isLiked: $isLiked")
-        session.setCustomLayout(
+        session.setMediaButtonPreferences(
             controller,
-            listOf(
-                AudioPlayerCommandButtons.previous,
-                AudioPlayerCommandButtons.playPause,
-                AudioPlayerCommandButtons.next,
-                if (isLiked) AudioPlayerCommandButtons.liked else AudioPlayerCommandButtons.unliked,
-                AudioPlayerCommandButtons.cancel
-            )
+            AudioPlayerCommandButtons.mediaButtonPreferences(isLiked),
         )
     }
 
@@ -214,6 +233,7 @@ class SessionCallback @Inject constructor(
                 )
                 queueService.updateRepeatMode(repeatMode)
                 queueService.clearQueue()
+                pendingResumePositionMs = safePositionMs
                 queueService.setQueue(orderedSongs, safeIndex)
                 result.set(
                     MediaSession.MediaItemsWithStartPosition(
